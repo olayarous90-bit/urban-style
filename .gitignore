@@ -37,3 +37,4 @@ server/data/urban_style*
 server/logs/
 scratch/
 
+.env*
