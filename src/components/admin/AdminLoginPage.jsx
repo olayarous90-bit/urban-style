@@ -42,7 +42,7 @@ export const AdminLoginPage = ({ onLoginSuccess, onReturnToStore }) => {
         credentials: 'include', // Envía y recibe Cookies HttpOnly
         body: JSON.stringify({
           username: username.trim(),
-          password
+          password: password.trim()
         })
       });
 
