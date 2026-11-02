@@ -1,0 +1,577 @@
+/* ==========================================================================
+   URBAN STYLE - ADMIN PRODUCTS SECTION STYLES
+   ========================================================================== */
+
+.admin-products-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* BARRA DE HERRAMIENTAS Y ACCIONES */
+.products-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background-color: #161616;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+
+.toolbar-filters {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.product-search-input {
+  background-color: #0d0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.85rem;
+  padding: 0.55rem 0.85rem;
+  min-width: 240px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.product-search-input:focus {
+  border-color: var(--color-accent, #FF5A1F);
+}
+
+.product-select-filter {
+  background-color: #0d0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.85rem;
+  padding: 0.55rem 0.85rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.status-pill-group {
+  display: flex;
+  background: #0d0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.status-pill-btn {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.5rem 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.status-pill-btn:hover {
+  color: #fff;
+}
+
+.status-pill-btn.active {
+  background: #222;
+  color: #fff;
+}
+
+.btn-create-product {
+  background-color: var(--color-accent, #FF5A1F);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.88rem;
+  font-weight: 800;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: transform 0.15s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-create-product:hover {
+  background-color: #e04810;
+  box-shadow: 0 4px 15px rgba(255, 90, 31, 0.3);
+}
+
+/* TABLA DE PRODUCTOS */
+.product-cell-name {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.product-title-bold {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.product-sub-meta {
+  font-size: 0.75rem;
+  color: #888888;
+}
+
+.category-tag {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #dddddd;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.price-text-cop {
+  font-weight: 800;
+  color: #52c41a;
+  font-size: 0.88rem;
+}
+
+.sizes-badge-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  max-width: 140px;
+}
+
+.size-chip {
+  background: #222;
+  border: 1px solid #333;
+  color: #ccc;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+}
+
+/* STOCK BADGE */
+.stock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+}
+
+.stock-high {
+  background: rgba(82, 196, 26, 0.12);
+  color: #73d13d;
+  border: 1px solid rgba(82, 196, 26, 0.3);
+}
+
+.stock-low {
+  background: rgba(250, 173, 20, 0.12);
+  color: #ffc53d;
+  border: 1px solid rgba(250, 173, 20, 0.3);
+}
+
+.stock-out {
+  background: rgba(255, 77, 79, 0.12);
+  color: #ff7875;
+  border: 1px solid rgba(255, 77, 79, 0.3);
+}
+
+/* TOGGLE STATUS */
+.status-toggle-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.2s ease;
+}
+
+.status-toggle-btn.active {
+  background: rgba(82, 196, 26, 0.15);
+  color: #52c41a;
+  border: 1px solid rgba(82, 196, 26, 0.4);
+}
+
+.status-toggle-btn.inactive {
+  background: rgba(255, 255, 255, 0.05);
+  color: #888;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.status-toggle-btn:hover {
+  transform: scale(1.04);
+}
+
+/* BOTONES DE ACCIÓN */
+.action-buttons-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-action-edit {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  padding: 0.35rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all 0.15s ease;
+}
+
+.btn-action-edit:hover {
+  background: #fff;
+  color: #000;
+}
+
+.btn-action-delete {
+  background: rgba(255, 77, 79, 0.1);
+  border: 1px solid rgba(255, 77, 79, 0.25);
+  color: #ff7875;
+  padding: 0.35rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all 0.15s ease;
+}
+
+.btn-action-delete:hover {
+  background: #ff4d4f;
+  color: #fff;
+}
+
+/* ==========================================================================
+   MODAL DE CREACIÓN / EDICIÓN DE PRODUCTO
+   ========================================================================== */
+
+.product-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  z-index: 1300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.product-modal-card {
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  background-color: #141414;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.95);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.product-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.75rem;
+  background-color: #1a1a1a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modal-badge-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--color-accent, #FF5A1F);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: block;
+}
+
+.modal-header-title {
+  margin: 0.2rem 0 0 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.btn-modal-close {
+  background: transparent;
+  border: none;
+  color: #888;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.btn-modal-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.product-modal-body {
+  padding: 1.5rem 1.75rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.product-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.form-full-width {
+  grid-column: 1 / -1;
+}
+
+.modal-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.modal-field-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #cccccc;
+  display: flex;
+  justify-content: space-between;
+}
+
+.price-formatted-preview {
+  color: #52c41a;
+  font-weight: 800;
+}
+
+.modal-input {
+  background-color: #0d0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 0.7rem 0.85rem;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.modal-input:focus {
+  border-color: var(--color-accent, #FF5A1F);
+}
+
+.modal-textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* SELECTOR DE TALLAS */
+.sizes-selector-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.2rem;
+}
+
+.size-select-btn {
+  background: #0d0d0d;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #aaa;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.4rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.size-select-btn:hover {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.size-select-btn.selected {
+  background: var(--color-accent, #FF5A1F);
+  border-color: var(--color-accent, #FF5A1F);
+  color: #fff;
+}
+
+/* CHECKBOX ACTIVO */
+.active-toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 0.85rem 1rem;
+  cursor: pointer;
+}
+
+.active-toggle-container input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-accent, #FF5A1F);
+  cursor: pointer;
+}
+
+.active-toggle-container span {
+  font-size: 0.88rem;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* NOTA INFORMATIVA DE HOJA DE RUTA */
+.modal-stage-notice {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  font-size: 0.78rem;
+  color: #888888;
+  line-height: 1.4;
+}
+
+/* MENSAJE DE ERROR DEL MODAL */
+.modal-error-box {
+  background: rgba(255, 77, 79, 0.15);
+  border: 1px solid rgba(255, 77, 79, 0.35);
+  color: #ff7875;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* FOOTER DEL MODAL */
+.product-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.85rem;
+  padding: 1.25rem 1.75rem;
+  background-color: #1a1a1a;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.btn-modal-cancel {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #cccccc;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.65rem 1.25rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-modal-cancel:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.btn-modal-save {
+  background: var(--color-accent, #FF5A1F);
+  border: none;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding: 0.65rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.btn-modal-save:hover:not(:disabled) {
+  background: #e04810;
+}
+
+.btn-modal-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ==========================================================================
+   MODAL DE CONFIRMACIÓN DE ELIMINACIÓN
+   ========================================================================== */
+
+.delete-confirm-card {
+  width: 100%;
+  max-width: 440px;
+  background-color: #141414;
+  border: 1px solid rgba(255, 77, 79, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95);
+  padding: 1.75rem;
+  text-align: center;
+}
+
+.delete-warn-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.delete-card-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 0.5rem 0;
+}
+
+.delete-card-desc {
+  font-size: 0.88rem;
+  color: #aaa;
+  line-height: 1.4;
+  margin: 0 0 1.25rem 0;
+}
+
+.delete-actions-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.btn-confirm-delete {
+  background: #ff4d4f;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.65rem 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-confirm-delete:hover:not(:disabled) {
+  background: #ff7875;
+}

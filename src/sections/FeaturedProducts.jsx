@@ -15,9 +15,24 @@ export const FeaturedProducts = ({
   onToggleFavorite = () => {}
 }) => {
   const { addToCart } = useCart();
+  const [products, setProducts] = useState(FEATURED_PRODUCTS);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedSize, setSelectedSize] = useState(null);
   const [modalFeedback, setModalFeedback] = useState(null);
+
+  // Sincronizar catálogo dinámico desde el backend
+  useEffect(() => {
+    fetch('/api/products')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data) && data.data.length > 0) {
+          setProducts(data.data);
+        }
+      })
+      .catch(() => {
+        // En caso de desconexión mantiene el catálogo estático seguro
+      });
+  }, []);
 
   // Cerrar modal con tecla Escape
   useEffect(() => {
@@ -70,9 +85,9 @@ export const FeaturedProducts = ({
           </p>
         </div>
 
-        {/* CUADRÍCULA DE 8 PRODUCTOS */}
+        {/* CUADRÍCULA DE PRODUCTOS */}
         <div className="products-grid">
-          {FEATURED_PRODUCTS.map((product, index) => {
+          {products.map((product, index) => {
             const favoriteActive = isFavorite(product.id);
 
             return (
@@ -119,7 +134,7 @@ export const FeaturedProducts = ({
                     <h3 className="product-name">{product.name}</h3>
 
                     <div className="product-price-wrapper">
-                      <span className="product-price">{product.formattedPrice}</span>
+                      <span className="product-price">{product.formattedPrice || product.formatted_price}</span>
                       <span className="product-demo-tag">DEMO</span>
                     </div>
                   </div>
@@ -184,7 +199,7 @@ export const FeaturedProducts = ({
                 </h3>
 
                 <div className="modal-price-box">
-                  <span className="modal-price">{selectedProduct.formattedPrice}</span>
+                  <span className="modal-price">{selectedProduct.formattedPrice || selectedProduct.formatted_price}</span>
                   <p className="modal-demo-notice">
                     * Precio ficticio para fines de demostración en pesos colombianos.
                   </p>

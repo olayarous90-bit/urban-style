@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CloseIcon } from '../common/icons';
 import { Button } from '../common/Button';
 import { AdminLoginPage } from './AdminLoginPage';
+import { AdminProductsSection } from './AdminProductsSection';
 import './AdminDashboard.css';
 
 export const AdminDashboard = ({ isOpen, onClose }) => {
@@ -301,6 +302,13 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
               </button>
               <button
                 type="button"
+                className={`tab-btn ${activeTab === 'products' ? 'active' : ''}`}
+                onClick={() => { setActiveTab('products'); setSelectedOrder(null); }}
+              >
+                🏷️ Productos
+              </button>
+              <button
+                type="button"
                 className={`tab-btn ${activeTab === 'shipments' ? 'active' : ''}`}
                 onClick={() => { setActiveTab('shipments'); setSelectedOrder(null); }}
               >
@@ -321,6 +329,18 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                 ⚙️ Diagnóstico del Sistema
               </button>
             </div>
+
+            {/* PESTAÑA: GESTIÓN DE PRODUCTOS */}
+            {activeTab === 'products' && (
+              <div className="tab-pane">
+                <AdminProductsSection
+                  onNotification={(msg) => {
+                    setActionFeedback(msg);
+                    setTimeout(() => setActionFeedback(null), 4000);
+                  }}
+                />
+              </div>
+            )}
 
             {/* PESTAÑA 1: PEDIDOS */}
             {activeTab === 'orders' && (

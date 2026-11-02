@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import { db, initDatabase } from './db/database.js';
 import { testNeonConnection, initNeonTables } from './db/neon.js';
 import { countAdminUsers, createAdminUser } from './services/adminAuthService.js';
+import { seedProductsToNeonIfEmpty, getPublicActiveProducts } from './services/productService.js';
 import locationsRouter from './routes/locations.js';
 import shippingRouter from './routes/shipping.js';
 import ordersRouter from './routes/orders.js';
@@ -39,8 +40,11 @@ app.use(express.urlencoded({ extended: true }));
 // Inicializar base de datos local y tablas Neon
 initDatabase();
 if (process.env.DATABASE_URL) {
-  initNeonTables().then(() => {
-    // Si se especificaron credenciales en variables de entorno y no hay admin, sembrar de forma segura
+  initNeonTables().then(async () => {
+    // 1. Poblar productos en Neon PostgreSQL si está vacío
+    await seedProductsToNeonIfEmpty();
+
+    // 2. Si se especificaron credenciales en variables de entorno y no hay admin, sembrar de forma segura
     if (process.env.ADMIN_INIT_USER && process.env.ADMIN_INIT_PASSWORD) {
       countAdminUsers().then(async (cnt) => {
         if (cnt === 0) {
@@ -98,28 +102,14 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// 2. RUTA DE PRODUCTOS DEL CATÁLOGO OFICIAL
-app.get('/api/products', (req, res) => {
+// 2. RUTA DE PRODUCTOS DEL CATÁLOGO OFICIAL (Neon PostgreSQL / Fallback)
+app.get('/api/products', async (req, res) => {
   try {
-    const products = db.prepare('SELECT * FROM products WHERE is_active = 1').all();
-    const formatted = products.map((p) => ({
-      id: p.id,
-      name: p.name,
-      category: p.category,
-      price: p.price,
-      formattedPrice: p.formatted_price,
-      image: p.image,
-      description: p.description,
-      sizes: p.sizes ? JSON.parse(p.sizes) : ['S', 'M', 'L'],
-      composition: p.composition,
-      color: p.color,
-      stock: p.stock
-    }));
-
+    const products = await getPublicActiveProducts();
     res.json({
       success: true,
-      count: formatted.length,
-      data: formatted
+      count: products.length,
+      data: products
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

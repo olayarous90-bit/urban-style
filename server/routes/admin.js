@@ -17,6 +17,14 @@ import {
   revokeAdminSession,
   logLoginAttempt
 } from '../services/adminAuthService.js';
+import {
+  getAdminProducts,
+  getProductById,
+  createProduct,
+  updateProduct,
+  toggleProductStatus,
+  deleteProduct
+} from '../services/productService.js';
 
 const router = express.Router();
 
@@ -469,12 +477,180 @@ router.get('/config-status', requireAdmin, (req, res) => {
         fallbackMode: 'Local HTML Log en server/logs/emails/'
       },
       database: {
-        engine: 'SQLite3',
+        engine: 'Neon PostgreSQL (Primary) / SQLite3 (Fallback)',
         file: 'server/data/urban_style.db',
         status: 'Operational'
       }
     }
   });
+});
+
+/**
+ * ========================================================
+ * GESTIÓN DE PRODUCTOS DEL CATÁLOGO E INVENTARIO (ADMIN)
+ * ========================================================
+ */
+
+/**
+ * GET /api/admin/products
+ * Listado de productos con filtros de búsqueda, categoría y estado
+ */
+router.get('/products', requireAdmin, async (req, res) => {
+  try {
+    const { search, category, status } = req.query;
+    const products = await getAdminProducts({ search, category, status });
+    res.json({
+      success: true,
+      count: products.length,
+      products
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * GET /api/admin/products/:id
+ * Consulta de producto individual para edición
+ */
+router.get('/products/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await getProductById(id);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Producto no encontrado' });
+    }
+    res.json({ success: true, product });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/products
+ * Creación de nuevo producto en Neon PostgreSQL con validación estricta
+ */
+router.post('/products', requireAdmin, async (req, res) => {
+  try {
+    const { name, category, price, description, sizes, composition, color, stock, is_active } = req.body;
+
+    if (!name || typeof name !== 'string' || name.trim().length < 3) {
+      return res.status(400).json({ success: false, message: 'El nombre del producto debe tener al menos 3 caracteres.' });
+    }
+
+    if (!category || typeof category !== 'string' || category.trim().length < 2) {
+      return res.status(400).json({ success: false, message: 'La categoría es obligatoria.' });
+    }
+
+    const numPrice = Number(price);
+    if (isNaN(numPrice) || numPrice < 1000) {
+      return res.status(400).json({ success: false, message: 'El precio debe ser un número válido mayor o igual a $1.000 COP.' });
+    }
+
+    const numStock = stock !== undefined ? Number(stock) : 50;
+    if (isNaN(numStock) || numStock < 0) {
+      return res.status(400).json({ success: false, message: 'El inventario debe ser un número entero mayor o igual a cero.' });
+    }
+
+    if (!color || typeof color !== 'string' || color.trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'El color principal es obligatorio.' });
+    }
+
+    const newProduct = await createProduct({
+      name,
+      category,
+      price: numPrice,
+      description: description || '',
+      sizes: sizes || ['S', 'M', 'L', 'XL'],
+      composition: composition || '100% Algodón Premium',
+      color,
+      stock: numStock,
+      is_active: is_active !== undefined ? is_active : true
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Producto creado exitosamente en el catálogo oficial.',
+      product: newProduct
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * PUT /api/admin/products/:id
+ * Edición de producto existente en Neon PostgreSQL
+ */
+router.put('/products/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, category, price, description, sizes, composition, color, stock, is_active } = req.body;
+
+    if (name !== undefined && (typeof name !== 'string' || name.trim().length < 3)) {
+      return res.status(400).json({ success: false, message: 'El nombre debe tener al menos 3 caracteres.' });
+    }
+
+    if (price !== undefined) {
+      const numPrice = Number(price);
+      if (isNaN(numPrice) || numPrice < 1000) {
+        return res.status(400).json({ success: false, message: 'El precio debe ser mayor o igual a $1.000 COP.' });
+      }
+    }
+
+    if (stock !== undefined) {
+      const numStock = Number(stock);
+      if (isNaN(numStock) || numStock < 0) {
+        return res.status(400).json({ success: false, message: 'El inventario no puede ser negativo.' });
+      }
+    }
+
+    const updated = await updateProduct(id, req.body);
+    res.json({
+      success: true,
+      message: 'Producto actualizado exitosamente.',
+      product: updated
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * PATCH /api/admin/products/:id/status
+ * Activa o desactiva un producto del catálogo
+ */
+router.patch('/products/:id/status', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { is_active } = req.body;
+    if (is_active === undefined) {
+      return res.status(400).json({ success: false, message: 'El campo is_active es requerido.' });
+    }
+
+    const result = await toggleProductStatus(id, is_active);
+    res.json({
+      success: true,
+      message: `Producto ${result.is_active ? 'activado' : 'desactivado'} para la tienda pública.`,
+      result
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * DELETE /api/admin/products/:id
+ * Eliminación protegida (desactiva si tiene órdenes, elimina físicamente si no)
+ */
+router.delete('/products/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await deleteProduct(id);
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 });
 
 export default router;
