@@ -17,7 +17,7 @@ import './Navbar.css';
  * Soporte de escritorio y cajón móvil interactivo y accesible.
  */
 export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
-  const { cartCount, openCart } = useCart();
+  const { cartCount, openCart, isCartOpen } = useCart();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
