@@ -1,0 +1,358 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { BRAND_INFO } from '../data/brand';
+import { NAV_LINKS } from '../data/navigation';
+import {
+  SearchIcon,
+  HeartIcon,
+  BagIcon,
+  MenuIcon,
+  CloseIcon,
+  ChevronRightIcon
+} from '../components/common/icons';
+import { useCart } from '../context/CartContext';
+import './Navbar.css';
+
+/**
+ * Barra de Navegación Principal de URBAN STYLE
+ * Soporte de escritorio y cajón móvil interactivo y accesible.
+ */
+export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
+  const { cartCount, openCart } = useCart();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchToast, setSearchToast] = useState(null);
+
+  const searchInputRef = useRef(null);
+
+  // Enfocar el input de búsqueda automáticamente al abrir
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearchOpen]);
+
+  // Cerrar modales con la tecla Escape
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+        setIsSearchOpen(false);
+        setIsCartOpen(false);
+        setIsWishlistOpen(false);
+        setSearchToast(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Bloquear el scroll del body cuando el menú móvil está abierto
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobileMenuOpen]);
+
+  // Manejo de navegación suave a secciones
+  const handleNavClick = (e, href) => {
+    setIsMobileMenuOpen(false);
+    setIsWishlistOpen(false);
+
+    if (href.startsWith('#')) {
+      const targetId = href.replace('#', '');
+      if (targetId === 'inicio') {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      const targetEl = document.getElementById(targetId);
+      if (targetEl) {
+        e.preventDefault();
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  };
+
+  const toggleSearch = () => {
+    setIsSearchOpen((prev) => !prev);
+    setIsWishlistOpen(false);
+  };
+
+  const toggleCart = () => {
+    openCart();
+    setIsSearchOpen(false);
+    setIsWishlistOpen(false);
+  };
+
+  const toggleWishlist = () => {
+    setIsWishlistOpen((prev) => !prev);
+    setIsSearchOpen(false);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const query = searchQuery.trim();
+    if (!query) return;
+    // Búsqueda demostrativa no invasiva sin alert() del navegador
+    setSearchToast(`Búsqueda: "${query}". Modo demostración: el catálogo está disponible en la sección de productos.`);
+    setSearchQuery('');
+    setIsSearchOpen(false);
+    setTimeout(() => setSearchToast(null), 4000);
+  };
+
+  return (
+    <>
+      <nav className="navbar" role="navigation" aria-label="Navegación principal">
+        <div className="container">
+          <div className="navbar-inner">
+            {/* LADO IZQUIERDO: LOGOTIPO TIPOGRÁFICO */}
+            <a
+              href="#inicio"
+              className="navbar-brand"
+              onClick={(e) => handleNavClick(e, '#inicio')}
+              aria-label={`${BRAND_INFO.name} - Ir al inicio`}
+            >
+              <span className="brand-text">{BRAND_INFO.name}</span>
+              <span className="brand-accent-dot" aria-hidden="true" />
+            </a>
+
+            {/* CENTRO: ENLACES DE NAVEGACIÓN EN ESCRITORIO */}
+            <ul className="navbar-nav">
+              {NAV_LINKS.map((link) => (
+                <li key={link.id}>
+                  <a
+                    href={link.href}
+                    className={`nav-link ${link.isSpecial ? 'nav-link-special' : ''}`}
+                    onClick={(e) => handleNavClick(e, link.href)}
+                  >
+                    {link.label}
+                    {link.isSpecial && <span className="nav-tag-pulse" aria-hidden="true" />}
+                  </a>
+                </li>
+              ))}
+            </ul>
+
+            {/* LADO DERECHO: ACCIONES E ICONOS */}
+            <div className="navbar-actions">
+              {/* Botón de Búsqueda */}
+              <button
+                type="button"
+                className={`action-btn ${isSearchOpen ? 'active' : ''}`}
+                onClick={toggleSearch}
+                aria-label="Abrir panel de búsqueda"
+                aria-expanded={isSearchOpen}
+              >
+                <SearchIcon size={20} />
+              </button>
+
+              {/* Botón de Favoritos */}
+              <button
+                type="button"
+                className={`action-btn ${isWishlistOpen ? 'active' : ''}`}
+                onClick={toggleWishlist}
+                aria-label={`Ver lista de favoritos, ${favoritesCount} productos`}
+                aria-expanded={isWishlistOpen}
+              >
+                <HeartIcon size={20} filled={favoritesCount > 0} />
+                {favoritesCount > 0 && (
+                  <span className="badge-count" aria-hidden="true">
+                    {favoritesCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Botón de Carrito con Contador */}
+              <button
+                type="button"
+                className={`action-btn ${isCartOpen ? 'active' : ''}`}
+                onClick={toggleCart}
+                aria-label={`Carrito de compras, ${cartCount} productos`}
+                aria-expanded={isCartOpen}
+              >
+                <BagIcon size={20} />
+                <span className="badge-count" aria-hidden="true">
+                  {cartCount}
+                </span>
+              </button>
+
+              {/* Botón Hamburguesa para Móvil */}
+              <button
+                type="button"
+                className="hamburger-btn"
+                onClick={() => setIsMobileMenuOpen(true)}
+                aria-label="Abrir menú de navegación"
+                aria-expanded={isMobileMenuOpen}
+              >
+                <MenuIcon size={22} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* PANEL DE BÚSQUEDA INTEGRADO */}
+      {isSearchOpen && (
+        <section
+          className="search-panel"
+          aria-label="Barra de búsqueda de productos"
+        >
+          <div className="container">
+            <form className="search-form" onSubmit={handleSearchSubmit}>
+              <SearchIcon size={18} className="search-icon-inside" />
+              <input
+                ref={searchInputRef}
+                type="search"
+                className="search-input"
+                placeholder="Buscar por prendas, zapatillas, estilo..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Buscar en la tienda"
+              />
+              <button
+                type="button"
+                className="search-close-btn"
+                onClick={() => setIsSearchOpen(false)}
+                aria-label="Cerrar búsqueda"
+              >
+                <CloseIcon size={18} />
+              </button>
+            </form>
+            <p className="search-feedback">
+              Presiona Enter para buscar en el catálogo (disponible en la siguiente etapa).
+            </p>
+          </div>
+        </section>
+      )}
+
+      {/* POPOVER DE FAVORITOS */}
+      {isWishlistOpen && (
+        <aside className="popover-card" role="dialog" aria-label="Lista de favoritos">
+          <div className="popover-header">
+            <span className="popover-title">
+              <HeartIcon size={16} filled={favoritesCount > 0} /> Tus Favoritos ({favoritesCount})
+            </span>
+            <button
+              type="button"
+              className="popover-close"
+              onClick={() => setIsWishlistOpen(false)}
+              aria-label="Cerrar favoritos"
+            >
+              <CloseIcon size={16} />
+            </button>
+          </div>
+          <div className="popover-body">
+            {favoritesCount > 0 ? (
+              <div style={{ textAlign: 'left' }}>
+                <p className="popover-empty-text" style={{ marginBottom: '0.5rem', color: 'var(--color-accent)' }}>
+                  {favoritesCount} {favoritesCount === 1 ? 'prenda guardada en sesión' : 'prendas guardadas en sesión'}:
+                </p>
+                <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '180px', overflowY: 'auto' }}>
+                  {favoriteItems.map((item) => (
+                    <li key={item.id} style={{ fontSize: '0.8rem', color: 'var(--color-white)', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '0.3rem' }}>
+                      • {item.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <>
+                <span className="popover-icon-empty">
+                  <HeartIcon size={32} />
+                </span>
+                <p className="popover-empty-text">Tu lista de deseos está vacía (0)</p>
+                <p className="popover-desc">
+                  Guarda tus prendas favoritas haciendo clic en el corazón de cada tarjeta de producto.
+                </p>
+              </>
+            )}
+          </div>
+        </aside>
+      )}
+
+      {/* MENÚ MÓVIL DESPLEGABLE (DRAWER ACCESIBLE) */}
+      {isMobileMenuOpen && (
+        <>
+          <div
+            className="mobile-backdrop"
+            onClick={() => setIsMobileMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <aside
+            className="mobile-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menú de navegación móvil"
+          >
+            <div className="mobile-drawer-header">
+              <a
+                href="#inicio"
+                className="navbar-brand"
+                onClick={(e) => handleNavClick(e, '#inicio')}
+              >
+                <span className="brand-text">{BRAND_INFO.name}</span>
+                <span className="brand-accent-dot" aria-hidden="true" />
+              </a>
+              <button
+                type="button"
+                className="action-btn"
+                onClick={() => setIsMobileMenuOpen(false)}
+                aria-label="Cerrar menú móvil"
+              >
+                <CloseIcon size={20} />
+              </button>
+            </div>
+
+            <nav aria-label="Categorías en menú móvil">
+              <ul className="mobile-nav-list">
+                {NAV_LINKS.map((link) => (
+                  <li key={link.id}>
+                    <a
+                      href={link.href}
+                      className={`mobile-nav-link ${link.isSpecial ? 'mobile-nav-special' : ''}`}
+                      onClick={(e) => handleNavClick(e, link.href)}
+                    >
+                      <span>{link.label}</span>
+                      <ChevronRightIcon size={16} />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
+            <div className="mobile-drawer-footer">
+              <p className="mobile-slogan">"{BRAND_INFO.slogan}"</p>
+            </div>
+          </aside>
+        </>
+      )}
+
+      {/* TOAST NOTIFICACIÓN DE BÚSQUEDA */}
+      {searchToast && (
+        <div className="search-toast" role="status" aria-live="polite">
+          <span className="search-toast-dot" aria-hidden="true" />
+          <span className="search-toast-text">{searchToast}</span>
+          <button
+            type="button"
+            className="search-toast-close"
+            onClick={() => setSearchToast(null)}
+            aria-label="Cerrar notificación"
+          >
+            <CloseIcon size={14} />
+          </button>
+        </div>
+      )}
+    </>
+  );
+};
+
+export default Navbar;

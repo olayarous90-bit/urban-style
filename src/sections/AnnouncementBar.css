@@ -1,0 +1,90 @@
+/* ==========================================================================
+   URBAN STYLE - Barra de Anuncios Superior
+   ========================================================================== */
+
+.announcement-bar {
+  background-color: var(--color-black);
+  border-bottom: 1px solid var(--color-border-dark);
+  color: var(--color-white);
+  padding: 0.5rem 1rem;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  position: relative;
+  z-index: calc(var(--z-header) + 1);
+  width: 100%;
+}
+
+.announcement-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  text-align: center;
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  line-height: 1.3;
+}
+
+.announcement-highlight {
+  color: var(--color-white);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.announcement-dot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--color-accent);
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 8px var(--color-accent);
+  animation: announcementPulse 3s infinite ease-in-out;
+}
+
+@keyframes announcementPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: 0 0 6px var(--color-accent);
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.8;
+    box-shadow: 0 0 12px var(--color-accent);
+  }
+}
+
+.announcement-divider {
+  color: var(--color-accent);
+  font-weight: var(--font-weight-extrabold);
+  user-select: none;
+}
+
+.announcement-detail {
+  color: var(--color-gray-light);
+  letter-spacing: var(--tracking-wider);
+  opacity: 0.95;
+}
+
+@media (max-width: 600px) {
+  .announcement-bar {
+    font-size: 0.6875rem;
+    padding: 0.45rem 0.5rem;
+  }
+
+  .announcement-content {
+    gap: 0.2rem 0.4rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .announcement-bar {
+    font-size: 0.625rem;
+  }
+}
+

@@ -1,0 +1,336 @@
+/* ==========================================================================
+   URBAN STYLE - Sección de Categorías Visuales
+   ========================================================================== */
+
+.categories-section {
+  padding: var(--space-20) 0;
+  background-color: var(--color-black);
+  position: relative;
+  border-bottom: 1px solid var(--color-border-dark);
+}
+
+/* --------------------------------------------------------------------------
+   CABECERA DE LA SECCIÓN
+   -------------------------------------------------------------------------- */
+.categories-header {
+  text-align: center;
+  max-width: 680px;
+  margin: 0 auto var(--space-12) auto;
+}
+
+.categories-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.35rem 0.85rem;
+  background-color: var(--color-accent-subtle);
+  border: 1px solid rgba(255, 90, 31, 0.3);
+  border-radius: var(--radius-full);
+  margin-bottom: var(--space-4);
+}
+
+.categories-badge-text {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--color-accent);
+}
+
+.categories-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-white);
+  letter-spacing: var(--tracking-tight);
+  text-transform: uppercase;
+  margin-bottom: var(--space-3);
+  line-height: 1.1;
+}
+
+.categories-subtitle {
+  font-family: var(--font-sans);
+  font-size: clamp(0.95rem, 1.2vw, 1.05rem);
+  color: var(--color-gray-muted);
+  line-height: 1.6;
+}
+
+/* --------------------------------------------------------------------------
+   CUADRÍCULA DE TARJETAS
+   -------------------------------------------------------------------------- */
+.categories-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-6);
+  width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   TARJETA INDIVIDUAL DE CATEGORÍA
+   -------------------------------------------------------------------------- */
+.category-card {
+  position: relative;
+  aspect-ratio: 3 / 4.2;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background-color: var(--color-gray-card);
+  border: 1px solid var(--color-border-dark);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  transition: all var(--transition-smooth);
+  cursor: pointer;
+  scroll-margin-top: 100px;
+}
+
+.category-card:hover,
+.category-card:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 90, 31, 0.2);
+  transform: translateY(-4px);
+}
+
+/* Imagen y contenedor */
+.category-image-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.category-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1), filter var(--transition-normal);
+  filter: brightness(0.95) contrast(1.02);
+}
+
+.category-card:hover .category-image {
+  transform: scale(1.06);
+  filter: brightness(1) contrast(1.05);
+}
+
+/* Gradiente protector de contraste sobre la imagen */
+.category-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  background: linear-gradient(
+    180deg,
+    rgba(17, 17, 17, 0.05) 0%,
+    rgba(17, 17, 17, 0.2) 40%,
+    rgba(17, 17, 17, 0.85) 75%,
+    rgba(17, 17, 17, 0.98) 100%
+  );
+  transition: opacity var(--transition-normal);
+  pointer-events: none;
+}
+
+.category-card:hover .category-overlay {
+  background: linear-gradient(
+    180deg,
+    rgba(17, 17, 17, 0.02) 0%,
+    rgba(17, 17, 17, 0.15) 35%,
+    rgba(17, 17, 17, 0.82) 70%,
+    rgba(17, 17, 17, 0.98) 100%
+  );
+}
+
+/* --------------------------------------------------------------------------
+   CONTENIDO DE LA TARJETA
+   -------------------------------------------------------------------------- */
+.category-card-content {
+  position: relative;
+  z-index: 3;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.category-tag {
+  font-family: var(--font-sans);
+  font-size: 0.68rem;
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--tracking-wider);
+  color: var(--color-accent);
+  text-transform: uppercase;
+}
+
+.category-card-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-white);
+  letter-spacing: var(--tracking-normal);
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.category-card-desc {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-light);
+  line-height: 1.5;
+  opacity: 0.9;
+  margin-bottom: var(--space-3);
+  /* Truncamiento armónico a 3 líneas */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Botón EXPLORAR */
+.category-btn-action {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 0.75rem 1rem;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: var(--color-white);
+  background-color: rgba(17, 17, 17, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-xs);
+  backdrop-filter: blur(8px);
+  transition: all var(--transition-normal);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.category-card:hover .category-btn-action {
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-white);
+  box-shadow: 0 4px 14px rgba(255, 90, 31, 0.4);
+}
+
+.category-btn-arrow {
+  transition: transform var(--transition-fast);
+}
+
+.category-card:hover .category-btn-arrow {
+  transform: translateX(3px);
+}
+
+/* --------------------------------------------------------------------------
+   FEEDBACK DE ACCIÓN / TOAST INFORMATIVO PROVISIONAL
+   -------------------------------------------------------------------------- */
+.category-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background-color: var(--color-gray-card);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4) var(--space-6);
+  color: var(--color-white);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-modal);
+  animation: toastIn 200ms ease-out;
+  max-width: 380px;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast-header {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-accent);
+  text-transform: uppercase;
+  margin-bottom: var(--space-1);
+}
+
+.toast-message {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-light);
+  line-height: 1.4;
+}
+
+/* --------------------------------------------------------------------------
+   RESPONSIVIDAD Y PREFERENCIAS DEL SISTEMA
+   -------------------------------------------------------------------------- */
+@media (max-width: 1200px) {
+  .categories-grid {
+    gap: var(--space-4);
+  }
+
+  .category-card-content {
+    padding: var(--space-4);
+  }
+
+  .category-card-title {
+    font-size: 1.15rem;
+  }
+}
+
+@media (max-width: 992px) {
+  .categories-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-6);
+  }
+
+  .category-card {
+    aspect-ratio: 3 / 3.8;
+  }
+}
+
+@media (max-width: 600px) {
+  .categories-section {
+    padding: var(--space-12) 0;
+  }
+
+  .categories-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+
+  .category-card {
+    aspect-ratio: 3 / 3.4;
+    max-width: 440px;
+    margin: 0 auto;
+    width: 100%;
+  }
+
+  .category-card-title {
+    font-size: 1.25rem;
+  }
+
+  .category-card-desc {
+    -webkit-line-clamp: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .category-image,
+  .category-card,
+  .category-btn-action,
+  .category-btn-arrow {
+    transition: none !important;
+    transform: none !important;
+  }
+}

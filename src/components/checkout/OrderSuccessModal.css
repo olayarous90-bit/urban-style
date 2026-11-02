@@ -1,0 +1,270 @@
+/* ==========================================================================
+   URBAN STYLE - ORDER SUCCESS MODAL STYLES
+   ========================================================================== */
+
+.success-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.success-dialog {
+  width: 100%;
+  max-width: 580px;
+  background-color: var(--color-black, #111111);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-md, 8px);
+  padding: 2.25rem 2rem;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.95);
+  position: relative;
+  text-align: center;
+}
+
+.success-close-btn {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary, #999999);
+  cursor: pointer;
+  padding: 0.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs, 4px);
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.success-close-btn:hover {
+  color: var(--color-white, #ffffff);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.success-badge-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-full, 9999px);
+  background-color: rgba(72, 187, 120, 0.15);
+  border: 2px solid #48bb78;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem auto;
+}
+
+.success-checkmark {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #48bb78;
+  line-height: 1;
+}
+
+.success-tag {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #48bb78;
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.success-title {
+  font-size: 1.55rem;
+  font-weight: 900;
+  color: var(--color-white, #ffffff);
+  margin: 0 0 0.5rem 0;
+  letter-spacing: 0.02em;
+}
+
+.success-order-num {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary, #aaaaaa);
+  margin: 0 0 1.75rem 0;
+}
+
+.success-order-num strong {
+  color: var(--color-white, #ffffff);
+  font-family: monospace;
+  font-size: 1.05rem;
+}
+
+/* CAJA DE GUÍA DE TRANSPORTE */
+.success-guide-card {
+  background-color: #171717;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm, 6px);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.guide-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 1rem;
+}
+
+.guide-card-subtitle {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-secondary, #888888);
+  display: block;
+}
+
+.guide-carrier-name {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--color-accent, #FF5A1F);
+  margin: 0.15rem 0 0 0;
+}
+
+.guide-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: #48bb78;
+  font-weight: 700;
+  background-color: rgba(72, 187, 120, 0.1);
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-xs, 4px);
+}
+
+.status-dot-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full, 9999px);
+  background-color: #48bb78;
+  box-shadow: 0 0 8px #48bb78;
+}
+
+.guide-number-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #0e0e0e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-xs, 4px);
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.guide-number-label {
+  font-size: 0.72rem;
+  color: var(--color-text-secondary, #888888);
+  text-transform: uppercase;
+  display: block;
+}
+
+.guide-number-value {
+  font-family: monospace;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--color-white, #ffffff);
+  letter-spacing: 1px;
+}
+
+.guide-copy-btn {
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--color-white, #ffffff);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-xs, 4px);
+  cursor: pointer;
+  transition: all var(--transition-fast, 0.15s ease);
+}
+
+.guide-copy-btn:hover {
+  background-color: var(--color-accent, #FF5A1F);
+  border-color: var(--color-accent, #FF5A1F);
+}
+
+.guide-actions-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.guide-download-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.9rem;
+  font-weight: 800;
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+/* AVISO DE CORREO */
+.success-email-notice {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  text-align: left;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-xs, 4px);
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.5rem;
+}
+
+.email-notice-icon {
+  font-size: 1.25rem;
+}
+
+.email-notice-content {
+  flex: 1;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary, #cccccc);
+}
+
+.email-notice-address {
+  margin: 0.2rem 0;
+  color: var(--color-white, #ffffff);
+  font-weight: 700;
+}
+
+.email-notice-desc {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.75rem;
+  color: #888888;
+}
+
+.email-preview-link {
+  color: var(--color-accent, #FF5A1F);
+  text-decoration: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.email-preview-link:hover {
+  text-decoration: underline;
+}
+
+.success-footer-actions {
+  display: flex;
+  flex-direction: column;
+}
+
+.success-keep-btn {
+  width: 100%;
+  padding: 0.85rem;
+  font-size: 0.85rem;
+}

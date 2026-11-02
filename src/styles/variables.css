@@ -1,0 +1,96 @@
+/**
+ * URBAN STYLE - Variables de Diseño Globales
+ * Paleta de colores oficial e identidad visual
+ */
+
+:root {
+  /* --- PALETA DE COLORES OFICIAL --- */
+  --color-black: #111111;
+  --color-white: #FFFFFF;
+  --color-gray-light: #F4F4F4;
+  --color-gray-dark: #292929;
+  --color-accent: #FF5A1F;
+
+  /* Tonos complementarios para contraste y estados interactivos */
+  --color-accent-hover: #E54910;
+  --color-accent-subtle: rgba(255, 90, 31, 0.12);
+  --color-accent-glow: rgba(255, 90, 31, 0.25);
+  --color-gray-muted: #8E8E8E;
+  --color-gray-card: #1C1C1C;
+  --color-border-dark: #333333;
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-light: rgba(17, 17, 17, 0.1);
+
+  /* --- TIPOGRAFÍA --- */
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-display: 'Syne', 'Plus Jakarta Sans', sans-serif;
+
+  /* Tamaños tipográficos con escala armónica */
+  --font-size-xs: 0.75rem;    /* 12px */
+  --font-size-sm: 0.875rem;   /* 14px */
+  --font-size-base: 1rem;     /* 16px */
+  --font-size-md: 1.125rem;   /* 18px */
+  --font-size-lg: 1.25rem;    /* 20px */
+  --font-size-xl: 1.5rem;     /* 24px */
+  --font-size-2xl: 2rem;      /* 32px */
+  --font-size-3xl: 2.5rem;    /* 40px */
+  --font-size-4xl: 3.25rem;   /* 52px */
+  --font-size-5xl: 4.5rem;    /* 72px */
+
+  /* Pesos */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+
+  /* Espaciado entre letras para estética urbana */
+  --tracking-tight: -0.03em;
+  --tracking-normal: 0em;
+  --tracking-wide: 0.05em;
+  --tracking-wider: 0.1em;
+  --tracking-widest: 0.2em;
+
+  /* --- ESPACIADO Y ESTRUCTURA --- */
+  --space-1: 0.25rem;  /* 4px */
+  --space-2: 0.5rem;   /* 8px */
+  --space-3: 0.75rem;  /* 12px */
+  --space-4: 1rem;     /* 16px */
+  --space-5: 1.25rem;  /* 20px */
+  --space-6: 1.5rem;   /* 24px */
+  --space-8: 2rem;     /* 32px */
+  --space-10: 2.5rem;  /* 40px */
+  --space-12: 3rem;    /* 48px */
+  --space-16: 4rem;    /* 64px */
+  --space-20: 5rem;    /* 80px */
+
+  /* Contenedores */
+  --container-max-width: 1200px;
+  --container-padding: 1.5rem;
+
+  /* Radios de borde (diseño urbano sobrio) */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* Sombras y elevaciones sutiles */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.6);
+  --shadow-accent: 0 4px 20px rgba(255, 90, 31, 0.35);
+
+  /* Transiciones */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+  --transition-smooth: 350ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Z-Index jerárquico */
+  --z-negative: -1;
+  --z-base: 1;
+  --z-dropdown: 50;
+  --z-sticky: 100;
+  --z-header: 200;
+  --z-modal: 1000;
+}

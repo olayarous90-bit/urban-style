@@ -1,0 +1,323 @@
+/* ==========================================================================
+   SECCIÓN FORMULARIO DE NOVEDADES (NEWSLETTER) - URBAN STYLE
+   ========================================================================== */
+
+.newsletter-section {
+  padding: var(--space-16) 0;
+  background-color: var(--color-bg-light);
+  position: relative;
+}
+
+.newsletter-card {
+  background-color: var(--color-black-main);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-16) var(--space-8);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--color-black-card);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Sutil acento de iluminación en el fondo */
+.newsletter-card::before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 260px;
+  height: 260px;
+  background: radial-gradient(
+    circle,
+    rgba(255, 90, 31, 0.15) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+}
+
+.newsletter-content {
+  max-width: 680px;
+  margin: 0 auto;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+/* Tag / Badge */
+.newsletter-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  margin-bottom: var(--space-4);
+}
+
+.newsletter-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-accent-orange);
+  box-shadow: 0 0 8px var(--color-accent-orange);
+}
+
+.newsletter-badge-text {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: uppercase;
+  color: var(--color-white);
+}
+
+/* Título */
+.newsletter-title {
+  font-family: var(--font-family-primary);
+  font-size: clamp(2rem, 3.8vw, 2.75rem);
+  font-weight: var(--font-weight-black);
+  letter-spacing: var(--letter-spacing-tight);
+  text-transform: uppercase;
+  color: var(--color-white);
+  margin: 0 0 var(--space-3) 0;
+  line-height: 1.15;
+}
+
+/* Texto */
+.newsletter-description {
+  font-size: var(--font-size-base);
+  color: rgba(255, 255, 255, 0.75);
+  line-height: var(--line-height-relaxed);
+  margin: 0 auto var(--space-8) auto;
+  max-width: 540px;
+}
+
+/* --------------------------------------------------------------------------
+   FORMULARIO E INPUT
+   -------------------------------------------------------------------------- */
+.newsletter-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 580px;
+  margin: 0 auto;
+}
+
+.newsletter-input-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.newsletter-input-wrapper {
+  position: relative;
+  flex: 1;
+}
+
+.newsletter-input-icon {
+  position: absolute;
+  left: var(--space-4);
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  transition: color var(--transition-fast);
+}
+
+.newsletter-input {
+  width: 100%;
+  padding: var(--space-4) var(--space-4) var(--space-4) 48px;
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-lg);
+  color: var(--color-white);
+  font-size: var(--font-size-base); /* 16px para evitar auto-zoom indeseado en navegadores móviles iOS */
+  min-height: 52px;
+  outline: none;
+  transition: border-color var(--transition-fast),
+              background-color var(--transition-fast),
+              box-shadow var(--transition-fast);
+}
+
+.newsletter-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.newsletter-input:focus {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--color-accent-orange);
+  box-shadow: 0 0 0 3px rgba(255, 90, 31, 0.25);
+}
+
+.newsletter-input:focus + .newsletter-input-icon {
+  color: var(--color-accent-orange);
+}
+
+.newsletter-input.has-error {
+  border-color: #ff4d4f;
+  background-color: rgba(255, 77, 79, 0.08);
+}
+
+.newsletter-btn {
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--letter-spacing-wide);
+  white-space: nowrap;
+}
+
+/* Mensaje de error */
+.newsletter-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  background-color: rgba(255, 77, 79, 0.12);
+  border: 1px solid rgba(255, 77, 79, 0.35);
+  color: #ff7875;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  text-align: left;
+  animation: shake 0.3s ease-in-out;
+}
+
+.error-icon {
+  flex-shrink: 0;
+}
+
+/* Nota demostrativa */
+.newsletter-demo-notice {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.45);
+  margin: var(--space-2) 0 0 0;
+}
+
+/* --------------------------------------------------------------------------
+   CONFIRMACIÓN VISUAL DEMOSTRATIVA
+   -------------------------------------------------------------------------- */
+.newsletter-confirmation-box {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 90, 31, 0.3);
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
+  max-width: 580px;
+  margin: 0 auto;
+  text-align: left;
+  animation: fadeInScale 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.confirmation-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.confirmation-icon-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  background-color: rgba(255, 90, 31, 0.15);
+  border: 1px solid rgba(255, 90, 31, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-accent-orange);
+  flex-shrink: 0;
+}
+
+.confirmation-title {
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-white);
+  margin: 0 0 4px 0;
+}
+
+.confirmation-email-tag {
+  display: inline-block;
+  font-size: var(--font-size-xs);
+  color: var(--color-accent-orange);
+  font-weight: var(--font-weight-semibold);
+  background-color: rgba(255, 90, 31, 0.12);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+}
+
+.confirmation-explanation {
+  font-size: var(--font-size-xs);
+  color: rgba(255, 255, 255, 0.7);
+  line-height: var(--line-height-relaxed);
+  margin: 0 0 var(--space-5) 0;
+}
+
+.confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.confirmation-btn-reset {
+  color: var(--color-white);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.confirmation-btn-reset:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--color-white);
+}
+
+/* Animaciones */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE DESIGN
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .newsletter-card {
+    padding: var(--space-10) var(--space-5);
+  }
+
+  .newsletter-input-group {
+    flex-direction: column;
+  }
+
+  .newsletter-input-wrapper {
+    width: 100%;
+  }
+
+  .newsletter-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .confirmation-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .confirmation-actions {
+    justify-content: stretch;
+  }
+
+  .confirmation-btn-reset {
+    width: 100%;
+    justify-content: center;
+  }
+}

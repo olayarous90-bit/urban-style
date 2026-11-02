@@ -1,0 +1,268 @@
+/* ==========================================================================
+   SECCIÓN COLECCIÓN DESTACADA (FEATURED COLLECTION) - URBAN STYLE
+   ========================================================================== */
+
+.collection-section {
+  padding: var(--space-20) 0;
+  background-color: var(--color-bg-light);
+  scroll-margin-top: 100px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Contenedor tipo editorial con contraste alto */
+.collection-card {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  background-color: var(--color-black-main);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.18);
+  border: 1px solid var(--color-black-card);
+}
+
+/* --------------------------------------------------------------------------
+   COLUMNA DE IMAGEN EDITORIAL
+   -------------------------------------------------------------------------- */
+.collection-media-col {
+  position: relative;
+  background-color: var(--color-black-card);
+  min-height: 520px;
+}
+
+.collection-image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 520px;
+  overflow: hidden;
+}
+
+.collection-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%;
+  display: block;
+  opacity: 0.95;
+  transition: transform var(--transition-slow), opacity var(--transition-base);
+}
+
+.collection-card:hover .collection-image {
+  transform: scale(1.03);
+  opacity: 1;
+}
+
+/* Sutil viñeta para integrar con el fondo oscuro */
+.collection-image-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to right,
+    rgba(17, 17, 17, 0.1) 0%,
+    rgba(17, 17, 17, 0.4) 100%
+  );
+  pointer-events: none;
+}
+
+/* Insignia flotante */
+.collection-badge-floating {
+  position: absolute;
+  top: var(--space-6);
+  left: var(--space-6);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background-color: rgba(17, 17, 17, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  z-index: 2;
+}
+
+.collection-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-accent-orange);
+  box-shadow: 0 0 8px var(--color-accent-orange);
+}
+
+.collection-badge-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+  color: var(--color-white);
+}
+
+/* --------------------------------------------------------------------------
+   COLUMNA DE CONTENIDO EDITORIAL
+   -------------------------------------------------------------------------- */
+.collection-content-col {
+  padding: var(--space-12) var(--space-10);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: var(--color-white);
+}
+
+/* Overline / Tag oficial */
+.collection-header-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.collection-tag-line {
+  display: inline-block;
+  width: 24px;
+  height: 2px;
+  background-color: var(--color-accent-orange);
+}
+
+.collection-tag-text {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: uppercase;
+  color: var(--color-accent-orange);
+}
+
+/* Titular principal oficial */
+.collection-headline {
+  font-family: var(--font-family-primary);
+  font-size: clamp(2rem, 3.2vw, 2.75rem);
+  font-weight: var(--font-weight-black);
+  line-height: 1.1;
+  letter-spacing: var(--letter-spacing-tight);
+  text-transform: uppercase;
+  color: var(--color-white);
+  margin: 0 0 var(--space-5) 0;
+}
+
+.collection-headline-accent {
+  color: var(--color-accent-orange);
+}
+
+/* Descripción oficial */
+.collection-description {
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-relaxed);
+  color: rgba(255, 255, 255, 0.78);
+  margin: 0 0 var(--space-8) 0;
+  max-width: 520px;
+}
+
+/* Puntos destacados de confección */
+.collection-highlights {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: var(--space-6);
+}
+
+.collection-highlight-item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.highlight-bullet {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--letter-spacing-wider);
+  color: var(--color-accent-orange);
+  background-color: rgba(255, 90, 31, 0.12);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 90, 31, 0.25);
+  line-height: 1;
+}
+
+.highlight-title {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--color-white);
+  margin: 0 0 2px 0;
+}
+
+.highlight-detail {
+  font-size: var(--font-size-xs);
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Botón de acción */
+.collection-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.collection-btn {
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE DESIGN
+   -------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .collection-card {
+    grid-template-columns: 1fr;
+  }
+
+  .collection-media-col {
+    min-height: 380px;
+    max-height: 440px;
+  }
+
+  .collection-image-wrapper {
+    min-height: 380px;
+  }
+
+  .collection-content-col {
+    padding: var(--space-8) var(--space-6);
+  }
+
+  .collection-headline {
+    font-size: clamp(1.75rem, 5vw, 2.25rem);
+  }
+}
+
+@media (max-width: 640px) {
+  .collection-section {
+    padding: var(--space-12) 0;
+  }
+
+  .collection-card {
+    border-radius: var(--radius-lg);
+  }
+
+  .collection-media-col {
+    min-height: 300px;
+    max-height: 340px;
+  }
+
+  .collection-image-wrapper {
+    min-height: 300px;
+  }
+
+  .collection-content-col {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .collection-actions .collection-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

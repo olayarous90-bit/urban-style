@@ -1,0 +1,251 @@
+/* ==========================================================================
+   URBAN STYLE - Pantalla de Verificación Técnica (Fase 1)
+   ========================================================================== */
+
+.verification-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-8) 0;
+  background-color: var(--color-black);
+  position: relative;
+}
+
+/* Encabezado */
+.header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--color-border-dark);
+  margin-bottom: var(--space-10);
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.brand-symbol {
+  width: 38px;
+  height: 38px;
+  background-color: var(--color-accent);
+  color: var(--color-white);
+  font-family: var(--font-display);
+  font-weight: var(--font-weight-extrabold);
+  font-size: var(--font-size-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
+  letter-spacing: -0.05em;
+}
+
+.brand-name {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--tracking-wider);
+  color: var(--color-white);
+}
+
+/* Sección Principal / Hero de Verificación */
+.hero-verification {
+  text-align: center;
+  max-width: 860px;
+  margin: 0 auto var(--space-12) auto;
+}
+
+.hero-tag {
+  margin-bottom: var(--space-4);
+}
+
+.hero-title {
+  font-size: clamp(2.5rem, 6vw, var(--font-size-5xl));
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--color-white);
+  margin-bottom: var(--space-3);
+  line-height: 1.05;
+}
+
+.hero-slogan {
+  font-size: clamp(1.25rem, 3vw, var(--font-size-2xl));
+  font-weight: var(--font-weight-bold);
+  color: var(--color-accent);
+  letter-spacing: var(--tracking-wide);
+  margin-bottom: var(--space-5);
+  text-transform: uppercase;
+}
+
+.hero-description {
+  font-size: var(--font-size-md);
+  color: var(--color-gray-light);
+  max-width: 680px;
+  margin: 0 auto var(--space-6) auto;
+  opacity: 0.9;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+/* Cuadrícula de Pilares de Moda Urbana */
+.pillars-section {
+  margin-bottom: var(--space-12);
+}
+
+.section-label {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-widest);
+  color: var(--color-gray-muted);
+  text-transform: uppercase;
+  margin-bottom: var(--space-4);
+  display: block;
+}
+
+.pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+}
+
+.pillar-card {
+  background-color: var(--color-gray-card);
+  border: 1px solid var(--color-border-dark);
+  padding: var(--space-6);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition-normal), transform var(--transition-normal);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  scroll-margin-top: 110px;
+}
+
+.pillar-card-special {
+  border-color: rgba(255, 90, 31, 0.4);
+  background: linear-gradient(180deg, rgba(255, 90, 31, 0.05) 0%, var(--color-gray-card) 100%);
+}
+
+.pillar-card:hover {
+  border-color: var(--color-accent);
+  transform: translateY(-2px);
+}
+
+.pillar-tag {
+  font-size: 0.7rem;
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-accent);
+  letter-spacing: var(--tracking-wider);
+  margin-bottom: var(--space-2);
+}
+
+.pillar-name {
+  font-size: var(--font-size-lg);
+  color: var(--color-white);
+  margin-bottom: var(--space-2);
+}
+
+.pillar-desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-muted);
+  line-height: 1.5;
+}
+
+/* Paleta de Colores de Marca Visual */
+.palette-section {
+  background-color: var(--color-gray-dark);
+  border: 1px solid var(--color-border-dark);
+  border-radius: var(--radius-sm);
+  padding: var(--space-6);
+  margin-bottom: var(--space-12);
+}
+
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.palette-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background-color: var(--color-black);
+  padding: var(--space-3);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-border-dark);
+}
+
+.color-sample {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-xs);
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.color-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.color-name {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-white);
+}
+
+.color-hex {
+  font-size: 0.7rem;
+  color: var(--color-gray-muted);
+  font-family: monospace;
+}
+
+/* Pie de pantalla de verificación */
+.verification-footer {
+  border-top: 1px solid var(--color-border-dark);
+  padding-top: var(--space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--font-size-xs);
+  color: var(--color-gray-muted);
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.footer-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #10B981;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #10B981;
+}
+
+@media (max-width: 640px) {
+  .header-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .verification-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

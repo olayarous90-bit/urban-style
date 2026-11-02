@@ -1,0 +1,327 @@
+/* ==========================================================================
+   URBAN STYLE - Sección Hero / Portada Principal
+   ========================================================================== */
+
+.hero-section {
+  position: relative;
+  width: 100%;
+  min-height: calc(100vh - 120px);
+  max-height: 860px;
+  display: flex;
+  align-items: center;
+  background-color: var(--color-black);
+  overflow: hidden;
+  border-bottom: 1px solid var(--color-border-dark);
+}
+
+/* --------------------------------------------------------------------------
+   IMAGEN PROTAGONISTA DE FONDO EDITORIAL
+   -------------------------------------------------------------------------- */
+.hero-media-wrapper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.hero-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+  transform: scale(1.02);
+  transition: transform 1.8s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: contrast(1.05) brightness(0.92);
+}
+
+.hero-section:hover .hero-image {
+  transform: scale(1.04);
+}
+
+/* Fallback visual cuando la imagen no carga */
+.hero-media-fallback {
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 70% 30%, #292929 0%, #111111 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Capas de gradiente para garantizar contraste y legibilidad óptima */
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  /* Gradiente direccional oscuro a la izquierda para el texto, transparente al centro-derecha */
+  background: linear-gradient(
+    90deg,
+    rgba(17, 17, 17, 0.95) 0%,
+    rgba(17, 17, 17, 0.85) 35%,
+    rgba(17, 17, 17, 0.5) 70%,
+    rgba(17, 17, 17, 0.3) 100%
+  );
+  pointer-events: none;
+}
+
+/* Sutil viñeta inferior para fusionar con el resto de la página */
+.hero-overlay::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 160px;
+  background: linear-gradient(to top, var(--color-black) 0%, transparent 100%);
+}
+
+/* --------------------------------------------------------------------------
+   CONTENIDO Y TIPOGRAFÍA
+   -------------------------------------------------------------------------- */
+.hero-content-wrapper {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  padding: var(--space-12) 0;
+}
+
+.hero-content {
+  max-width: 680px;
+}
+
+/* Badge de campaña */
+.hero-campaign-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.4rem 0.9rem;
+  background-color: rgba(17, 17, 17, 0.8);
+  border: 1px solid rgba(255, 90, 31, 0.35);
+  border-radius: var(--radius-full);
+  margin-bottom: var(--space-5);
+  backdrop-filter: blur(8px);
+  animation: heroFadeIn 0.8s ease-out forwards;
+}
+
+.hero-badge-dot {
+  width: 6px;
+  height: 6px;
+  background-color: var(--color-accent);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--color-accent);
+}
+
+.hero-badge-text {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--tracking-widest);
+  text-transform: uppercase;
+  color: var(--color-white);
+}
+
+/* Titular Principal */
+.hero-headline {
+  font-family: var(--font-display);
+  font-size: clamp(2.35rem, 5.5vw, 4.25rem);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--color-white);
+  text-transform: uppercase;
+  margin-bottom: var(--space-5);
+  animation: heroFadeInUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.15s both;
+}
+
+.hero-headline-accent {
+  display: block;
+  color: var(--color-accent);
+  text-shadow: 0 0 24px rgba(255, 90, 31, 0.3);
+}
+
+/* Texto Secundario */
+.hero-description {
+  font-family: var(--font-sans);
+  font-size: clamp(1rem, 1.25vw, 1.15rem);
+  line-height: 1.6;
+  color: var(--color-gray-light);
+  max-width: 560px;
+  margin-bottom: var(--space-8);
+  opacity: 0.92;
+  animation: heroFadeInUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+}
+
+/* --------------------------------------------------------------------------
+   BOTONES DE ACCIÓN
+   -------------------------------------------------------------------------- */
+.hero-cta-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  animation: heroFadeInUp 0.9s cubic-bezier(0.16, 1, 0.3, 1) 0.45s both;
+}
+
+.hero-btn-primary {
+  box-shadow: 0 4px 20px rgba(255, 90, 31, 0.35);
+}
+
+.hero-btn-secondary {
+  border-color: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  background-color: rgba(17, 17, 17, 0.4);
+  transition: all var(--transition-normal);
+}
+
+.hero-btn-secondary:hover {
+  border-color: var(--color-white);
+  background-color: var(--color-white);
+  color: var(--color-black);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.15);
+}
+
+/* --------------------------------------------------------------------------
+   BARRA DE ATRIBUTOS EDITORIALES INFERIOR
+   -------------------------------------------------------------------------- */
+.hero-features-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin-top: var(--space-10);
+  padding-top: var(--space-6);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  animation: heroFadeIn 1s ease-out 0.6s both;
+}
+
+.hero-feature-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.hero-feature-number {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-accent);
+  letter-spacing: var(--tracking-wider);
+}
+
+.hero-feature-label {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-wide);
+  color: var(--color-gray-muted);
+  text-transform: uppercase;
+}
+
+/* --------------------------------------------------------------------------
+   ANIMACIONES SUTILES
+   -------------------------------------------------------------------------- */
+@keyframes heroFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes heroFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   RESPONSIVIDAD Y PREFERENCIA DE MOVIMIENTO
+   -------------------------------------------------------------------------- */
+@media (max-width: 960px) {
+  .hero-section {
+    min-height: auto;
+    padding: var(--space-8) 0;
+  }
+
+  .hero-overlay {
+    /* En tablet y móvil aumentamos la opacidad general para que el texto sea siempre legible */
+    background: linear-gradient(
+      180deg,
+      rgba(17, 17, 17, 0.8) 0%,
+      rgba(17, 17, 17, 0.88) 50%,
+      rgba(17, 17, 17, 0.98) 100%
+    );
+  }
+
+  .hero-image {
+    object-position: 70% center;
+  }
+
+  .hero-content {
+    max-width: 100%;
+  }
+
+  .hero-features-bar {
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-section {
+    padding: var(--space-6) 0;
+  }
+
+  .hero-headline {
+    font-size: clamp(2rem, 8.5vw, 2.75rem);
+    line-height: 1.1;
+  }
+
+  .hero-description {
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--space-6);
+  }
+
+  .hero-cta-group {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: var(--space-3);
+  }
+
+  .hero-cta-group .btn {
+    width: 100%;
+  }
+
+  .hero-features-bar {
+    display: none; /* Simplificar para máxima limpieza en pantallas pequeñas */
+  }
+}
+
+/* Respeto estricto a usuarios con reducción de movimiento */
+@media (prefers-reduced-motion: reduce) {
+  .hero-campaign-badge,
+  .hero-headline,
+  .hero-description,
+  .hero-cta-group,
+  .hero-features-bar {
+    animation: none !important;
+  }
+
+  .hero-image {
+    transition: none !important;
+    transform: none !important;
+  }
+}

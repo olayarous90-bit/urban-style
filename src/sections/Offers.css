@@ -1,0 +1,559 @@
+/* ==========================================================================
+   SECCIÓN OFERTAS DE DEMOSTRACIÓN (OFFERS SECTION) - URBAN STYLE
+   ========================================================================== */
+
+.offers-section {
+  padding: var(--space-20) 0;
+  background-color: var(--color-white);
+  scroll-margin-top: 100px;
+}
+
+/* --------------------------------------------------------------------------
+   CABECERA DE LA SECCIÓN
+   -------------------------------------------------------------------------- */
+.offers-header {
+  text-align: center;
+  max-width: 680px;
+  margin: 0 auto var(--space-12) auto;
+}
+
+.offers-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background-color: var(--color-bg-light);
+  border: 1px solid var(--color-gray-border);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  margin-bottom: var(--space-3);
+}
+
+.offers-badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-accent-orange);
+}
+
+.offers-badge-text {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--letter-spacing-widest);
+  text-transform: uppercase;
+  color: var(--color-black-main);
+}
+
+.offers-title {
+  font-family: var(--font-family-primary);
+  font-size: clamp(2rem, 3.5vw, 2.75rem);
+  font-weight: var(--font-weight-black);
+  letter-spacing: var(--letter-spacing-tight);
+  text-transform: uppercase;
+  color: var(--color-black-main);
+  margin: 0 0 var(--space-3) 0;
+}
+
+.offers-description {
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+  margin: 0 0 var(--space-4) 0;
+}
+
+.offers-demo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background-color: rgba(255, 90, 31, 0.08);
+  border: 1px dashed rgba(255, 90, 31, 0.4);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  color: var(--color-accent-orange);
+  font-weight: var(--font-weight-semibold);
+}
+
+.demo-icon {
+  font-style: normal;
+  font-weight: bold;
+}
+
+/* --------------------------------------------------------------------------
+   CUADRÍCULA DE TARJETAS DE OFERTA
+   -------------------------------------------------------------------------- */
+.offers-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-8);
+  margin-bottom: var(--space-12);
+}
+
+.offer-card {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg-light);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  border: 1px solid var(--color-gray-border);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.04);
+  transition: transform var(--transition-base), box-shadow var(--transition-base), border-color var(--transition-base);
+}
+
+.offer-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.08);
+  border-color: rgba(255, 90, 31, 0.35);
+}
+
+/* --------------------------------------------------------------------------
+   CONTENEDOR DE IMAGEN
+   -------------------------------------------------------------------------- */
+.offer-image-box {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3.8;
+  background-color: #e5e5e5;
+  overflow: hidden;
+}
+
+.offer-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform var(--transition-slow);
+}
+
+.offer-card:hover .offer-image {
+  transform: scale(1.05);
+}
+
+/* Etiqueta de descuento */
+.offer-discount-badge {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  background-color: var(--color-accent-orange);
+  color: var(--color-white);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--letter-spacing-wide);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  box-shadow: 0 4px 12px rgba(255, 90, 31, 0.35);
+  z-index: 2;
+}
+
+/* Badge de categoría */
+.offer-category-badge {
+  position: absolute;
+  bottom: var(--space-4);
+  right: var(--space-4);
+  background-color: rgba(17, 17, 17, 0.85);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--color-white);
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+/* --------------------------------------------------------------------------
+   CONTENIDO DE LA OFERTA
+   -------------------------------------------------------------------------- */
+.offer-content {
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.offer-category-name {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+  color: var(--color-accent-orange);
+  margin-bottom: var(--space-2);
+}
+
+.offer-product-name {
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-black-main);
+  margin: 0 0 var(--space-2) 0;
+  line-height: 1.25;
+}
+
+.offer-product-desc {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-base);
+  margin: 0 0 var(--space-5) 0;
+  flex: 1;
+}
+
+/* Fila de precios con contraste alto */
+.offer-pricing-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--color-white);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-gray-border);
+  margin-bottom: var(--space-5);
+}
+
+.offer-pricing-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.offer-price-label {
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+  color: var(--color-text-muted);
+  margin-bottom: 2px;
+}
+
+.offer-price-original {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 90, 31, 0.6);
+  text-decoration-thickness: 1.5px;
+}
+
+.offer-price-promo {
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-black);
+  color: var(--color-accent-orange);
+  letter-spacing: -0.02em;
+}
+
+/* Botón de acción */
+.offer-action-box {
+  margin-top: auto;
+}
+
+.offer-action-btn {
+  width: 100%;
+  justify-content: center;
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+/* --------------------------------------------------------------------------
+   TARJETA DE DESCARGO DE RESPONSABILIDAD (DISCLAIMER)
+   -------------------------------------------------------------------------- */
+.offers-disclaimer-card {
+  background-color: var(--color-bg-light);
+  border: 1px dashed var(--color-gray-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-6);
+  max-width: 840px;
+  margin: 0 auto;
+}
+
+.disclaimer-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.disclaimer-badge {
+  font-size: 10px;
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--letter-spacing-widest);
+  background-color: var(--color-black-main);
+  color: var(--color-white);
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  white-space: nowrap;
+}
+
+.disclaimer-text {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-base);
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------------
+   MODAL DE OFERTA DE DEMOSTRACIÓN
+   -------------------------------------------------------------------------- */
+.offer-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(17, 17, 17, 0.75);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.offer-modal-dialog {
+  background-color: var(--color-white);
+  border-radius: var(--radius-2xl);
+  max-width: 780px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  animation: scaleUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.offer-modal-close {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background-color: var(--color-bg-light);
+  border: 1px solid var(--color-gray-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-black-main);
+  cursor: pointer;
+  z-index: 10;
+  transition: all var(--transition-fast);
+}
+
+.offer-modal-close:hover {
+  background-color: var(--color-black-main);
+  color: var(--color-white);
+}
+
+.offer-modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+}
+
+.offer-modal-media {
+  position: relative;
+  background-color: #f0f0f0;
+  min-height: 360px;
+}
+
+.offer-modal-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.offer-modal-discount-tag {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  background-color: var(--color-accent-orange);
+  color: var(--color-white);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-extrabold);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  box-shadow: 0 4px 12px rgba(255, 90, 31, 0.4);
+}
+
+.offer-modal-body {
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+}
+
+.offer-modal-category {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+  color: var(--color-accent-orange);
+  margin-bottom: var(--space-2);
+}
+
+.offer-modal-title {
+  font-family: var(--font-family-primary);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-black);
+  color: var(--color-black-main);
+  margin: 0 0 var(--space-3) 0;
+  line-height: 1.2;
+}
+
+.offer-modal-description {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-relaxed);
+  margin: 0 0 var(--space-5) 0;
+}
+
+.offer-modal-pricing-box {
+  display: flex;
+  gap: var(--space-6);
+  padding: var(--space-4);
+  background-color: var(--color-bg-light);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-5);
+}
+
+.pricing-title {
+  display: block;
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  margin-bottom: 2px;
+}
+
+.pricing-before {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 90, 31, 0.6);
+  text-decoration-thickness: 1.5px;
+}
+
+.pricing-now {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-black);
+  color: var(--color-accent-orange);
+}
+
+.offer-modal-meta-box {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+}
+
+.meta-tag {
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  background-color: var(--color-white);
+  border: 1px solid var(--color-gray-border);
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--color-text-secondary);
+}
+
+.offer-modal-feedback {
+  background-color: rgba(255, 90, 31, 0.1);
+  color: var(--color-accent-orange);
+  border: 1px solid rgba(255, 90, 31, 0.3);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  margin-bottom: var(--space-4);
+  text-align: center;
+}
+
+.offer-modal-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: auto;
+  margin-bottom: var(--space-3);
+}
+
+.offer-modal-cta {
+  flex: 1;
+  justify-content: center;
+}
+
+.offer-modal-note {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin: 0;
+  text-align: center;
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   RESPONSIVE DESIGN
+   -------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .offers-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-6);
+  }
+
+  .offers-title {
+    font-size: 2.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .offers-grid {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .offer-modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .offer-modal-media {
+    min-height: 240px;
+  }
+
+  .offer-modal-body {
+    padding: var(--space-6) var(--space-4);
+  }
+
+  .disclaimer-content {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+}
+
+@media (max-width: 640px) {
+  .offers-section {
+    padding: var(--space-12) 0;
+  }
+
+  .offer-modal-actions {
+    flex-direction: column;
+    gap: var(--space-3);
+    width: 100%;
+  }
+
+  .offer-modal-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
