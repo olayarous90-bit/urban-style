@@ -17,6 +17,7 @@ export const FeaturedProducts = ({
   const { addToCart } = useCart();
   const [products, setProducts] = useState(FEATURED_PRODUCTS);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [selectedSize, setSelectedSize] = useState(null);
   const [modalFeedback, setModalFeedback] = useState(null);
 
@@ -55,9 +56,10 @@ export const FeaturedProducts = ({
     };
   }, [selectedProduct]);
 
-  // Al abrir el modal, seleccionar la primera talla por defecto
+  // Al abrir el modal, seleccionar la primera talla por defecto y primera imagen
   const handleOpenModal = (product) => {
     setSelectedProduct(product);
+    setActiveImageIndex(0);
     setSelectedSize(product.sizes?.[0] || null);
     setModalFeedback(null);
   };
@@ -178,17 +180,74 @@ export const FeaturedProducts = ({
               <CloseIcon size={18} />
             </button>
 
-            {/* Columna Izquierda: Imagen */}
-            <div className="modal-media">
-              {selectedProduct.tag && (
-                <span className="product-tag">{selectedProduct.tag}</span>
-              )}
-              <img
-                src={selectedProduct.image}
-                alt={selectedProduct.alt}
-                className="modal-image"
-              />
-            </div>
+            {/* Columna Izquierda: Galería de Imágenes */}
+            {(() => {
+              const gallery = (selectedProduct.images && selectedProduct.images.length > 0)
+                ? selectedProduct.images
+                : [selectedProduct.image || '/images/products/prod-tshirt.jpg'];
+              const currentImg = gallery[activeImageIndex] || gallery[0];
+
+              return (
+                <div className="modal-media">
+                  {selectedProduct.tag && (
+                    <span className="product-tag">{selectedProduct.tag}</span>
+                  )}
+
+                  {/* Imagen Principal Activa */}
+                  <div className="modal-main-image-container">
+                    <img
+                      src={currentImg}
+                      alt={`${selectedProduct.name} - Vista ${activeImageIndex + 1}`}
+                      className="modal-image"
+                    />
+
+                    {/* Botones de navegación anterior / siguiente */}
+                    {gallery.length > 1 && (
+                      <>
+                        <button
+                          type="button"
+                          className="modal-nav-arrow arrow-prev"
+                          onClick={() => setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : gallery.length - 1))}
+                          aria-label="Imagen anterior"
+                        >
+                          ‹
+                        </button>
+                        <button
+                          type="button"
+                          className="modal-nav-arrow arrow-next"
+                          onClick={() => setActiveImageIndex((prev) => (prev < gallery.length - 1 ? prev + 1 : 0))}
+                          aria-label="Siguiente imagen"
+                        >
+                          ›
+                        </button>
+                        <span className="modal-gallery-counter">
+                          {activeImageIndex + 1} / {gallery.length}
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Tira de Miniaturas Interactivas */}
+                  {gallery.length > 1 && (
+                    <div className="modal-thumbnails-strip" role="tablist" aria-label="Vistas del producto">
+                      {gallery.map((imgUrl, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          className={`modal-thumb-btn ${activeImageIndex === idx ? 'active' : ''}`}
+                          onClick={() => setActiveImageIndex(idx)}
+                          aria-label={`Ver vista ${idx + 1}`}
+                          role="tab"
+                          aria-selected={activeImageIndex === idx}
+                        >
+                          <img src={imgUrl} alt="" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Columna Derecha: Detalles del Producto */}
             <div className="modal-details">

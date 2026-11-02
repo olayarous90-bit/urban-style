@@ -1,5 +1,6 @@
 import { query as neonQuery, getNeonPool } from '../db/neon.js';
 import { db as sqliteDb } from '../db/database.js';
+import { getProductImages, seedProductImagesIfEmpty } from './imageStorageService.js';
 
 /**
  * Formatea un valor numérico a moneda oficial colombiana ($ COP)
@@ -63,6 +64,9 @@ export async function seedProductsToNeonIfEmpty() {
       }
       console.log(`[Neon Products] ${localProducts.length} productos iniciales sembrados en Neon exitosamente.`);
     }
+
+    // Asegurar que las imágenes de productos iniciales estén registradas en product_images
+    await seedProductImagesIfEmpty();
   } catch (err) {
     console.warn('[Neon Products Seed Notice]', err.message);
   }
@@ -101,11 +105,20 @@ export async function getAdminProducts({ search = '', category = 'ALL', status =
       queryStr += ' ORDER BY created_at DESC, id DESC';
       const result = await neonQuery(queryStr, params);
 
-      return result.rows.map((r) => ({
-        ...r,
-        sizes: parseSizes(r.sizes),
-        isActive: Boolean(r.is_active)
-      }));
+      const productsWithImages = await Promise.all(
+        result.rows.map(async (r) => {
+          const images = await getProductImages(r.id);
+          const defaultImg = r.image || '/images/products/prod-tshirt.jpg';
+          return {
+            ...r,
+            image: r.image || (images[0]?.url || defaultImg),
+            images: images.length > 0 ? images : [{ id: `img-${r.id}-default`, url: defaultImg, is_primary: true }],
+            sizes: parseSizes(r.sizes),
+            isActive: Boolean(r.is_active)
+          };
+        })
+      );
+      return productsWithImages;
     } catch (err) {
       console.warn('[Admin Products] Fallback a base local:', err.message);
     }
@@ -135,12 +148,21 @@ export async function getAdminProducts({ search = '', category = 'ALL', status =
   sql += ' ORDER BY id DESC';
   const rows = sqliteDb.prepare(sql).all(...params);
 
-  return rows.map((r) => ({
-    ...r,
-    sizes: parseSizes(r.sizes),
-    is_active: Boolean(r.is_active),
-    isActive: Boolean(r.is_active)
-  }));
+  const localWithImages = await Promise.all(
+    rows.map(async (r) => {
+      const images = await getProductImages(r.id);
+      const defaultImg = r.image || '/images/products/prod-tshirt.jpg';
+      return {
+        ...r,
+        image: r.image || (images[0]?.url || defaultImg),
+        images: images.length > 0 ? images : [{ id: `img-${r.id}-default`, url: defaultImg, is_primary: true }],
+        sizes: parseSizes(r.sizes),
+        is_active: Boolean(r.is_active),
+        isActive: Boolean(r.is_active)
+      };
+    })
+  );
+  return localWithImages;
 }
 
 /**
@@ -153,19 +175,29 @@ export async function getPublicActiveProducts() {
     try {
       const res = await neonQuery('SELECT * FROM products WHERE is_active = TRUE ORDER BY created_at DESC, id ASC');
       if (res.rows && res.rows.length > 0) {
-        return res.rows.map((p) => ({
-          id: p.id,
-          name: p.name,
-          category: p.category,
-          price: Number(p.price),
-          formattedPrice: p.formatted_price || formatCOP(p.price),
-          image: p.image || '/images/products/prod-tshirt.jpg',
-          description: p.description,
-          sizes: parseSizes(p.sizes),
-          composition: p.composition,
-          color: p.color,
-          stock: Number(p.stock ?? 50)
-        }));
+        const publicWithImages = await Promise.all(
+          res.rows.map(async (p) => {
+            const images = await getProductImages(p.id);
+            const defaultImg = p.image || '/images/products/prod-tshirt.jpg';
+            const imageUrls = images.length > 0 ? images.map((i) => i.url) : [defaultImg];
+            return {
+              id: p.id,
+              name: p.name,
+              category: p.category,
+              price: Number(p.price),
+              formattedPrice: p.formatted_price || formatCOP(p.price),
+              image: p.image || imageUrls[0],
+              images: imageUrls,
+              imagesDetail: images,
+              description: p.description,
+              sizes: parseSizes(p.sizes),
+              composition: p.composition,
+              color: p.color,
+              stock: Number(p.stock ?? 50)
+            };
+          })
+        );
+        return publicWithImages;
       }
     } catch (err) {
       console.warn('[Public Products] Fallback local:', err.message);
@@ -174,23 +206,33 @@ export async function getPublicActiveProducts() {
 
   // Fallback local SQLite
   const localRows = sqliteDb.prepare('SELECT * FROM products WHERE is_active = 1').all();
-  return localRows.map((p) => ({
-    id: p.id,
-    name: p.name,
-    category: p.category,
-    price: Number(p.price),
-    formattedPrice: p.formatted_price || formatCOP(p.price),
-    image: p.image || '/images/products/prod-tshirt.jpg',
-    description: p.description,
-    sizes: parseSizes(p.sizes),
-    composition: p.composition,
-    color: p.color,
-    stock: Number(p.stock ?? 50)
-  }));
+  const localWithImages = await Promise.all(
+    localRows.map(async (p) => {
+      const images = await getProductImages(p.id);
+      const defaultImg = p.image || '/images/products/prod-tshirt.jpg';
+      const imageUrls = images.length > 0 ? images.map((i) => i.url) : [defaultImg];
+      return {
+        id: p.id,
+        name: p.name,
+        category: p.category,
+        price: Number(p.price),
+        formattedPrice: p.formatted_price || formatCOP(p.price),
+        image: p.image || imageUrls[0],
+        images: imageUrls,
+        imagesDetail: images,
+        description: p.description,
+        sizes: parseSizes(p.sizes),
+        composition: p.composition,
+        color: p.color,
+        stock: Number(p.stock ?? 50)
+      };
+    })
+  );
+  return localWithImages;
 }
 
 /**
- * Consulta un producto por ID
+ * Consulta un producto por ID con imágenes completas
  */
 export async function getProductById(id) {
   const pool = getNeonPool();
@@ -200,8 +242,14 @@ export async function getProductById(id) {
       const res = await neonQuery('SELECT * FROM products WHERE id = $1 LIMIT 1', [id]);
       if (res.rows && res.rows.length > 0) {
         const p = res.rows[0];
+        const images = await getProductImages(p.id);
+        const defaultImg = p.image || '/images/products/prod-tshirt.jpg';
+        const imageUrls = images.length > 0 ? images.map((i) => i.url) : [defaultImg];
         return {
           ...p,
+          image: p.image || imageUrls[0],
+          images: images.length > 0 ? images : [{ id: `img-${p.id}-default`, url: defaultImg, is_primary: true }],
+          imageUrls,
           sizes: parseSizes(p.sizes),
           isActive: Boolean(p.is_active)
         };
@@ -213,8 +261,14 @@ export async function getProductById(id) {
 
   const row = sqliteDb.prepare('SELECT * FROM products WHERE id = ?').get(id);
   if (!row) return null;
+  const images = await getProductImages(row.id);
+  const defaultImg = row.image || '/images/products/prod-tshirt.jpg';
+  const imageUrls = images.length > 0 ? images.map((i) => i.url) : [defaultImg];
   return {
     ...row,
+    image: row.image || imageUrls[0],
+    images: images.length > 0 ? images : [{ id: `img-${row.id}-default`, url: defaultImg, is_primary: true }],
+    imageUrls,
     sizes: parseSizes(row.sizes),
     isActive: Boolean(row.is_active)
   };

@@ -575,3 +575,425 @@
 .btn-confirm-delete:hover:not(:disabled) {
   background: #ff7875;
 }
+
+/* ==========================================================================
+   ESTILOS DE GESTIÓN DE IMÁGENES (NEON S3 OBJECT STORAGE)
+   ========================================================================== */
+
+/* Miniatura en celda de la tabla */
+.product-cell-with-thumb {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.table-product-thumb {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  overflow: hidden;
+  background-color: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.table-product-thumb:hover {
+  transform: scale(1.08);
+  border-color: var(--color-accent, #FF5A1F);
+}
+
+.table-product-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.thumb-gallery-count {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  line-height: 1.1;
+}
+
+.btn-action-gallery {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ddd;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-action-gallery:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+/* Panel de Gestión de Imágenes en el Modal */
+.image-management-panel {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.image-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.image-panel-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 0.25rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.image-panel-desc {
+  font-size: 0.8rem;
+  color: #888;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.image-count-tag {
+  background: rgba(255, 90, 31, 0.15);
+  color: var(--color-accent, #FF5A1F);
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 0.25rem 0.65rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 90, 31, 0.3);
+  white-space: nowrap;
+}
+
+.image-error-alert {
+  background: rgba(255, 77, 79, 0.15);
+  border: 1px solid rgba(255, 77, 79, 0.35);
+  color: #ff7875;
+  border-radius: 6px;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Dropzone de subida */
+.image-dropzone {
+  border: 2px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.image-dropzone:hover,
+.image-dropzone.drag-over {
+  border-color: var(--color-accent, #FF5A1F);
+  background: rgba(255, 90, 31, 0.05);
+}
+
+.dropzone-label-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.dropzone-icon {
+  font-size: 2rem;
+}
+
+.dropzone-texts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.dropzone-cta {
+  font-size: 0.88rem;
+  color: #fff;
+}
+
+.dropzone-sub {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+/* Grid de Tarjetas de Imágenes */
+.image-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.image-card-item {
+  background: #141416;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.image-card-item.is-primary-card {
+  border-color: var(--color-accent, #FF5A1F);
+  box-shadow: 0 0 14px rgba(255, 90, 31, 0.25);
+}
+
+.image-card-thumb-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  background: #000;
+  overflow: hidden;
+}
+
+.image-card-thumb-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.primary-cover-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: var(--color-accent, #FF5A1F);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 3px 7px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+  z-index: 2;
+}
+
+.btn-mark-primary {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.image-card-item:hover .btn-mark-primary {
+  opacity: 1;
+}
+
+.btn-mark-primary:hover {
+  background: var(--color-accent, #FF5A1F);
+  border-color: var(--color-accent, #FF5A1F);
+}
+
+.btn-preview-zoom {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 0.75rem;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s ease;
+  z-index: 2;
+}
+
+.image-card-item:hover .btn-preview-zoom {
+  opacity: 1;
+}
+
+.btn-preview-zoom:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.image-card-footer {
+  padding: 0.65rem 0.75rem;
+  background: #111113;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.image-card-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  color: #aaa;
+}
+
+.image-card-info .img-name {
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image-card-info .img-size {
+  color: #666;
+  font-family: var(--font-mono, monospace);
+}
+
+.image-card-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.35rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.btn-img-move {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ccc;
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-img-move:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.btn-img-move:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.btn-img-delete {
+  background: rgba(255, 77, 79, 0.1);
+  border: 1px solid rgba(255, 77, 79, 0.25);
+  color: #ff7875;
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-img-delete:hover {
+  background: #ff4d4f;
+  color: #fff;
+}
+
+/* Lightbox Modal para Vista Previa en Alta Resolución */
+.image-lightbox-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(8px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.image-lightbox-dialog {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.btn-lightbox-close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.image-lightbox-image-box {
+  max-width: 85vw;
+  max-height: 80vh;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.image-lightbox-image-box img {
+  width: 100%;
+  height: 100%;
+  max-height: 80vh;
+  object-fit: contain;
+  display: block;
+}
+
+.image-lightbox-meta {
+  margin-top: 0.85rem;
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.lightbox-open-link {
+  color: var(--color-accent, #FF5A1F);
+  text-decoration: none;
+}
+
+.lightbox-open-link:hover {
+  text-decoration: underline;
+}
+

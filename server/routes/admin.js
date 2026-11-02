@@ -25,6 +25,15 @@ import {
   toggleProductStatus,
   deleteProduct
 } from '../services/productService.js';
+import {
+  uploadProductImage,
+  getProductImages,
+  setPrimaryImage,
+  reorderProductImages,
+  deleteProductImage,
+  ALLOWED_MIME_TYPES,
+  MAX_FILE_SIZE_BYTES
+} from '../services/imageStorageService.js';
 
 const router = express.Router();
 
@@ -648,6 +657,193 @@ router.delete('/products/:id', requireAdmin, async (req, res) => {
     const { id } = req.params;
     const result = await deleteProduct(id);
     res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * ========================================================
+ * GESTIÓN DE IMÁGENES DE PRODUCTOS (NEON S3 / OBJECT STORAGE)
+ * ========================================================
+ */
+
+function parseBase64Image(dataString, declaredMime) {
+  let mimeType = declaredMime || 'image/jpeg';
+  let base64Data = dataString;
+
+  if (typeof dataString === 'string' && dataString.startsWith('data:')) {
+    const matches = dataString.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (matches && matches.length === 3) {
+      mimeType = matches[1];
+      base64Data = matches[2];
+    }
+  }
+
+  const buffer = Buffer.from(base64Data, 'base64');
+  return { buffer, mimeType };
+}
+
+/**
+ * GET /api/admin/products/:id/images
+ * Consulta la galería de imágenes del producto
+ */
+router.get('/products/:id/images', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await getProductById(id);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Producto no encontrado.' });
+    }
+
+    const images = await getProductImages(id);
+    res.json({
+      success: true,
+      productId: id,
+      count: images.length,
+      images
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/products/:id/images
+ * Sube una o varias imágenes a Neon Object Storage y las vincula al producto
+ */
+router.post('/products/:id/images', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await getProductById(id);
+    if (!product) {
+      return res.status(404).json({ success: false, message: 'Producto no encontrado.' });
+    }
+
+    // Acepta { images: [...] } o payload individual { image, ... }
+    const items = Array.isArray(req.body.images) ? req.body.images : [req.body];
+
+    if (items.length === 0 || !items[0].image && !items[0].data) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se enviaron datos de imagen válidos.'
+      });
+    }
+
+    const uploaded = [];
+
+    for (const item of items) {
+      const rawData = item.image || item.data;
+      if (!rawData) continue;
+
+      const { buffer, mimeType } = parseBase64Image(rawData, item.mimeType);
+
+      // Validar tipo y tamaño
+      if (!ALLOWED_MIME_TYPES.includes(mimeType.toLowerCase())) {
+        return res.status(400).json({
+          success: false,
+          message: `El archivo ${item.originalName || 'subido'} tiene formato no permitido (${mimeType}). Formatos aceptados: JPEG, PNG, WebP, AVIF, GIF.`
+        });
+      }
+
+      if (buffer.length > MAX_FILE_SIZE_BYTES) {
+        return res.status(400).json({
+          success: false,
+          message: `El archivo ${item.originalName || 'subido'} supera el límite máximo de 5 MB.`
+        });
+      }
+
+      const imgRecord = await uploadProductImage({
+        productId: id,
+        buffer,
+        originalName: item.originalName || `${product.name}-image`,
+        mimeType,
+        isPrimary: Boolean(item.isPrimary),
+        altText: item.altText || product.name
+      });
+
+      uploaded.push(imgRecord);
+    }
+
+    const allImages = await getProductImages(id);
+
+    res.status(201).json({
+      success: true,
+      message: `${uploaded.length} imagen(es) subida(s) y almacenada(s) en Neon exitosamente.`,
+      uploaded,
+      images: allImages
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * PUT /api/admin/products/:id/images/:imageId/primary
+ * Establece una imagen como la principal del producto
+ */
+router.put('/products/:id/images/:imageId/primary', requireAdmin, async (req, res) => {
+  try {
+    const { id, imageId } = req.params;
+    const result = await setPrimaryImage(id, imageId);
+    const images = await getProductImages(id);
+
+    res.json({
+      success: true,
+      message: 'Imagen principal actualizada exitosamente.',
+      result,
+      images
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * PUT /api/admin/products/:id/images/reorder
+ * Reordena la galería de imágenes del producto
+ */
+router.put('/products/:id/images/reorder', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { orderedImageIds } = req.body;
+
+    if (!Array.isArray(orderedImageIds) || orderedImageIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Debe proporcionar un arreglo orderedImageIds con los identificadores en su nuevo orden.'
+      });
+    }
+
+    const result = await reorderProductImages(id, orderedImageIds);
+    const images = await getProductImages(id);
+
+    res.json({
+      success: true,
+      message: result.message,
+      images
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * DELETE /api/admin/products/:id/images/:imageId
+ * Elimina una imagen del almacenamiento S3 y de Neon
+ */
+router.delete('/products/:id/images/:imageId', requireAdmin, async (req, res) => {
+  try {
+    const { id, imageId } = req.params;
+    const result = await deleteProductImage(id, imageId);
+    const images = await getProductImages(id);
+
+    res.json({
+      success: true,
+      message: result.message,
+      deletedId: imageId,
+      images
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
