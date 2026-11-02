@@ -149,12 +149,34 @@ export function initDatabase() {
       created_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS admin_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_token TEXT UNIQUE NOT NULL,
+      user_id INTEGER NOT NULL,
+      username TEXT NOT NULL,
+      role TEXT NOT NULL,
+      ip_address TEXT,
+      user_agent TEXT,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS admin_login_attempts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      ip_address TEXT NOT NULL,
+      username TEXT,
+      success INTEGER DEFAULT 0,
+      attempted_at TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_orders_order_number ON orders(order_number);
     CREATE INDEX IF NOT EXISTS idx_orders_customer_email ON orders(customer_email);
     CREATE INDEX IF NOT EXISTS idx_shipments_order_id ON shipments(order_id);
     CREATE INDEX IF NOT EXISTS idx_shipments_guide_number ON shipments(guide_number);
     CREATE INDEX IF NOT EXISTS idx_email_logs_order_id ON email_logs(order_id);
     CREATE INDEX IF NOT EXISTS idx_status_history_order_id ON order_status_history(order_id);
+    CREATE INDEX IF NOT EXISTS idx_admin_sessions_token ON admin_sessions(session_token);
+    CREATE INDEX IF NOT EXISTS idx_admin_attempts_ip ON admin_login_attempts(ip_address, attempted_at);
   `);
 
   // Sembrar usuario administrador por defecto
@@ -288,33 +310,46 @@ function seedInitialProducts() {
 }
 
 /**
- * Generación de hash seguro PBKDF2 para contraseñas administrativas
+ * Generación de hash seguro PBKDF2 (120.000 iteraciones SHA-512) para contraseñas administrativas
  */
-export function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
-  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
+export function hashPassword(password, salt = crypto.randomBytes(32).toString('hex')) {
+  const hash = crypto.pbkdf2Sync(password, salt, 120000, 64, 'sha512').toString('hex');
   return { hash, salt };
 }
 
 /**
- * Validación de contraseña contra hash almacenado
+ * Validación de contraseña contra hash almacenado usando comparación en tiempo constante (timingSafeEqual)
  */
-export function verifyPassword(password, hash, salt) {
-  const verifyHash = crypto.pbkdf2Sync(password, salt, 1000, 64, 'sha512').toString('hex');
-  return hash === verifyHash;
+export function verifyPassword(password, storedHash, salt) {
+  if (!password || !storedHash || !salt) return false;
+  try {
+    const computedHash = crypto.pbkdf2Sync(password, salt, 120000, 64, 'sha512').toString('hex');
+    const storedBuf = Buffer.from(storedHash, 'hex');
+    const compBuf = Buffer.from(computedHash, 'hex');
+    if (storedBuf.length !== compBuf.length) return false;
+    return crypto.timingSafeEqual(storedBuf, compBuf);
+  } catch (err) {
+    return false;
+  }
 }
 
 /**
- * Sembrado de usuario administrador inicial seguro
+ * Inicialización controlada de usuario administrador:
+ * Sólo crea administrador si se especifican variables de entorno ADMIN_INIT_USER y ADMIN_INIT_PASSWORD.
+ * NUNCA utiliza contraseñas por defecto conocidas ni expone secretos en registros.
  */
 function seedAdminUser() {
   const count = db.prepare('SELECT count(*) as count FROM admin_users').get();
   if (count.count === 0) {
-    const defaultPassword = process.env.ADMIN_INITIAL_PASSWORD || 'UrbanStyle2026!';
-    const { hash, salt } = hashPassword(defaultPassword);
-    db.prepare(`
-      INSERT INTO admin_users (username, password_hash, salt, role, created_at)
-      VALUES (?, ?, ?, 'superadmin', ?)
-    `).run('admin', hash, salt, new Date().toISOString());
+    const initUser = process.env.ADMIN_INIT_USER;
+    const initPass = process.env.ADMIN_INIT_PASSWORD;
+    if (initUser && initPass && initPass.length >= 8) {
+      const { hash, salt } = hashPassword(initPass);
+      db.prepare(`
+        INSERT INTO admin_users (username, password_hash, salt, role, created_at)
+        VALUES (?, ?, ?, 'admin', ?)
+      `).run(initUser.trim(), hash, salt, new Date().toISOString());
+    }
   }
 }
 

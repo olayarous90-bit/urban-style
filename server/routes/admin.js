@@ -1,92 +1,213 @@
 import express from 'express';
-import crypto from 'crypto';
-import { db, verifyPassword } from '../db/database.js';
+import { db } from '../db/database.js';
 import { retryOrderEmail } from '../services/mailer.js';
+import {
+  verifyPassword,
+  ADMIN_COOKIE_NAME,
+  getAdminCookieOptions,
+  validateLoginInput,
+  checkRateLimit,
+  recordFailedAttempt,
+  resetFailedAttempts
+} from '../auth/security.js';
+import {
+  findAdminByUsername,
+  createAdminSession,
+  getAdminSession,
+  revokeAdminSession,
+  logLoginAttempt
+} from '../services/adminAuthService.js';
 
 const router = express.Router();
 
-// Almacén de sesiones activas en memoria con tiempo de expiración
-const activeSessions = new Map();
-
 /**
  * Middleware para proteger rutas administrativas
+ * Admite autenticación por Cookie HttpOnly (principal) o Cabecera Bearer (API clients)
  */
-export function requireAdmin(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
+export async function requireAdmin(req, res, next) {
+  try {
+    // 1. Obtener token desde Cookie HttpOnly o Cabecera Authorization
+    let token = req.cookies?.[ADMIN_COOKIE_NAME];
+    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        authenticated: false,
+        message: 'Acceso no autorizado. Se requiere sesión de administrador.'
+      });
+    }
+
+    // 2. Validar sesión en base de datos (Neon PostgreSQL / fallback local)
+    const session = await getAdminSession(token);
+    if (!session) {
+      // Limpiar cookie huérfana si existía
+      if (req.cookies?.[ADMIN_COOKIE_NAME]) {
+        res.clearCookie(ADMIN_COOKIE_NAME, { ...getAdminCookieOptions(), maxAge: 0 });
+      }
+      return res.status(401).json({
+        success: false,
+        authenticated: false,
+        message: 'Sesión administrativa expirada o inválida. Inicia sesión nuevamente.'
+      });
+    }
+
+    req.adminUser = session.user;
+    req.sessionToken = token;
+    next();
+  } catch (error) {
+    return res.status(500).json({
       success: false,
-      message: 'Acceso no autorizado. Se requiere token de administrador.'
+      message: 'Error verificando autenticación de administrador.'
     });
   }
-
-  const token = authHeader.split(' ')[1];
-  const session = activeSessions.get(token);
-
-  if (!session || session.expiresAt < Date.now()) {
-    activeSessions.delete(token);
-    return res.status(401).json({
-      success: false,
-      message: 'Sesión administrativa expirada o inválida. Inicia sesión nuevamente.'
-    });
-  }
-
-  // Renovar sesión activa
-  session.expiresAt = Date.now() + 4 * 60 * 60 * 1000; // 4 horas
-  req.adminUser = session.user;
-  next();
 }
 
 /**
  * POST /api/admin/login
- * Autenticación segura de administrador
+ * Autenticación robusta con rate-limiting, PBKDF2 y Cookie HttpOnly
  */
-router.post('/login', (req, res) => {
-  try {
-    const { username, password } = req.body;
+router.post('/login', async (req, res) => {
+  const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket?.remoteAddress || '127.0.0.1';
+  const userAgent = req.headers['user-agent'] || 'unknown';
 
-    if (!username || !password) {
+  try {
+    // 1. Validar formato de datos de entrada
+    const validation = validateLoginInput(req.body);
+    if (!validation.valid) {
       return res.status(400).json({
         success: false,
-        message: 'Usuario y contraseña son requeridos.'
+        message: validation.message
       });
     }
 
-    const admin = db.prepare('SELECT * FROM admin_users WHERE username = ?').get(username.trim());
+    const { cleanUsername, password } = validation;
+
+    // 2. Control de Fuerza Bruta / Rate Limiting
+    const rateCheck = checkRateLimit(clientIp, cleanUsername);
+    if (!rateCheck.allowed) {
+      await logLoginAttempt({ ipAddress: clientIp, username: cleanUsername, success: false });
+      return res.status(429).json({
+        success: false,
+        locked: true,
+        remainingSeconds: rateCheck.remainingSeconds,
+        message: rateCheck.message
+      });
+    }
+
+    // 3. Buscar usuario en base de datos
+    const admin = await findAdminByUsername(cleanUsername);
     if (!admin) {
+      const attempt = recordFailedAttempt(clientIp, cleanUsername);
+      await logLoginAttempt({ ipAddress: clientIp, username: cleanUsername, success: false });
+
+      // Demora deliberada para frustrar escaneos automáticos de tiempo
+      await new Promise((r) => setTimeout(r, 600));
+
       return res.status(401).json({
         success: false,
-        message: 'Credenciales de acceso incorrectas.'
+        message: 'Credenciales de acceso incorrectas.',
+        remainingAttempts: attempt.remainingAttempts
       });
     }
 
+    // 4. Verificar contraseña con hash seguro PBKDF2 y tiempo constante
     const isValid = verifyPassword(password, admin.password_hash, admin.salt);
     if (!isValid) {
+      const attempt = recordFailedAttempt(clientIp, cleanUsername);
+      await logLoginAttempt({ ipAddress: clientIp, username: cleanUsername, success: false });
+
+      // Demora deliberada
+      await new Promise((r) => setTimeout(r, 600));
+
       return res.status(401).json({
         success: false,
-        message: 'Credenciales de acceso incorrectas.'
+        message: 'Credenciales de acceso incorrectas.',
+        remainingAttempts: attempt.remainingAttempts
       });
     }
 
-    // Generar token de sesión seguro
-    const token = crypto.randomBytes(32).toString('hex');
-    activeSessions.set(token, {
-      user: { id: admin.id, username: admin.username, role: admin.role },
-      expiresAt: Date.now() + 4 * 60 * 60 * 1000
+    // 5. Credenciales correctas: resetear contador de intentos
+    resetFailedAttempts(clientIp, cleanUsername);
+    await logLoginAttempt({ ipAddress: clientIp, username: cleanUsername, success: true });
+
+    // 6. Crear sesión en base de datos
+    const session = await createAdminSession({
+      userId: admin.id,
+      username: admin.username,
+      role: admin.role,
+      ipAddress: clientIp,
+      userAgent
     });
+
+    // 7. Establecer Cookie de sesión HttpOnly segura
+    const cookieOptions = getAdminCookieOptions();
+    res.cookie(ADMIN_COOKIE_NAME, session.sessionToken, cookieOptions);
 
     res.json({
       success: true,
       message: 'Autenticación exitosa',
-      token,
+      token: session.sessionToken, // Se devuelve para compatibilidad
       user: {
         username: admin.username,
         role: admin.role
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('[Admin Login Error]', error);
+    res.status(500).json({ success: false, message: 'Error interno en el proceso de autenticación.' });
   }
+});
+
+/**
+ * POST /api/admin/logout
+ * Cierre de sesión seguro: revoca sesión en BD y destruye la cookie
+ */
+router.post('/logout', async (req, res) => {
+  try {
+    let token = req.cookies?.[ADMIN_COOKIE_NAME];
+    if (!token && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+
+    if (token) {
+      await revokeAdminSession(token);
+    }
+
+    res.clearCookie(ADMIN_COOKIE_NAME, { ...getAdminCookieOptions(), maxAge: 0 });
+
+    res.json({
+      success: true,
+      message: 'Sesión administrativa cerrada correctamente.'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error cerrando sesión.' });
+  }
+});
+
+/**
+ * GET /api/admin/me
+ * Consulta el estado de autenticación de la sesión activa
+ */
+router.get('/me', requireAdmin, (req, res) => {
+  res.json({
+    success: true,
+    authenticated: true,
+    user: req.adminUser
+  });
+});
+
+/**
+ * POST /api/admin/register
+ * Bloqueo explícito de registro público
+ */
+router.post('/register', (req, res) => {
+  res.status(403).json({
+    success: false,
+    message: 'El registro público de administradores está deshabilitado por política de seguridad.'
+  });
 });
 
 /**

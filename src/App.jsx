@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AnnouncementBar } from './sections/AnnouncementBar';
 import { Navbar } from './sections/Navbar';
 import { Hero } from './sections/Hero';
@@ -17,11 +17,28 @@ import { CartDrawer } from './components/cart/CartDrawer';
 import { CheckoutModal } from './components/checkout/CheckoutModal';
 import { OrderSuccessModal } from './components/checkout/OrderSuccessModal';
 import { AdminDashboard } from './components/admin/AdminDashboard';
+import { AdminLoginPage } from './components/admin/AdminLoginPage';
 import './App.css';
 
 export function AppContent() {
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
+
+  // Escuchar cambios de ruta en el navegador (back / forward / pushState)
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateTo = (path) => {
+    window.history.pushState({}, '', path);
+    setCurrentPath(path);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   // Activar animaciones suaves al desplazarse
   useScrollReveal();
@@ -37,6 +54,33 @@ export function AppContent() {
 
   const favoriteItems = FEATURED_PRODUCTS.filter((p) => favoriteIds.includes(p.id));
 
+  // 1. RUTA DEDICADA: /admin/login
+  if (currentPath === '/admin/login') {
+    return (
+      <AdminLoginPage
+        onLoginSuccess={() => {
+          navigateTo('/admin');
+        }}
+        onReturnToStore={() => {
+          navigateTo('/');
+        }}
+      />
+    );
+  }
+
+  // 2. RUTA DEDICADA: /admin
+  if (currentPath === '/admin') {
+    return (
+      <AdminDashboard
+        isOpen={true}
+        onClose={() => {
+          navigateTo('/');
+        }}
+      />
+    );
+  }
+
+  // 3. TIENDA VIRTUAL PÚBLICA
   return (
     <div className="app" id="inicio">
       {/* 1. BARRA DE ANUNCIOS Y 2. BARRA DE NAVEGACIÓN (Sincronizada con Carrito y Favoritos) */}
@@ -79,14 +123,14 @@ export function AppContent() {
       </main>
 
       {/* 11. PIE DE PÁGINA (FOOTER OFICIAL) */}
-      <Footer onOpenAdmin={() => setIsAdminOpen(true)} />
+      <Footer onOpenAdmin={() => navigateTo('/admin/login')} />
 
       {/* COMPONENTES DE COMERCIO ELECTRÓNICO (OVERLAYS Y MODALES) */}
       <CartDrawer />
       <CheckoutModal />
       <OrderSuccessModal />
 
-      {/* PANEL ADMINISTRATIVO PROTEGIDO */}
+      {/* PANEL ADMINISTRATIVO OVERLAY */}
       <AdminDashboard
         isOpen={isAdminOpen}
         onClose={() => setIsAdminOpen(false)}

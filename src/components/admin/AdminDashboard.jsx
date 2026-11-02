@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { CloseIcon } from '../common/icons';
 import { Button } from '../common/Button';
+import { AdminLoginPage } from './AdminLoginPage';
 import './AdminDashboard.css';
 
 export const AdminDashboard = ({ isOpen, onClose }) => {
-  const [token, setToken] = useState(() => sessionStorage.getItem('urban_style_admin_token') || null);
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('');
-  const [loginError, setLoginError] = useState(null);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [adminUser, setAdminUser] = useState(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // Datos del Dashboard
   const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'shipments', 'emails', 'diagnostic'
@@ -24,6 +22,36 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFeedback, setActionFeedback] = useState(null);
   const [loadingData, setLoadingData] = useState(false);
+
+  // Verificar sesión administrativa activa al abrir el panel
+  useEffect(() => {
+    if (isOpen) {
+      checkAuthStatus();
+    }
+  }, [isOpen]);
+
+  const checkAuthStatus = async () => {
+    setIsCheckingAuth(true);
+    try {
+      const res = await fetch('/api/admin/me', {
+        credentials: 'include'
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.authenticated) {
+          setAdminUser(data.user);
+        } else {
+          setAdminUser(null);
+        }
+      } else {
+        setAdminUser(null);
+      }
+    } catch {
+      setAdminUser(null);
+    } finally {
+      setIsCheckingAuth(false);
+    }
+  };
 
   // Cerrar con Escape
   useEffect(() => {
@@ -44,20 +72,20 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
     };
   }, [isOpen, onClose, selectedOrder]);
 
-  // Cargar datos administrativos si hay token
+  // Cargar datos administrativos si hay sesión activa
   useEffect(() => {
-    if (isOpen && token) {
+    if (isOpen && adminUser) {
       loadDashboardData();
     }
-  }, [isOpen, token, activeTab, statusFilter]);
+  }, [isOpen, adminUser, activeTab, statusFilter]);
 
   const loadDashboardData = async () => {
     setLoadingData(true);
     try {
-      const headers = { Authorization: `Bearer ${token}` };
+      const fetchOpts = { credentials: 'include' };
 
       // 1. Estadísticas
-      const statsRes = await fetch('/api/admin/stats', { headers });
+      const statsRes = await fetch('/api/admin/stats', fetchOpts);
       if (statsRes.status === 401) {
         handleLogout();
         return;
@@ -69,7 +97,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
 
       // 2. Pedidos
       if (activeTab === 'orders') {
-        const ordersRes = await fetch(`/api/admin/orders?status=${statusFilter}&search=${encodeURIComponent(searchTerm)}`, { headers });
+        const ordersRes = await fetch(`/api/admin/orders?status=${statusFilter}&search=${encodeURIComponent(searchTerm)}`, fetchOpts);
         if (ordersRes.ok) {
           const ordersData = await ordersRes.json();
           setOrders(ordersData.orders || []);
@@ -78,7 +106,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
 
       // 3. Despachos y Guías
       if (activeTab === 'shipments') {
-        const shipRes = await fetch('/api/admin/shipments', { headers });
+        const shipRes = await fetch('/api/admin/shipments', fetchOpts);
         if (shipRes.ok) {
           const shipData = await shipRes.json();
           setShipments(shipData.shipments || []);
@@ -87,7 +115,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
 
       // 4. Registros de Correo
       if (activeTab === 'emails') {
-        const emailRes = await fetch('/api/admin/emails', { headers });
+        const emailRes = await fetch('/api/admin/emails', fetchOpts);
         if (emailRes.ok) {
           const emailData = await emailRes.json();
           setEmailLogs(emailData.logs || []);
@@ -96,7 +124,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
 
       // 5. Diagnóstico de Configuración
       if (activeTab === 'diagnostic') {
-        const diagRes = await fetch('/api/admin/config-status', { headers });
+        const diagRes = await fetch('/api/admin/config-status', fetchOpts);
         if (diagRes.ok) {
           const diagData = await diagRes.json();
           setConfigStatus(diagData.services);
@@ -109,38 +137,21 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
     }
   };
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setIsLoggingIn(true);
-    setLoginError(null);
-
+  const handleLogout = async () => {
     try {
-      const res = await fetch('/api/admin/login', {
+      await fetch('/api/admin/logout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        credentials: 'include'
       });
-
-      const data = await res.json();
-      if (res.ok && data.success && data.token) {
-        sessionStorage.setItem('urban_style_admin_token', data.token);
-        setToken(data.token);
-        setPassword('');
-      } else {
-        setLoginError(data.message || 'Usuario o contraseña incorrectos.');
-      }
-    } catch (err) {
-      setLoginError('Error de conexión con el servidor.');
-    } finally {
-      setIsLoggingIn(false);
+    } catch {
+      // Continuar con limpieza local
     }
-  };
-
-  const handleLogout = () => {
-    sessionStorage.removeItem('urban_style_admin_token');
-    setToken(null);
+    setAdminUser(null);
     setStats(null);
     setSelectedOrder(null);
+    if (onClose) {
+      onClose();
+    }
   };
 
   // Cambio de estado de un pedido
@@ -149,9 +160,9 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
       const res = await fetch(`/api/admin/orders/${orderNumber}/status`, {
         method: 'PATCH',
         headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({
           newStatus,
           comment: `Estado modificado a ${newStatus} desde el panel de control.`
@@ -176,7 +187,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
     try {
       const res = await fetch(`/api/admin/orders/${orderNumber}/resend-email`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` }
+        credentials: 'include'
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -194,7 +205,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
   const handleViewOrderDetail = async (orderNumber) => {
     try {
       const res = await fetch(`/api/admin/orders/${orderNumber}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        credentials: 'include'
       });
       if (res.ok) {
         const data = await res.json();
@@ -221,9 +232,9 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
           </div>
 
           <div className="admin-header-actions">
-            {token && (
+            {adminUser && (
               <button type="button" className="admin-logout-btn" onClick={handleLogout}>
-                Cerrar Sesión (admin)
+                Cerrar Sesión ({adminUser.username})
               </button>
             )}
             <button type="button" className="admin-close-btn" onClick={onClose} aria-label="Cerrar panel">
@@ -239,53 +250,20 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
           </div>
         )}
 
-        {/* 1. PANTALLA DE INICIO DE SESIÓN SEGURA */}
-        {!token ? (
-          <div className="admin-login-screen">
-            <div className="admin-login-card">
-              <span className="login-icon">🔒</span>
-              <h3 className="login-title">Autenticación Administrativa</h3>
-              <p className="login-desc">
-                Ingresa tus credenciales autorizadas para gestionar pedidos, guías de Mi Paquete y correos.
-              </p>
-
-              <form onSubmit={handleLogin} className="login-form">
-                <div className="form-field">
-                  <label htmlFor="admin-user" className="field-label">Usuario</label>
-                  <input
-                    id="admin-user"
-                    type="text"
-                    className="field-input"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="form-field">
-                  <label htmlFor="admin-pass" className="field-label">Contraseña</label>
-                  <input
-                    id="admin-pass"
-                    type="password"
-                    className="field-input"
-                    placeholder="Contraseña de administrador"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                  <span className="field-hint">
-                    Clave predeterminada de inicialización: <code>UrbanStyle2026!</code>
-                  </span>
-                </div>
-
-                {loginError && <div className="login-error-msg">{loginError}</div>}
-
-                <Button variant="primary" type="submit" disabled={isLoggingIn} className="login-submit-btn">
-                  {isLoggingIn ? 'Verificando...' : 'Acceder al Panel'}
-                </Button>
-              </form>
-            </div>
+        {/* VERIFICANDO SESIÓN */}
+        {isCheckingAuth ? (
+          <div style={{ textAlign: 'center', padding: '4rem 1rem', color: '#a0a0a0' }}>
+            <p>Verificando credenciales de sesión...</p>
           </div>
+        ) : !adminUser ? (
+          /* PANTALLA DE INICIO DE SESIÓN INTEGRADA */
+          <AdminLoginPage
+            onLoginSuccess={(user) => {
+              setAdminUser(user);
+              loadDashboardData();
+            }}
+            onReturnToStore={onClose}
+          />
         ) : (
           /* 2. DASHBOARD ADMINISTRATIVO COMPLETO */
           <div className="admin-content-layout">

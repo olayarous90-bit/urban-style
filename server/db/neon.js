@@ -38,7 +38,8 @@ export function getNeonPool() {
     },
     max: 10,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000
+    connectionTimeoutMillis: 20000,
+    keepAlive: true
   });
 
   pool.on('error', (err) => {
@@ -209,8 +210,33 @@ export async function initNeonTables() {
         password_hash TEXT NOT NULL,
         salt TEXT NOT NULL,
         role VARCHAR(50) DEFAULT 'admin',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      ALTER TABLE admin_users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+      CREATE TABLE IF NOT EXISTS admin_sessions (
+        id SERIAL PRIMARY KEY,
+        session_token VARCHAR(128) UNIQUE NOT NULL,
+        user_id INTEGER NOT NULL,
+        username VARCHAR(100) NOT NULL,
+        role VARCHAR(50) NOT NULL,
+        ip_address VARCHAR(100),
+        user_agent TEXT,
+        expires_at TIMESTAMPTZ NOT NULL,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+      CREATE INDEX IF NOT EXISTS idx_admin_sessions_token ON admin_sessions(session_token);
+      CREATE INDEX IF NOT EXISTS idx_admin_sessions_expires ON admin_sessions(expires_at);
+
+      CREATE TABLE IF NOT EXISTS admin_login_attempts (
+        id SERIAL PRIMARY KEY,
+        ip_address VARCHAR(100) NOT NULL,
+        username VARCHAR(100),
+        success BOOLEAN DEFAULT FALSE,
+        attempted_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_admin_attempts_lookup ON admin_login_attempts(ip_address, username, attempted_at);
     `);
 
     return true;

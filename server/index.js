@@ -4,8 +4,10 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import cookieParser from 'cookie-parser';
 import { db, initDatabase } from './db/database.js';
 import { testNeonConnection, initNeonTables } from './db/neon.js';
+import { countAdminUsers, createAdminUser } from './services/adminAuthService.js';
 import locationsRouter from './routes/locations.js';
 import shippingRouter from './routes/shipping.js';
 import ordersRouter from './routes/orders.js';
@@ -19,20 +21,41 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Configuración de Middlewares
+// Configuración de Middlewares de Seguridad y CORS
 app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  origin: (origin, callback) => {
+    // Permite requests de la tienda (mismo origen, localhost y preview)
+    callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'session-tracker']
 }));
 
+app.use(cookieParser());
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Inicializar base de datos local y tablas Neon
 initDatabase();
 if (process.env.DATABASE_URL) {
-  initNeonTables().catch((err) => {
+  initNeonTables().then(() => {
+    // Si se especificaron credenciales en variables de entorno y no hay admin, sembrar de forma segura
+    if (process.env.ADMIN_INIT_USER && process.env.ADMIN_INIT_PASSWORD) {
+      countAdminUsers().then(async (cnt) => {
+        if (cnt === 0) {
+          await createAdminUser({
+            username: process.env.ADMIN_INIT_USER,
+            password: process.env.ADMIN_INIT_PASSWORD,
+            role: 'superadmin'
+          });
+          console.log('[Security] Administrador inicial aprovisionado desde variables de entorno.');
+        }
+      }).catch((e) => {
+        console.warn('[Security] Aviso al inicializar admin:', e.message);
+      });
+    }
+  }).catch((err) => {
     console.warn('[Neon Bootstrap Notice] No se pudo inicializar Neon en el arranque:', err.message);
   });
 }
