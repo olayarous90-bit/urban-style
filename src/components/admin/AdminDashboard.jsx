@@ -379,7 +379,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                 </div>
 
                 <div className="table-responsive">
-                  <table className="admin-table">
+                  <table className="admin-table admin-orders-table">
                     <thead>
                       <tr>
                         <th>N° Orden</th>
@@ -447,7 +447,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                                   onClick={() => handleViewOrderDetail(order.order_number)}
                                   title="Ver trazabilidad completa"
                                 >
-                                  👁️
+                                  👁️ Detalle
                                 </button>
                                 {order.status !== 'SHIPPED' && order.status !== 'CANCELLED' && (
                                   <button
@@ -475,7 +475,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                                   onClick={() => handleResendEmail(order.order_number)}
                                   title="Reenviar correo con guía"
                                 >
-                                  ✉️
+                                  ✉️ Reenviar
                                 </button>
                               </div>
                             </td>
@@ -492,7 +492,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
             {activeTab === 'shipments' && (
               <div className="tab-pane">
                 <div className="table-responsive">
-                  <table className="admin-table">
+                  <table className="admin-table admin-shipments-table">
                     <thead>
                       <tr>
                         <th>N° Guía</th>
@@ -524,9 +524,9 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                               href={`/api/shipping/guide/${s.guide_number}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="btn btn-outline btn-sm"
+                              className="btn-table-action download"
                             >
-                              Descargar / Imprimir PDF
+                              📄 Descargar PDF
                             </a>
                           </td>
                         </tr>
@@ -541,7 +541,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
             {activeTab === 'emails' && (
               <div className="tab-pane">
                 <div className="table-responsive">
-                  <table className="admin-table">
+                  <table className="admin-table admin-emails-table">
                     <thead>
                       <tr>
                         <th>ID</th>
@@ -578,9 +578,9 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                                 href={`/api/orders/${log.order_number}/email-preview`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="email-preview-link"
+                                className="btn-table-action preview"
                               >
-                                Ver Correo HTML →
+                                🔍 Ver Correo
                               </a>
                             </td>
                           </tr>

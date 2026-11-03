@@ -873,20 +873,20 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
 
       {/* TABLA DE PRODUCTOS */}
       <div className="table-responsive">
-        <table className="admin-table">
+        <table className="admin-table admin-products-table">
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Prenda y Vista</th>
-              <th>Categoría</th>
-              <th>Precio Normal</th>
-              <th>Descuento / Promo</th>
-              <th>Precio Final</th>
-              <th>Tallas</th>
-              <th>Color</th>
-              <th>Inventario</th>
-              <th>Estado</th>
-              <th>Acciones</th>
+              <th className="th-id">ID</th>
+              <th className="th-product">Prenda y Producto</th>
+              <th className="th-category">Categoría</th>
+              <th className="th-price-normal">Precio Normal</th>
+              <th className="th-discount">Descuento</th>
+              <th className="th-price-final">Precio Final</th>
+              <th className="th-sizes">Tallas</th>
+              <th className="th-color">Color</th>
+              <th className="th-stock">Inventario</th>
+              <th className="th-status">Estado</th>
+              <th className="th-actions">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -911,10 +911,10 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
 
                 return (
                   <tr key={p.id}>
-                    <td>
-                      <code style={{ fontSize: '0.75rem', color: '#888' }}>{p.id}</code>
+                    <td className="col-id">
+                      <code className="id-code-badge">{p.id}</code>
                     </td>
-                    <td>
+                    <td className="col-product">
                       <div className="product-cell-with-thumb">
                         <div
                           className="table-product-thumb"
@@ -929,11 +929,13 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                           )}
                         </div>
                         <div className="product-cell-name">
-                          <span className="product-title-bold">{p.name}</span>
-                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px', fontSize: '0.72rem', flexWrap: 'wrap' }}>
-                            <span style={{ color: 'var(--color-accent, #ff5a1f)', fontWeight: 'bold' }}>{p.brand || 'URBAN STYLE'}</span>
-                            {p.model && <span style={{ color: '#ccc' }}>• Mod: {p.model}</span>}
-                            {p.department && <span style={{ color: '#888' }}>({p.department})</span>}
+                          <span className="product-title-bold" title={p.name}>
+                            {p.name}
+                          </span>
+                          <div className="product-meta-row">
+                            <span className="product-meta-brand">{p.brand || 'URBAN STYLE'}</span>
+                            {p.model && <span className="product-meta-model">• Mod: {p.model}</span>}
+                            {p.department && <span className="product-meta-dept">({p.department})</span>}
                           </div>
                           {p.composition && (
                             <span className="product-sub-meta">{p.composition}</span>
@@ -941,15 +943,15 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                         </div>
                       </div>
                     </td>
-                    <td>
+                    <td className="col-category">
                       <span className="category-tag">{p.category}</span>
                     </td>
-                    <td>
+                    <td className="col-price-normal">
                       <span className="price-text-cop normal-price">
                         {p.formattedOriginalPrice || p.formatted_price || formatCOPPreview(p.price)}
                       </span>
                     </td>
-                    <td>
+                    <td className="col-discount">
                       {p.discountStatus === 'ACTIVE' && (
                         <span
                           className="badge-promo-active"
@@ -978,20 +980,20 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                         <span className="badge-promo-none">—</span>
                       )}
                     </td>
-                    <td>
+                    <td className="col-price-final">
                       <span className={`price-final-highlight ${p.hasActiveDiscount ? 'is-discounted' : ''}`}>
                         {p.formattedPrice || p.formatted_price || formatCOPPreview(p.price)}
                       </span>
                     </td>
-                    <td>
+                    <td className="col-sizes">
                       <div className="sizes-badge-container">
                         {Array.isArray(p.sizes) && p.sizes.map((s) => (
                           <span key={s} className="size-chip">{s}</span>
                         ))}
                       </div>
                     </td>
-                    <td>{p.color || 'Negro'}</td>
-                    <td>
+                    <td className="col-color">{p.color || 'Negro'}</td>
+                    <td className="col-stock">
                       <span
                         className={`stock-badge ${
                           stockNum === 0
@@ -1004,7 +1006,7 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                         {stockNum} u. {stockNum <= 10 ? '⚠️' : '✓'}
                       </span>
                     </td>
-                    <td>
+                    <td className="col-status">
                       <button
                         type="button"
                         className={`status-toggle-btn ${isActive ? 'active' : 'inactive'}`}
@@ -1014,7 +1016,7 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                         {isActive ? '🟢 Activo' : '⚪ Inactivo'}
                       </button>
                     </td>
-                    <td>
+                    <td className="col-actions">
                       <div className="action-buttons-cell">
                         <button
                           type="button"
@@ -1022,7 +1024,7 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                           onClick={() => handleOpenDiscountModal(p)}
                           title="Gestionar precios y promociones"
                         >
-                          🏷️ Descuento
+                          🏷️ Promo
                         </button>
                         <button
                           type="button"
@@ -1044,9 +1046,9 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                           type="button"
                           className="btn-action-delete"
                           onClick={() => setDeleteProductTarget(p)}
-                          title="Eliminar producto"
+                          title="Eliminar producto permanentemente"
                         >
-                          🗑️
+                          🗑️ Borrar
                         </button>
                       </div>
                     </td>
