@@ -20,28 +20,42 @@ function matchesCategory(product, filter) {
   const pDep = (product.department || '').toLowerCase();
   const pName = (product.name || '').toLowerCase();
   const pModel = (product.model || '').toLowerCase();
+  const pDesc = (product.description || '').toLowerCase();
 
   if (filter === 'TENIS' || filter === 'ZAPATILLAS' || filter === 'CALZADO') {
     return (
       pCat.includes('zapatilla') ||
       pCat.includes('calzado') ||
       pCat.includes('tenis') ||
+      pCat.includes('sneaker') ||
+      pCat.includes('zapato') ||
       pDep.includes('tenis') ||
       pDep.includes('calzado') ||
+      pDep.includes('zapatilla') ||
       pName.includes('sneaker') ||
       pName.includes('tenis') ||
       pName.includes('zapatilla') ||
-      pModel.includes('apex')
+      pName.includes('air force') ||
+      pName.includes('jordan') ||
+      pName.includes('dunk') ||
+      pName.includes('bota') ||
+      pModel.includes('apex') ||
+      pModel.includes('force') ||
+      pDesc.includes('calzado') ||
+      pDesc.includes('suela') ||
+      pDesc.includes('sneaker')
     );
   }
 
   if (filter === 'HOMBRE') {
     return (
       pDep.includes('hombre') ||
+      pDep.includes('unisex') ||
       pCat.includes('camiseta') ||
       pCat.includes('sudadera') ||
       pCat.includes('pantalon') ||
-      pCat.includes('chaqueta')
+      pCat.includes('chaqueta') ||
+      (!pDep.includes('mujer') && (pCat.includes('zapatilla') || pCat.includes('calzado')))
     );
   }
 
@@ -62,11 +76,14 @@ function matchesCategory(product, filter) {
       pCat.includes('accesorio') ||
       pCat.includes('bolso') ||
       pCat.includes('gorra') ||
+      pCat.includes('cadena') ||
+      pCat.includes('collar') ||
+      pCat.includes('reloj') ||
       pDep.includes('accesorio')
     );
   }
 
-  return pCat.includes(filter.toLowerCase()) || pDep.includes(filter.toLowerCase());
+  return pCat.includes(filter.toLowerCase()) || pDep.includes(filter.toLowerCase()) || pName.includes(filter.toLowerCase());
 }
 
 /**
@@ -92,9 +109,13 @@ export const FeaturedProducts = ({
   const [selectedCardSizes, setSelectedCardSizes] = useState({});
   const [cardToast, setCardToast] = useState(null);
 
-  // Sincronizar catálogo dinámico desde el backend (Neon PostgreSQL)
-  useEffect(() => {
-    fetch('/api/products')
+  // Sincronizar catálogo dinámico desde el backend (Neon PostgreSQL) sin caché obsoleto
+  const fetchProducts = () => {
+    fetch(`/api/products?_t=${Date.now()}`, {
+      headers: {
+        'Cache-Control': 'no-cache, no-store'
+      }
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data) && data.data.length > 0) {
@@ -104,6 +125,28 @@ export const FeaturedProducts = ({
       .catch(() => {
         // En caso de desconexión mantiene el catálogo estático seguro
       });
+  };
+
+  useEffect(() => {
+    fetchProducts();
+
+    // Reaccionar inmediatamente cuando el admin crea, edita o elimina productos
+    const handleCatalogUpdate = () => {
+      fetchProducts();
+    };
+
+    // Al regresar a la pestaña de la tienda, sincronizar catálogo
+    const handleWindowFocus = () => {
+      fetchProducts();
+    };
+
+    window.addEventListener('catalog-updated', handleCatalogUpdate);
+    window.addEventListener('focus', handleWindowFocus);
+
+    return () => {
+      window.removeEventListener('catalog-updated', handleCatalogUpdate);
+      window.removeEventListener('focus', handleWindowFocus);
+    };
   }, []);
 
   // Escuchar eventos globales de filtrado (desde Navbar o Categories) y cambios de hash en la URL
@@ -122,6 +165,8 @@ export const FeaturedProducts = ({
     const handleSearchEvent = (e) => {
       const q = e.detail;
       if (typeof q === 'string') {
+        // Al buscar desde el Navbar, buscar en TODO el catálogo para no limitar por categoría previa
+        setActiveCategory('ALL');
         setSearchQuery(q);
         const section = document.getElementById('productos');
         if (section) {
@@ -230,14 +275,36 @@ export const FeaturedProducts = ({
   const countAccesorios = products.filter((p) => matchesCategory(p, 'ACCESORIOS')).length;
   const countOfertas = products.filter((p) => matchesCategory(p, 'OFERTAS')).length;
 
+  // Conteo de coincidencias globales para búsqueda
+  const cleanQuery = searchQuery.toLowerCase().trim();
+  const globalMatchesCount = cleanQuery
+    ? products.filter((p) => {
+        const name = (p.name || '').toLowerCase();
+        const brand = (p.brand || '').toLowerCase();
+        const model = (p.model || '').toLowerCase();
+        const cat = (p.category || '').toLowerCase();
+        const dep = (p.department || '').toLowerCase();
+        const col = (p.color || '').toLowerCase();
+        const desc = (p.description || '').toLowerCase();
+        return (
+          name.includes(cleanQuery) ||
+          brand.includes(cleanQuery) ||
+          model.includes(cleanQuery) ||
+          cat.includes(cleanQuery) ||
+          dep.includes(cleanQuery) ||
+          col.includes(cleanQuery) ||
+          desc.includes(cleanQuery)
+        );
+      }).length
+    : 0;
+
   // Filtrado reactivo de productos según categoría y término de búsqueda
   const filteredProducts = products.filter((p) => {
     const matchCat = matchesCategory(p, activeCategory);
     if (!matchCat) return false;
 
-    if (!searchQuery.trim()) return true;
+    if (!cleanQuery) return true;
 
-    const q = searchQuery.toLowerCase().trim();
     const name = (p.name || '').toLowerCase();
     const brand = (p.brand || '').toLowerCase();
     const model = (p.model || '').toLowerCase();
@@ -247,13 +314,13 @@ export const FeaturedProducts = ({
     const desc = (p.description || '').toLowerCase();
 
     return (
-      name.includes(q) ||
-      brand.includes(q) ||
-      model.includes(q) ||
-      cat.includes(q) ||
-      dep.includes(q) ||
-      col.includes(q) ||
-      desc.includes(q)
+      name.includes(cleanQuery) ||
+      brand.includes(cleanQuery) ||
+      model.includes(cleanQuery) ||
+      cat.includes(cleanQuery) ||
+      dep.includes(cleanQuery) ||
+      col.includes(cleanQuery) ||
+      desc.includes(cleanQuery)
     );
   });
 
@@ -394,28 +461,45 @@ export const FeaturedProducts = ({
         {filteredProducts.length === 0 ? (
           <div className="products-empty-state">
             <div className="empty-state-icon">👟</div>
-            <h3 className="empty-state-title">No encontramos productos coincidentes</h3>
+            <h3 className="empty-state-title">
+              {globalMatchesCount > 0
+                ? `Encontramos ${globalMatchesCount} producto(s) en otras categorías`
+                : 'No encontramos productos coincidentes'}
+            </h3>
             <p className="empty-state-text">
-              Intenta cambiar la categoría o buscar con otra palabra clave como "tenis", "hoodie", "cargo" o "cadena".
+              {globalMatchesCount > 0
+                ? `Hay ${globalMatchesCount} producto(s) que coinciden con "${searchQuery}" en el catálogo general pero no están en la categoría seleccionada (${activeCategory}).`
+                : 'Intenta cambiar la categoría o buscar con otra palabra clave como "tenis", "air force", "hoodie", "cargo" o "cadena".'}
             </p>
             <button
               type="button"
               className="empty-state-btn"
               onClick={() => {
                 setActiveCategory('ALL');
-                setSearchQuery('');
               }}
             >
-              Ver Todo el Catálogo
+              {globalMatchesCount > 0
+                ? `Ver los ${globalMatchesCount} resultados en Todo el Catálogo`
+                : 'Ver Todo el Catálogo'}
             </button>
           </div>
         ) : (
           <div className="products-grid">
             {filteredProducts.map((product, index) => {
               const favoriteActive = isFavorite(product.id);
-              const isFootwear = (product.category || '').toLowerCase().includes('zapatilla') ||
-                                 (product.department || '').toLowerCase().includes('calzado') ||
-                                 (product.name || '').toLowerCase().includes('sneaker');
+              const pCat = (product.category || '').toLowerCase();
+              const pDep = (product.department || '').toLowerCase();
+              const pName = (product.name || '').toLowerCase();
+              const isFootwear = pCat.includes('zapatilla') ||
+                                 pCat.includes('calzado') ||
+                                 pCat.includes('tenis') ||
+                                 pDep.includes('calzado') ||
+                                 pDep.includes('tenis') ||
+                                 pName.includes('sneaker') ||
+                                 pName.includes('air force') ||
+                                 pName.includes('jordan') ||
+                                 pName.includes('tenis') ||
+                                 pName.includes('zapatilla');
               const chosenSize = selectedCardSizes[product.id] || product.sizes?.[0] || (isFootwear ? '40' : 'M');
 
               return (

@@ -105,6 +105,11 @@ app.get('/api/health', async (req, res) => {
 // 2. RUTA DE PRODUCTOS DEL CATÁLOGO OFICIAL (Neon PostgreSQL / Fallback)
 app.get('/api/products', async (req, res) => {
   try {
+    // Evitar que intermediarios, CDNs o navegadores sirvan productos obsoletos
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+
     const products = await getPublicActiveProducts();
     res.json({
       success: true,

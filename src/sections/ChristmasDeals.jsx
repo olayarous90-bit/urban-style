@@ -51,8 +51,10 @@ export const ChristmasDeals = ({ favorites = [], onToggleFavorite = () => {} }) 
   const [selectedSizes, setSelectedSizes] = useState({});
   const [addedToast, setAddedToast] = useState(null);
 
-  useEffect(() => {
-    fetch('/api/products')
+  const fetchDeals = () => {
+    fetch(`/api/products?_t=${Date.now()}`, {
+      headers: { 'Cache-Control': 'no-cache, no-store' }
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data)) {
@@ -66,6 +68,13 @@ export const ChristmasDeals = ({ favorites = [], onToggleFavorite = () => {} }) 
       .catch((err) => {
         console.warn('Ofertas navideñas funcionando con catálogo base sincronizado:', err);
       });
+  };
+
+  useEffect(() => {
+    fetchDeals();
+    const handleUpdate = () => fetchDeals();
+    window.addEventListener('catalog-updated', handleUpdate);
+    return () => window.removeEventListener('catalog-updated', handleUpdate);
   }, []);
 
   if (!isChristmasMode) return null;

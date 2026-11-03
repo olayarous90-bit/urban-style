@@ -22,8 +22,10 @@ export const Offers = ({ favorites = [], onToggleFavorite = () => {} }) => {
   const [modalFeedback, setModalFeedback] = useState(null);
 
   // Sincronizar con catálogo de Neon si hay precios o descuentos dinámicos activos
-  useEffect(() => {
-    fetch('/api/products')
+  const fetchOffers = () => {
+    fetch(`/api/products?_t=${Date.now()}`, {
+      headers: { 'Cache-Control': 'no-cache, no-store' }
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.data) && data.data.length > 0) {
@@ -58,6 +60,13 @@ export const Offers = ({ favorites = [], onToggleFavorite = () => {} }) => {
       .catch(() => {
         // Mantiene datos completos iniciales seguros
       });
+  };
+
+  useEffect(() => {
+    fetchOffers();
+    const handleUpdate = () => fetchOffers();
+    window.addEventListener('catalog-updated', handleUpdate);
+    return () => window.removeEventListener('catalog-updated', handleUpdate);
   }, []);
 
   // Cerrar modal al presionar la tecla Escape

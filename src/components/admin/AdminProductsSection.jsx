@@ -365,6 +365,7 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
         setIsDiscountModalOpen(false);
         onNotification(`Descuento de "${discountTargetProduct.name}" actualizado exitosamente.`);
         loadProducts();
+        window.dispatchEvent(new CustomEvent('catalog-updated'));
       } else {
         setDiscountModalError(data.message || 'Error guardando descuento.');
       }
@@ -389,6 +390,7 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
       if (res.ok && data.success) {
         onNotification(`Descuento de "${p.name}" ${nextStatus ? 'ACTIVADO' : 'DESACTIVADO'}.`);
         loadProducts();
+        window.dispatchEvent(new CustomEvent('catalog-updated'));
       } else {
         alert(data.message || 'Error conmutando descuento.');
       }
@@ -704,6 +706,7 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
             : `Producto "${formData.name}" creado con sus imágenes en Neon exitosamente.`
         );
         loadProducts();
+        window.dispatchEvent(new CustomEvent('catalog-updated'));
       } else {
         setFormError(data.message || 'Error guardando producto en el servidor.');
       }
@@ -727,6 +730,7 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
       if (res.ok && data.success) {
         onNotification(`Producto "${product.name}" ${newStatus ? 'ACTIVADO' : 'DESACTIVADO'} para la tienda.`);
         loadProducts();
+        window.dispatchEvent(new CustomEvent('catalog-updated'));
       } else {
         alert(data.message || 'Error modificando estado.');
       }
@@ -749,6 +753,7 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
         setDeleteProductTarget(null);
         onNotification(data.message);
         loadProducts();
+        window.dispatchEvent(new CustomEvent('catalog-updated'));
       } else {
         alert(data.message || 'Error eliminando producto.');
       }

@@ -598,7 +598,26 @@ export async function createProduct({
     .replace(/^-+|-+$/g, '')
     .slice(0, 30);
   const id = `prod-${slug || Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-  const defaultImage = '/images/products/prod-tshirt.jpg';
+  
+  // Asignar imagen contextual de alta calidad según la categoría del producto
+  const catLower = (category || '').toLowerCase();
+  const nameLower = (name || '').toLowerCase();
+  let defaultImage = '/images/products/prod-tshirt.jpg';
+  if (catLower.includes('zapatilla') || catLower.includes('calzado') || catLower.includes('tenis') || nameLower.includes('air force') || nameLower.includes('sneaker')) {
+    defaultImage = '/images/products/prod-sneakers.jpg';
+  } else if (catLower.includes('hoodie') || catLower.includes('sudadera')) {
+    defaultImage = '/images/products/prod-hoodie.jpg';
+  } else if (catLower.includes('pantalon') || catLower.includes('cargo')) {
+    defaultImage = '/images/products/prod-pants.jpg';
+  } else if (catLower.includes('chaqueta') || catLower.includes('bomber')) {
+    defaultImage = '/images/products/prod-jacket.jpg';
+  } else if (catLower.includes('gorra') || catLower.includes('cap')) {
+    defaultImage = '/images/products/prod-cap.jpg';
+  } else if (catLower.includes('accesorio') || catLower.includes('cadena') || catLower.includes('collar')) {
+    defaultImage = '/images/products/prod-accessory.jpg';
+  } else if (catLower.includes('bolso') || catLower.includes('maleta')) {
+    defaultImage = '/images/products/prod-bag.jpg';
+  }
 
   let savedInNeon = false;
 
