@@ -21,6 +21,24 @@
   --color-border-subtle: rgba(255, 255, 255, 0.08);
   --color-border-light: rgba(17, 17, 17, 0.1);
 
+  /* Alias de compatibilidad y soporte de contraste */
+  --color-black-main: #111111;
+  --color-black-card: #1C1C1C;
+  --color-bg-light: #181818;
+  --color-gray-border: #333333;
+  --color-accent-orange: #FF5A1F;
+  --color-text-secondary: #CCCCCC;
+  --color-text-muted: #8E8E8E;
+  --font-family-primary: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --letter-spacing-wide: 0.05em;
+  --letter-spacing-wider: 0.1em;
+  --letter-spacing-widest: 0.2em;
+  --letter-spacing-tight: -0.03em;
+  --transition-base: 0.25s ease;
+  --transition-slow: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  --line-height-relaxed: 1.6;
+  --line-height-base: 1.5;
+
   /* --- TIPOGRAFÍA --- */
   --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --font-display: 'Syne', 'Plus Jakarta Sans', sans-serif;
