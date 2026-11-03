@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import './AdminProductsSection.css';
 
 const DEFAULT_CATEGORIES = [
@@ -234,16 +235,72 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
 
   // Abrir modal de gestión rápida de descuentos
   const handleOpenDiscountModal = (p) => {
+    if (!p) return;
+    const basePrice = Number(p.originalPrice || p.price || 0);
+    const pct = Number(p.discountPercent ?? p.discount_percent ?? 0);
     setDiscountTargetProduct(p);
     setDiscountFormData({
-      price: p.originalPrice || p.price || 0,
+      price: basePrice,
       discount_active: Boolean(p.discountActive ?? p.discount_active),
-      discount_percent: Number(p.discountPercent ?? p.discount_percent ?? 0),
+      discount_percent: pct,
+      discount_savings_cop: pct > 0 ? Math.round((basePrice * pct) / 100) : 0,
       discount_start_at: toLocalDatetimeInput(p.discountStartAt || p.discount_start_at),
       discount_end_at: toLocalDatetimeInput(p.discountEndAt || p.discount_end_at)
     });
     setDiscountModalError(null);
     setIsDiscountModalOpen(true);
+  };
+
+  // Cambiar producto objetivo dentro del modal de descuentos
+  const handleSwitchDiscountProduct = (targetId) => {
+    const target = products.find((pr) => pr.id === targetId);
+    if (target) {
+      handleOpenDiscountModal(target);
+    }
+  };
+
+  // Ajuste rápido con chips de porcentaje
+  const handlePresetPercent = (pct) => {
+    const normalPrice = Number(discountFormData.price) || 0;
+    setDiscountFormData((prev) => ({
+      ...prev,
+      discount_percent: pct,
+      discount_savings_cop: Math.round((normalPrice * pct) / 100),
+      discount_active: true
+    }));
+  };
+
+  // Cambio directo de ahorro en pesos COP (calcula el porcentaje equivalente)
+  const handleSavingsCOPChange = (valStr) => {
+    const savingsVal = Number(valStr);
+    const normalPrice = Number(discountFormData.price) || 0;
+    if (isNaN(savingsVal) || savingsVal <= 0 || normalPrice <= 0) {
+      setDiscountFormData((prev) => ({
+        ...prev,
+        discount_percent: 0,
+        discount_savings_cop: 0
+      }));
+      return;
+    }
+    const computedPercent = Math.min(99, Math.max(1, Math.round((savingsVal / normalPrice) * 100)));
+    setDiscountFormData((prev) => ({
+      ...prev,
+      discount_percent: computedPercent,
+      discount_savings_cop: savingsVal,
+      discount_active: true
+    }));
+  };
+
+  // Cambio en el porcentaje (calcula el ahorro en COP)
+  const handlePercentChange = (valStr) => {
+    const pct = Number(valStr);
+    const normalPrice = Number(discountFormData.price) || 0;
+    setDiscountFormData((prev) => ({
+      ...prev,
+      discount_percent: pct,
+      discount_savings_cop: pct > 0 ? Math.round((normalPrice * pct) / 100) : 0,
+      discount_active: pct > 0 ? true : prev.discount_active
+    }));
   };
 
   // Guardar configuración de descuento
@@ -773,13 +830,28 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
           </div>
         </div>
 
-        <button
-          type="button"
-          className="btn-create-product"
-          onClick={handleOpenCreateModal}
-        >
-          <span>＋</span> Nuevo Producto
-        </button>
+        <div className="product-header-actions-group">
+          <button
+            type="button"
+            className="btn-open-discounts-header"
+            onClick={() => {
+              if (products.length > 0) {
+                const target = products.find((p) => Boolean(p.discountActive ?? p.discount_active)) || products[0];
+                handleOpenDiscountModal(target);
+              }
+            }}
+            title="Administrar precios y descuentos promocionales"
+          >
+            🏷️ Gestionar Descuentos
+          </button>
+          <button
+            type="button"
+            className="btn-create-product"
+            onClick={handleOpenCreateModal}
+          >
+            <span>＋</span> Nuevo Producto
+          </button>
+        </div>
       </div>
 
       {/* TABLA DE PRODUCTOS */}
@@ -965,7 +1037,7 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
       </div>
 
       {/* MODAL DE CREACIÓN / EDICIÓN CON GESTIÓN DE IMÁGENES */}
-      {isModalOpen && (
+      {isModalOpen && typeof document !== 'undefined' && createPortal(
         <div className="product-modal-backdrop" onClick={() => setIsModalOpen(false)}>
           <div className="product-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="product-modal-header">
@@ -1405,11 +1477,12 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL DE VISTA PREVIA DE IMAGEN EN TAMAÑO COMPLETO */}
-      {previewModalUrl && (
+      {previewModalUrl && typeof document !== 'undefined' && createPortal(
         <div className="image-lightbox-backdrop" onClick={() => setPreviewModalUrl(null)}>
           <div className="image-lightbox-dialog" onClick={(e) => e.stopPropagation()}>
             <button
@@ -1430,11 +1503,12 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
               </a>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL DE CONFIRMACIÓN DE ELIMINACIÓN DE PRODUCTO */}
-      {deleteProductTarget && (
+      {deleteProductTarget && typeof document !== 'undefined' && createPortal(
         <div className="product-modal-backdrop" onClick={() => setDeleteProductTarget(null)}>
           <div className="delete-confirm-card" onClick={(e) => e.stopPropagation()}>
             <div className="delete-warn-icon">⚠️</div>
@@ -1465,11 +1539,12 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* MODAL DE GESTIÓN RÁPIDA DE DESCUENTOS */}
-      {isDiscountModalOpen && discountTargetProduct && (
+      {isDiscountModalOpen && discountTargetProduct && typeof document !== 'undefined' && createPortal(
         <div className="product-modal-backdrop" onClick={() => setIsDiscountModalOpen(false)}>
           <div className="product-modal-card discount-modal-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="product-modal-header">
@@ -1483,12 +1558,13 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                 type="button"
                 className="btn-modal-close"
                 onClick={() => setIsDiscountModalOpen(false)}
+                aria-label="Cerrar modal de descuentos"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleSaveDiscount}>
+            <form onSubmit={handleSaveDiscount} className="modal-inner-form">
               <div className="product-modal-body">
                 {discountModalError && (
                   <div className="modal-error-box" role="alert">
@@ -1496,16 +1572,41 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                   </div>
                 )}
 
+                {/* SELECTOR DE PRODUCTO Y RESUMEN */}
                 <div className="discount-modal-intro">
+                  {products.length > 1 && (
+                    <div className="modal-field-group discount-product-select-group">
+                      <label className="modal-field-label">
+                        <span>Prenda o Producto a Modificar:</span>
+                      </label>
+                      <select
+                        className="modal-input discount-product-select"
+                        value={discountTargetProduct.id}
+                        onChange={(e) => handleSwitchDiscountProduct(e.target.value)}
+                      >
+                        {products.map((pr) => {
+                          const hasD = Boolean(pr.discountActive ?? pr.discount_active);
+                          return (
+                            <option key={pr.id} value={pr.id}>
+                              {pr.name} — {formatCOPPreview(pr.originalPrice || pr.price)} {hasD ? `🏷️ (-${pr.discountPercent}% OFF)` : ''}
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+                  )}
+
                   <div className="discount-product-summary">
                     <img
                       src={discountTargetProduct.image || discountTargetProduct.images?.[0]?.url || '/images/products/prod-tshirt.jpg'}
                       alt={discountTargetProduct.name}
                       className="discount-thumb"
                     />
-                    <div>
+                    <div className="discount-summary-details">
                       <strong className="summary-title">{discountTargetProduct.name}</strong>
-                      <span className="category-text">{discountTargetProduct.category} | ID: <code>{discountTargetProduct.id}</code></span>
+                      <span className="category-text">
+                        {discountTargetProduct.category} | ID: <code>{discountTargetProduct.id}</code>
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1514,7 +1615,7 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                   {/* PRECIO NORMAL */}
                   <div className="modal-field-group">
                     <label className="modal-field-label">
-                      <span>Precio Normal ($ COP) *</span>
+                      <span>Precio Normal Oficial ($ COP) *</span>
                       <strong style={{ color: 'var(--color-accent, #FF5A1F)' }}>
                         {formatCOPPreview(discountFormData.price)}
                       </strong>
@@ -1525,14 +1626,22 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                       min="1000"
                       step="500"
                       value={discountFormData.price}
-                      onChange={(e) => setDiscountFormData({ ...discountFormData, price: e.target.value })}
+                      onChange={(e) => {
+                        const newPrice = e.target.value;
+                        const pct = Number(discountFormData.discount_percent) || 0;
+                        setDiscountFormData({
+                          ...discountFormData,
+                          price: newPrice,
+                          discount_savings_cop: pct > 0 ? Math.round((Number(newPrice) * pct) / 100) : 0
+                        });
+                      }}
                       required
                     />
                   </div>
 
                   {/* ACTIVACIÓN DE DESCUENTO */}
                   <div className="modal-field-group">
-                    <label className="modal-field-label">Estado del Descuento</label>
+                    <label className="modal-field-label">Estado de la Promoción</label>
                     <label className="discount-toggle-switch">
                       <input
                         type="checkbox"
@@ -1540,34 +1649,84 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                         onChange={(e) => setDiscountFormData({ ...discountFormData, discount_active: e.target.checked })}
                       />
                       <span className="toggle-label">
-                        {discountFormData.discount_active ? '🟢 Descuento Promocional Activado' : '⚪ Descuento Desactivado'}
+                        {discountFormData.discount_active ? '🟢 Descuento Promocional ACTIVADO' : '⚪ Descuento DESACTIVADO'}
                       </span>
                     </label>
                   </div>
 
-                  {/* PORCENTAJE */}
+                  {/* CHIPS RÁPIDOS DE PORCENTAJE */}
                   <div className="modal-field-group">
-                    <label className="modal-field-label">Porcentaje de Descuento (1% - 99%)</label>
-                    <div className="percent-input-wrapper">
-                      <input
-                        type="number"
-                        className="modal-input"
-                        min="1"
-                        max="99"
-                        step="1"
-                        placeholder="20"
-                        value={discountFormData.discount_percent || ''}
-                        onChange={(e) => setDiscountFormData({ ...discountFormData, discount_percent: e.target.value })}
-                        disabled={!discountFormData.discount_active}
-                      />
-                      <span className="percent-suffix">% OFF</span>
+                    <div className="label-with-action">
+                      <label className="modal-field-label">Configurar Descuento</label>
+                      <span className="field-hint-mini">Selecciona un porcentaje o escribe el valor</span>
+                    </div>
+
+                    <div className="discount-preset-chips">
+                      {[10, 15, 20, 25, 30, 40, 50].map((pct) => (
+                        <button
+                          key={pct}
+                          type="button"
+                          className={`preset-chip-btn ${Number(discountFormData.discount_percent) === pct && discountFormData.discount_active ? 'active' : ''}`}
+                          onClick={() => handlePresetPercent(pct)}
+                        >
+                          {pct}% OFF
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* DUAL INPUTS: PORCENTAJE (%) Y REBAJA EN COP ($) */}
+                    <div className="discount-dual-input-row">
+                      <div className="dual-input-col">
+                        <label className="sub-field-label">Porcentaje (1% - 99%)</label>
+                        <div className="percent-input-wrapper">
+                          <input
+                            type="number"
+                            className="modal-input"
+                            min="1"
+                            max="99"
+                            step="1"
+                            placeholder="20"
+                            value={discountFormData.discount_percent || ''}
+                            onChange={(e) => handlePercentChange(e.target.value)}
+                            disabled={!discountFormData.discount_active}
+                          />
+                          <span className="percent-suffix">% OFF</span>
+                        </div>
+                      </div>
+
+                      <div className="dual-input-col">
+                        <label className="sub-field-label">Rebaja en Pesos COP</label>
+                        <div className="percent-input-wrapper">
+                          <input
+                            type="number"
+                            className="modal-input"
+                            min="500"
+                            step="500"
+                            placeholder="Ej: 25000"
+                            value={discountFormData.discount_savings_cop || ''}
+                            onChange={(e) => handleSavingsCOPChange(e.target.value)}
+                            disabled={!discountFormData.discount_active}
+                          />
+                          <span className="percent-suffix">COP</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* FECHAS */}
+                  {/* FECHAS DE INICIO Y FINALIZACIÓN */}
                   <div className="discount-dates-row">
                     <div className="modal-field-group">
-                      <label className="modal-field-label">Fecha y Hora de Inicio</label>
+                      <div className="label-with-action">
+                        <label className="modal-field-label">Fecha y Hora de Inicio</label>
+                        <button
+                          type="button"
+                          className="date-helper-btn"
+                          onClick={() => setDiscountFormData(prev => ({ ...prev, discount_start_at: '' }))}
+                          title="Dejar en blanco para que comience de inmediato"
+                        >
+                          Inmediato
+                        </button>
+                      </div>
                       <input
                         type="datetime-local"
                         className="modal-input"
@@ -1579,7 +1738,41 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                     </div>
 
                     <div className="modal-field-group">
-                      <label className="modal-field-label">Fecha y Hora de Finalización</label>
+                      <div className="label-with-action">
+                        <label className="modal-field-label">Fecha y Hora de Finalización</label>
+                        <div className="date-quick-helpers">
+                          <button
+                            type="button"
+                            className="date-helper-btn"
+                            onClick={() => {
+                              const d = new Date();
+                              d.setDate(d.getDate() + 7);
+                              setDiscountFormData(prev => ({ ...prev, discount_end_at: toLocalDatetimeInput(d.toISOString()) }));
+                            }}
+                          >
+                            +7d
+                          </button>
+                          <button
+                            type="button"
+                            className="date-helper-btn"
+                            onClick={() => {
+                              const d = new Date();
+                              d.setDate(d.getDate() + 30);
+                              setDiscountFormData(prev => ({ ...prev, discount_end_at: toLocalDatetimeInput(d.toISOString()) }));
+                            }}
+                          >
+                            +30d
+                          </button>
+                          <button
+                            type="button"
+                            className="date-helper-btn"
+                            onClick={() => setDiscountFormData(prev => ({ ...prev, discount_end_at: '' }))}
+                            title="Sin fecha límite de finalización"
+                          >
+                            Sin límite
+                          </button>
+                        </div>
+                      </div>
                       <input
                         type="datetime-local"
                         className="modal-input"
@@ -1602,7 +1795,7 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                     );
                     return (
                       <div className="discount-live-preview-box">
-                        <span className="preview-heading">⚡ Cálculo Oficial en Servidor:</span>
+                        <span className="preview-heading">⚡ Cálculo Oficial en Servidor (Neon PostgreSQL):</span>
                         <div className="preview-metrics-row">
                           <div className="preview-metric">
                             <span className="metric-label">Precio Normal:</span>
@@ -1622,9 +1815,9 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                           </div>
                         </div>
                         <div className="preview-status-indicator">
-                          <span>Estado: </span>
+                          <span>Estado estimado: </span>
                           {preview.status === 'ACTIVE' && <strong className="status-badge-active">🟢 ACTIVO AHORA en tienda pública</strong>}
-                          {preview.status === 'SCHEDULED' && <strong className="status-badge-scheduled">🟡 PROGRAMADO (iniciará a la fecha establecida)</strong>}
+                          {preview.status === 'SCHEDULED' && <strong className="status-badge-scheduled">🟡 PROGRAMADO (iniciará en fecha futura)</strong>}
                           {preview.status === 'EXPIRED' && <strong className="status-badge-expired">⌛ VENCIDO (la tienda muestra precio normal)</strong>}
                           {preview.status === 'INACTIVE' && <strong className="status-badge-inactive">⚪ INACTIVO</strong>}
                         </div>
@@ -1653,7 +1846,8 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

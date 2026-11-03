@@ -273,13 +273,15 @@
 .product-modal-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(6px);
-  z-index: 1300;
+  background-color: rgba(0, 0, 0, 0.88);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 2500;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
+  overflow-y: auto;
   animation: fadeIn 0.2s ease-out;
 }
 
@@ -294,9 +296,24 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+  margin: auto;
+}
+
+/* Regla crítica para garantizar que el formulario flexione y permita scroll interno */
+.product-modal-card > form,
+.product-modal-card form,
+.modal-inner-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .product-modal-header {
+  flex-shrink: 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -340,9 +357,30 @@
 .product-modal-body {
   padding: 1.5rem 1.75rem;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+}
+
+/* Scrollbar estilizada y fluida */
+.product-modal-body::-webkit-scrollbar {
+  width: 7px;
+}
+
+.product-modal-body::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.product-modal-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.product-modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--color-accent, #FF5A1F);
 }
 
 .product-form-grid {
@@ -1291,13 +1329,63 @@
   color: #666;
 }
 
+/* Botones de Cabecera */
+.product-header-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.btn-open-discounts-header {
+  background: rgba(255, 90, 31, 0.12);
+  color: var(--color-accent, #FF5A1F);
+  border: 1px solid rgba(255, 90, 31, 0.4);
+  padding: 0.65rem 1.15rem;
+  border-radius: var(--radius-xs, 4px);
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-open-discounts-header:hover {
+  background: var(--color-accent, #FF5A1F);
+  color: #fff;
+  border-color: var(--color-accent, #FF5A1F);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(255, 90, 31, 0.35);
+}
+
 /* Diálogo de Descuento Rápido */
 .discount-modal-dialog {
-  max-width: 580px;
+  max-width: 620px;
 }
 
 .discount-modal-intro {
-  margin-bottom: 1.25rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.discount-product-select-group {
+  margin-bottom: 0.25rem;
+}
+
+.discount-product-select {
+  background-color: #1a1a1e !important;
+  border-color: rgba(255, 255, 255, 0.18) !important;
+  color: #ffffff !important;
+  font-weight: 600;
+}
+
+.discount-product-select:focus {
+  border-color: var(--color-accent, #FF5A1F) !important;
 }
 
 .discount-product-summary {
@@ -1316,12 +1404,23 @@
   border-radius: 6px;
   object-fit: cover;
   border: 1px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+.discount-summary-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
 }
 
 .summary-title {
   display: block;
   font-size: 0.95rem;
   color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .category-text {
@@ -1332,7 +1431,104 @@
 .discount-form-body {
   display: flex;
   flex-direction: column;
+  gap: 1.15rem;
+}
+
+/* Chips de Porcentajes Rápidos */
+.discount-preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.4rem;
+  margin-bottom: 0.65rem;
+}
+
+.preset-chip-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ccc;
+  padding: 0.35rem 0.65rem;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-chip-btn:hover {
+  background: rgba(255, 90, 31, 0.15);
+  border-color: var(--color-accent, #FF5A1F);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.preset-chip-btn.active {
+  background: var(--color-accent, #FF5A1F);
+  border-color: var(--color-accent, #FF5A1F);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(255, 90, 31, 0.4);
+}
+
+/* Fila Dual: Porcentaje y Ahorro en COP */
+.discount-dual-input-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 1rem;
+}
+
+.dual-input-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sub-field-label {
+  font-size: 0.75rem;
+  color: #aaa;
+  font-weight: 600;
+}
+
+.field-hint-mini {
+  font-size: 0.72rem;
+  color: #777;
+  font-weight: 400;
+}
+
+/* Fila de Fechas con Acciones Rápidas */
+.label-with-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.label-with-action .modal-field-label {
+  margin-bottom: 0;
+}
+
+.date-quick-helpers {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.date-helper-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #bbb;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.45rem;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.date-helper-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  border-color: #fff;
 }
 
 .discount-dates-row {
@@ -1341,9 +1537,53 @@
   gap: 1rem;
 }
 
-@media (max-width: 560px) {
+/* ==========================================================================
+   OPTIMIZACIONES MÓVILES Y DE PANTALLA
+   ========================================================================== */
+
+@media (max-width: 640px) {
+  .product-modal-backdrop {
+    padding: 0.5rem;
+    align-items: center;
+  }
+
+  .product-modal-card {
+    max-height: 94vh;
+    border-radius: 8px;
+    width: 100%;
+  }
+
+  .product-modal-header {
+    padding: 1rem 1.25rem;
+  }
+
+  .product-modal-body {
+    padding: 1.15rem 1rem;
+    gap: 1rem;
+  }
+
+  .discount-dual-input-row,
   .discount-dates-row {
     grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .preview-metrics-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .product-modal-footer {
+    padding: 0.85rem 1rem;
+    flex-direction: column-reverse;
+    gap: 0.5rem;
+  }
+
+  .product-modal-footer button {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
   }
 }
+
 
