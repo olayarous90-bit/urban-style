@@ -482,31 +482,75 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
     }
   };
 
-  // Reintento de envío de correo
+  // Reintento de envío de correo (Compra, Guía o Ambos)
   const handleResendEmail = async (orderNumber, emailType = 'ALL') => {
     setResendingEmail(`${orderNumber}-${emailType}`);
+    setActionFeedback(null);
     try {
       const res = await fetch(`/api/admin/orders/${orderNumber}/resend-email`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
         credentials: 'include',
         body: JSON.stringify({ emailType })
       });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        const typeLabel = emailType === 'placed' ? 'de Confirmación' : emailType === 'shipping' ? 'con Guía' : 'de Confirmación y Guía';
-        setActionFeedback(`✅ Notificación ${typeLabel} procesada para #${orderNumber}.`);
-        setTimeout(() => setActionFeedback(null), 4000);
-        // Recargar datos y detalle si está abierto
-        loadAdminData();
-        if (selectedOrder && selectedOrder.order.order_number === orderNumber) {
-          handleViewOrderDetail(orderNumber);
+
+      let data = null;
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        try {
+          data = await res.json();
+        } catch (jsonErr) {
+          console.error('[ResendEmail JSON parse error]', jsonErr);
         }
       } else {
-        alert(data.message || 'Error reenviando correo.');
+        const rawText = await res.text();
+        console.warn('[ResendEmail Non-JSON response]', res.status, rawText.substring(0, 200));
       }
-    } catch {
-      alert('Error de red al reenviar correo.');
+
+      if (res.ok && data && data.success) {
+        const typeLabel = emailType === 'placed'
+          ? 'de confirmación de compra'
+          : emailType === 'shipping'
+          ? 'con la guía de despacho'
+          : 'de compra y guía';
+        const recipient = data.result?.recipient || 'el cliente';
+        setActionFeedback(`✅ Notificación ${typeLabel} enviada a ${recipient} (#${orderNumber}).`);
+        setTimeout(() => setActionFeedback(null), 5000);
+
+        // Recargar datos del panel y refrescar modal de trazabilidad si está abierto
+        await loadDashboardData();
+        if (selectedOrder && selectedOrder.order && selectedOrder.order.order_number === orderNumber) {
+          await handleViewOrderDetail(orderNumber);
+        }
+      } else {
+        // Manejar fallas controladas según código HTTP
+        let errorDetail = data?.message;
+        if (res.status === 401) {
+          errorDetail = 'Tu sesión administrativa ha expirado. Por favor recarga la página o inicia sesión de nuevo.';
+        } else if (res.status === 404) {
+          errorDetail = `El pedido #${orderNumber} no fue encontrado en la base de datos.`;
+        } else if (res.status === 400) {
+          errorDetail = data?.message || 'El pedido aún no tiene una guía generada para reenviar.';
+        } else if (res.status === 502) {
+          errorDetail = data?.message || 'El servidor SMTP rechazó la entrega del correo.';
+        } else if (res.status === 504) {
+          errorDetail = 'Tiempo de espera agotado al conectar con el servidor de correo SMTP en Vercel.';
+        } else if (!errorDetail) {
+          errorDetail = `Error del servidor (${res.status}). Revise la configuración SMTP en la pestaña Configuración.`;
+        }
+
+        alert(`⚠️ No se pudo reenviar la notificación:\n${errorDetail}`);
+      }
+    } catch (err) {
+      console.error('[ResendEmail Network/Client Error]', err);
+      if (err.name === 'TypeError' && err.message?.includes('fetch')) {
+        alert('⚠️ Error de conexión: No se pudo contactar al servidor. Comprueba tu conexión a internet.');
+      } else {
+        alert(`⚠️ Error inesperado al procesar el reenvío: ${err.message || 'Error desconocido'}`);
+      }
     } finally {
       setResendingEmail(null);
     }

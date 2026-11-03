@@ -43,7 +43,10 @@ export async function getTransporterInfo() {
       auth: { user, pass },
       tls: {
         rejectUnauthorized: process.env.NODE_ENV === 'production'
-      }
+      },
+      connectionTimeout: 7000,
+      greetingTimeout: 5000,
+      socketTimeout: 8000
     });
 
     return {
@@ -63,7 +66,10 @@ export async function getTransporterInfo() {
       auth: {
         user: 'resend',
         pass: process.env.RESEND_API_KEY
-      }
+      },
+      connectionTimeout: 7000,
+      greetingTimeout: 5000,
+      socketTimeout: 8000
     });
 
     return {
@@ -75,7 +81,7 @@ export async function getTransporterInfo() {
   }
 
   // 3. Si estamos en producción estricta en Vercel y no hay credenciales
-  if (process.env.NODE_ENV === 'production' && !process.env.ENABLE_ETHEREAL_TEST) {
+  if ((process.env.NODE_ENV === 'production' || process.env.VERCEL) && !process.env.ENABLE_ETHEREAL_TEST) {
     return {
       transporter: null,
       providerName: 'Pendiente de Configuración en Vercel',
@@ -88,7 +94,10 @@ export async function getTransporterInfo() {
   // 4. Modo Desarrollo / Pruebas Controladas: Ethereal SMTP (Servidor SMTP real con buzón web)
   try {
     if (!cachedEtherealAccount) {
-      cachedEtherealAccount = await nodemailer.createTestAccount();
+      cachedEtherealAccount = await Promise.race([
+        nodemailer.createTestAccount(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout de 5s creando cuenta de prueba Ethereal')), 5000))
+      ]);
       console.log(`[Mailer] Buzón de pruebas Ethereal inicializado: ${cachedEtherealAccount.user}`);
     }
 
@@ -99,7 +108,10 @@ export async function getTransporterInfo() {
       auth: {
         user: cachedEtherealAccount.user,
         pass: cachedEtherealAccount.pass
-      }
+      },
+      connectionTimeout: 7000,
+      greetingTimeout: 5000,
+      socketTimeout: 8000
     });
 
     return {
@@ -113,7 +125,7 @@ export async function getTransporterInfo() {
     console.warn('[Mailer Ethereal Warning] No se pudo crear cuenta de prueba Ethereal:', err.message);
     return {
       transporter: null,
-      providerName: 'Local Fallback (Sin conexión)',
+      providerName: 'Local Fallback (HTML Logs & Previews)',
       mode: 'LOCAL_FALLBACK',
       isLive: false,
       reason: err.message
@@ -136,7 +148,10 @@ export function createTransporter() {
       host,
       port,
       secure,
-      auth: { user, pass }
+      auth: { user, pass },
+      connectionTimeout: 7000,
+      greetingTimeout: 5000,
+      socketTimeout: 8000
     });
   }
   return null;
@@ -790,47 +805,69 @@ export async function sendOrderConfirmationEmail({ order, shipment, items = [], 
 /**
  * Reintento controlado de envío de correo por el administrador
  */
-export async function retryOrderEmail(orderId, emailType = 'ALL', force = true) {
-  // Buscar orden en Neon o SQLite
+export async function retryOrderEmail(orderIdentifier, emailType = 'ALL', force = true) {
   let order = null;
   let items = [];
   let shipment = null;
 
-  try {
-    const res = await query('SELECT * FROM orders WHERE id = $1', [orderId]);
-    if (res.rows[0]) {
-      order = res.rows[0];
-      const itRes = await query('SELECT * FROM order_items WHERE order_id = $1', [orderId]);
-      items = itRes.rows;
-      const shRes = await query('SELECT * FROM shipments WHERE order_id = $1', [orderId]);
-      shipment = shRes.rows[0] || null;
-    }
-  } catch (e) {}
+  // 1. Si se pasa un objeto pre-cargado desde getAdminOrderDetails
+  if (typeof orderIdentifier === 'object' && orderIdentifier !== null && orderIdentifier.order) {
+    order = orderIdentifier.order;
+    shipment = orderIdentifier.shipment || null;
+    items = orderIdentifier.items || [];
+    if (orderIdentifier.emailType) emailType = orderIdentifier.emailType;
+    if (orderIdentifier.force !== undefined) force = orderIdentifier.force;
+  } else {
+    // 2. Buscar orden en Neon PostgreSQL o SQLite por order_number o id
+    const orderNumOrId = String(orderIdentifier || '').trim();
+    if (!orderNumOrId) throw new Error('Identificador de pedido no proporcionado.');
 
-  if (!order) {
-    order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId);
-    if (!order) throw new Error('Pedido no encontrado en Neon ni en SQLite');
-    items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(orderId);
-    shipment = db.prepare('SELECT * FROM shipments WHERE order_id = ?').get(orderId);
+    try {
+      const res = await query(
+        'SELECT * FROM orders WHERE order_number = $1 OR id::text = $1 LIMIT 1',
+        [orderNumOrId]
+      );
+      if (res.rows && res.rows[0]) {
+        order = res.rows[0];
+        const itRes = await query('SELECT * FROM order_items WHERE order_id = $1 ORDER BY id ASC', [order.id]);
+        items = itRes.rows || [];
+        const shRes = await query('SELECT * FROM shipments WHERE order_id = $1 LIMIT 1', [order.id]);
+        shipment = shRes.rows[0] || null;
+      }
+    } catch (e) {
+      console.warn('[retryOrderEmail Neon Fallback]', e.message);
+    }
+
+    if (!order) {
+      order = db.prepare('SELECT * FROM orders WHERE order_number = ? OR id = ?').get(orderNumOrId, orderNumOrId);
+      if (!order) throw new Error(`Pedido «${orderNumOrId}» no encontrado en Neon ni en SQLite.`);
+      items = db.prepare('SELECT * FROM order_items WHERE order_id = ? ORDER BY id ASC').all(order.id) || [];
+      shipment = db.prepare('SELECT * FROM shipments WHERE order_id = ?').get(order.id) || null;
+    }
   }
 
   const results = [];
 
-  // Enviar Email 1 si aplica
+  // Enviar Email 1 (Confirmación de compra) si aplica
   if (emailType === 'ALL' || emailType === 'placed' || emailType === 'ORDER_CONFIRMATION') {
     const placedRes = await sendOrderPlacedEmail({ order, items, force });
     results.push(placedRes);
   }
 
-  // Enviar Email 2 si aplica y hay guía
-  if ((emailType === 'ALL' || emailType === 'shipping' || emailType === 'SHIPPING_NOTIFICATION') && shipment) {
-    const shipRes = await sendShippingConfirmationEmail({ order, shipment, items, force });
-    results.push(shipRes);
+  // Enviar Email 2 (Despacho y Guía de envío) si aplica
+  if (emailType === 'ALL' || emailType === 'shipping' || emailType === 'SHIPPING_NOTIFICATION') {
+    if (shipment && shipment.guide_number) {
+      const shipRes = await sendShippingConfirmationEmail({ order, shipment, items, force });
+      results.push(shipRes);
+    } else if (emailType === 'shipping' || emailType === 'SHIPPING_NOTIFICATION') {
+      throw new Error(`El pedido #${order.order_number} no tiene guía de transporte asociada. Genere la guía antes de enviar la notificación.`);
+    }
   }
 
   return {
     success: true,
     orderNumber: order.order_number,
+    recipient: order.customer_email,
     results
   };
 }

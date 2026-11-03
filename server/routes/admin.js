@@ -347,26 +347,70 @@ router.patch('/orders/:orderNumber/status', requireAdmin, async (req, res) => {
 
 /**
  * POST /api/admin/orders/:orderNumber/resend-email
- * Reintento manual de envío de notificación por correo
+ * Reintento manual de envío de notificación por correo (Compra o Guía)
  */
 router.post('/orders/:orderNumber/resend-email', requireAdmin, async (req, res) => {
   try {
     const { orderNumber } = req.params;
     const details = await getAdminOrderDetails(orderNumber);
     if (!details || !details.order) {
-      return res.status(404).json({ success: false, message: 'Pedido no encontrado' });
+      return res.status(404).json({
+        success: false,
+        code: 'ORDER_NOT_FOUND',
+        message: `El pedido #${orderNumber} no fue encontrado en la base de datos.`
+      });
     }
 
     const emailType = req.body?.emailType || 'ALL';
-    const result = await retryOrderEmail(details.order.id, emailType, true);
+
+    // Validación preventiva: Si se pide reenviar la guía de envío, verificar que exista guía
+    if ((emailType === 'shipping' || emailType === 'SHIPPING_NOTIFICATION') && (!details.shipment || !details.shipment.guide_number)) {
+      return res.status(400).json({
+        success: false,
+        code: 'NO_SHIPMENT',
+        message: `El pedido #${orderNumber} no tiene una guía de transporte asociada todavía. Genere el despacho primero antes de reenviarla al cliente.`
+      });
+    }
+
+    // Pasar objeto de detalle completo para evitar desfase de IDs entre Neon y SQLite
+    const result = await retryOrderEmail({
+      order: details.order,
+      shipment: details.shipment,
+      items: details.items,
+      emailType,
+      force: true
+    });
+
+    // Validar si el proveedor SMTP falló en todos los envíos
+    const failedResults = (result.results || []).filter((r) => r && !r.success);
+    if (failedResults.length > 0 && failedResults.length === (result.results || []).length) {
+      return res.status(502).json({
+        success: false,
+        code: 'SMTP_FAILURE',
+        message: failedResults[0]?.error || 'El servidor SMTP no pudo entregar el correo.',
+        result
+      });
+    }
+
+    const typeDesc = emailType === 'placed'
+      ? 'de confirmación de compra'
+      : emailType === 'shipping'
+      ? `con guía de transporte (${details.shipment?.guide_number})`
+      : 'completa (compra y guía)';
 
     res.json({
       success: true,
-      message: `Reintento de correo (${emailType}) procesado exitosamente.`,
+      code: 'EMAIL_RESENT',
+      message: `Notificación ${typeDesc} enviada exitosamente a ${details.order.customer_email}.`,
       result
     });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('[Admin Resend Email Error]', error);
+    res.status(500).json({
+      success: false,
+      code: 'SERVER_ERROR',
+      message: error.message || 'Error interno al procesar el reenvío de correo.'
+    });
   }
 });
 
