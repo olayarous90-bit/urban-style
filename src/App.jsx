@@ -13,14 +13,21 @@ import { Footer } from './sections/Footer';
 import { FEATURED_PRODUCTS } from './data/products';
 import { useScrollReveal } from './hooks/useScrollReveal';
 import { CartProvider } from './context/CartContext';
+import { ChristmasThemeProvider, useChristmasTheme } from './context/ChristmasThemeContext';
+import { SnowfallEffect } from './components/christmas/SnowfallEffect';
+import { ChristmasLights } from './components/christmas/ChristmasLights';
+import { ChristmasTogglePill } from './components/christmas/ChristmasTogglePill';
+import { ChristmasDeals } from './sections/ChristmasDeals';
 import { CartDrawer } from './components/cart/CartDrawer';
 import { CheckoutModal } from './components/checkout/CheckoutModal';
 import { OrderSuccessModal } from './components/checkout/OrderSuccessModal';
 import { AdminDashboard } from './components/admin/AdminDashboard';
 import { AdminLoginPage } from './components/admin/AdminLoginPage';
+import './styles/christmas.css';
 import './App.css';
 
 export function AppContent() {
+  const { isChristmasMode } = useChristmasTheme();
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [currentPath, setCurrentPath] = useState(() => window.location.pathname);
@@ -82,68 +89,87 @@ export function AppContent() {
 
   // 3. TIENDA VIRTUAL PÚBLICA
   return (
-    <div className="app" id="inicio">
-      {/* 1. BARRA DE ANUNCIOS Y 2. BARRA DE NAVEGACIÓN (Sincronizada con Carrito y Favoritos) */}
-      <header className="site-header">
-        <AnnouncementBar />
-        <Navbar
-          favoritesCount={favoriteIds.length}
-          favoriteItems={favoriteItems}
+    <>
+      {/* EFECTO DE NIEVE ANIMADA ELEGANTE (LIGERO, SIN BLOQUEAR INTERACCIÓN) */}
+      <SnowfallEffect />
+
+      <div className="app" id="inicio">
+        {/* 1. BARRA DE ANUNCIOS, LUCES FESTIVAS Y BARRA DE NAVEGACIÓN */}
+        <header className="site-header">
+          <AnnouncementBar />
+          <ChristmasLights />
+          <Navbar
+            favoritesCount={favoriteIds.length}
+            favoriteItems={favoriteItems}
+          />
+        </header>
+
+        {/* CUERPO PRINCIPAL DE LA TIENDA */}
+        <main>
+          {/* 3. PORTADA PRINCIPAL (HERO SECTION CON TEMÁTICA NAVIDEÑA) */}
+          <Hero />
+
+          {/* 4. SECCIÓN VISUAL DE CATEGORÍAS */}
+          <Categories />
+
+          {/* SECCIÓN ESPECIAL: OFERTAS NAVIDEÑAS CON DESCUENTOS REALES CONFIGURADOS */}
+          {isChristmasMode && (
+            <ChristmasDeals
+              favorites={favoriteIds}
+              onToggleFavorite={handleToggleFavorite}
+            />
+          )}
+
+          {/* 5. SECCIÓN DE PRODUCTOS DESTACADOS (CONEXIÓN CON CARRITO Y TALLAS) */}
+          <FeaturedProducts
+            favorites={favoriteIds}
+            onToggleFavorite={handleToggleFavorite}
+          />
+
+          {/* 6. COLECCIÓN DESTACADA (STREETWEAR SIN LÍMITES) */}
+          <FeaturedCollection />
+
+          {/* 7. OFERTAS DE DEMOSTRACIÓN (OFERTAS QUE MARCAN ESTILO) */}
+          <Offers />
+
+          {/* 8. BENEFICIOS DE LA MARCA (FRANJA DE VALOR) */}
+          <BrandBenefits />
+
+          {/* 9. PRESENTACIÓN E IDENTIDAD DE MARCA */}
+          <BrandIdentity />
+
+          {/* 10. FORMULARIO DE NOVEDADES (NEWSLETTER) */}
+          <Newsletter />
+        </main>
+
+        {/* 11. PIE DE PÁGINA (FOOTER OFICIAL) */}
+        <Footer onOpenAdmin={() => navigateTo('/admin/login')} />
+
+        {/* COMPONENTES DE COMERCIO ELECTRÓNICO (OVERLAYS Y MODALES) */}
+        <CartDrawer />
+        <CheckoutModal />
+        <OrderSuccessModal />
+
+        {/* BOTÓN FLOTANTE: CONMUTADOR MODO NAVIDEÑO / ESTILO CLÁSICO */}
+        <ChristmasTogglePill />
+
+        {/* PANEL ADMINISTRATIVO OVERLAY */}
+        <AdminDashboard
+          isOpen={isAdminOpen}
+          onClose={() => setIsAdminOpen(false)}
         />
-      </header>
-
-      {/* CUERPO PRINCIPAL DE LA TIENDA */}
-      <main>
-        {/* 3. PORTADA PRINCIPAL (HERO SECTION) */}
-        <Hero />
-
-        {/* 4. SECCIÓN VISUAL DE CATEGORÍAS */}
-        <Categories />
-
-        {/* 5. SECCIÓN DE PRODUCTOS DESTACADOS (CONEXIÓN CON CARRITO Y TALLAS) */}
-        <FeaturedProducts
-          favorites={favoriteIds}
-          onToggleFavorite={handleToggleFavorite}
-        />
-
-        {/* 6. COLECCIÓN DESTACADA (STREETWEAR SIN LÍMITES) */}
-        <FeaturedCollection />
-
-        {/* 7. OFERTAS DE DEMOSTRACIÓN (OFERTAS QUE MARCAN ESTILO) */}
-        <Offers />
-
-        {/* 8. BENEFICIOS DE LA MARCA (FRANJA DE VALOR) */}
-        <BrandBenefits />
-
-        {/* 9. PRESENTACIÓN E IDENTIDAD DE MARCA */}
-        <BrandIdentity />
-
-        {/* 10. FORMULARIO DE NOVEDADES (NEWSLETTER) */}
-        <Newsletter />
-      </main>
-
-      {/* 11. PIE DE PÁGINA (FOOTER OFICIAL) */}
-      <Footer onOpenAdmin={() => navigateTo('/admin/login')} />
-
-      {/* COMPONENTES DE COMERCIO ELECTRÓNICO (OVERLAYS Y MODALES) */}
-      <CartDrawer />
-      <CheckoutModal />
-      <OrderSuccessModal />
-
-      {/* PANEL ADMINISTRATIVO OVERLAY */}
-      <AdminDashboard
-        isOpen={isAdminOpen}
-        onClose={() => setIsAdminOpen(false)}
-      />
-    </div>
+      </div>
+    </>
   );
 }
 
 export function App() {
   return (
-    <CartProvider>
-      <AppContent />
-    </CartProvider>
+    <ChristmasThemeProvider>
+      <CartProvider>
+        <AppContent />
+      </CartProvider>
+    </ChristmasThemeProvider>
   );
 }
 

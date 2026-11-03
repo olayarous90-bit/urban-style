@@ -1,0 +1,45 @@
+/* ==========================================================================
+   URBAN STYLE - Efecto de Copos de Nieve Festivos
+   ========================================================================== */
+
+.snowfall-canvas-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 999;
+}
+
+.snowflake-particle {
+  position: absolute;
+  top: -12px;
+  background-color: #ffffff;
+  border-radius: 50%;
+  filter: blur(0.6px);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.7), 0 0 12px rgba(212, 175, 55, 0.3);
+  animation-name: snowfall-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+
+@keyframes snowfall-fall {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(var(--drift-x, 20px), 50vh, 0);
+  }
+  100% {
+    transform: translate3d(0, 105vh, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .snowfall-canvas-container {
+    display: none;
+  }
+}

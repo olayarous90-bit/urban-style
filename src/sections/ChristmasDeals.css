@@ -1,0 +1,353 @@
+/* ==========================================================================
+   URBAN STYLE - Sección de Ofertas Navideñas
+   ========================================================================== */
+
+.christmas-deals-section {
+  padding: var(--space-20) 0;
+  background: radial-gradient(circle at 50% 0%, rgba(22, 91, 51, 0.22) 0%, rgba(17, 17, 17, 0.98) 65%), #0c120f;
+  border-top: 1px solid rgba(212, 175, 55, 0.25);
+  border-bottom: 1px solid rgba(212, 43, 43, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+.christmas-deals-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(245, 197, 24, 0.6), transparent);
+}
+
+.christmas-header {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto var(--space-12) auto;
+}
+
+.christmas-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 1rem;
+  background: rgba(212, 43, 43, 0.16);
+  border: 1px solid rgba(212, 43, 43, 0.5);
+  border-radius: var(--radius-full);
+  margin-bottom: var(--space-4);
+  box-shadow: 0 0 16px rgba(212, 43, 43, 0.25);
+}
+
+.christmas-badge-icon {
+  font-size: 0.95rem;
+}
+
+.christmas-badge-text {
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  color: #ff6b6b;
+}
+
+.christmas-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  font-weight: var(--font-weight-extrabold);
+  color: var(--color-white);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-tight);
+  margin-bottom: var(--space-3);
+  line-height: 1.1;
+}
+
+.title-accent-gold {
+  color: #F5C518;
+  text-shadow: 0 0 20px rgba(245, 197, 24, 0.35);
+}
+
+.christmas-subtitle {
+  font-family: var(--font-sans);
+  font-size: clamp(0.95rem, 1.2vw, 1.05rem);
+  color: #c4c4c4;
+  line-height: 1.6;
+}
+
+/* Toast de Alerta */
+.christmas-toast-alert {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f3826;
+  border: 1px solid #f5c518;
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  font-size: 0.9rem;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(245, 197, 24, 0.3);
+  z-index: 1000;
+  animation: toastFadeIn 0.3s ease;
+}
+
+@keyframes toastFadeIn {
+  from { opacity: 0; transform: translate(-50%, 15px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Cuadrícula de Tarjetas */
+.christmas-deals-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-6);
+  width: 100%;
+}
+
+@media (max-width: 992px) {
+  .christmas-deals-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .christmas-deals-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Tarjeta Individual de Oferta */
+.christmas-card {
+  background: #141816;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: all var(--transition-normal);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+}
+
+.christmas-card:hover {
+  transform: translateY(-5px);
+  border-color: #f5c518;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.8), 0 0 25px rgba(245, 197, 24, 0.25);
+}
+
+/* Cinta de Regalo en la Tarjeta */
+.christmas-card-ribbon {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  background: linear-gradient(135deg, #d42b2b, #b91c1c);
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: var(--radius-xs);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* Contenedor de Medios */
+.christmas-media-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background-color: #1a1e1c;
+  overflow: hidden;
+}
+
+.christmas-card-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.christmas-card:hover .christmas-card-image {
+  transform: scale(1.06);
+}
+
+.christmas-discount-tag {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 2;
+  background: #f5c518;
+  color: #111;
+  padding: 4px 9px;
+  border-radius: var(--radius-xs);
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.christmas-fav-btn {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(17, 17, 17, 0.75);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.christmas-fav-btn:hover {
+  background: #d42b2b;
+  color: #fff;
+  border-color: #d42b2b;
+}
+
+.christmas-fav-btn.is-active {
+  background: #d42b2b;
+  color: #fff;
+  border-color: #d42b2b;
+}
+
+/* Información de la Tarjeta */
+.christmas-card-info {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.christmas-category {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #10b981;
+  letter-spacing: 0.08em;
+}
+
+.christmas-product-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0.2rem 0;
+  line-height: 1.3;
+}
+
+.christmas-pricing-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.current-price-gold {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: #f5c518;
+}
+
+.original-price-strike {
+  font-size: 0.85rem;
+  color: #888;
+  text-decoration: line-through;
+}
+
+.savings-badge-pill {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #10b981;
+  display: inline-block;
+}
+
+/* Selector de Tallas */
+.christmas-sizes-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sizes-label {
+  font-size: 0.72rem;
+  color: #999;
+  text-transform: uppercase;
+}
+
+.sizes-chips-list {
+  display: flex;
+  gap: 4px;
+}
+
+.size-mini-btn {
+  background: #1e2421;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ccc;
+  padding: 3px 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.size-mini-btn:hover {
+  border-color: #f5c518;
+  color: #fff;
+}
+
+.size-mini-btn.active {
+  background: #f5c518;
+  border-color: #f5c518;
+  color: #111;
+}
+
+/* Botón Añadir a la Bolsa */
+.christmas-add-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #d42b2b, #b91c1c);
+  color: #fff;
+  border: 1px solid rgba(245, 197, 24, 0.35);
+  border-radius: var(--radius-xs);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  box-shadow: 0 4px 12px rgba(212, 43, 43, 0.35);
+}
+
+.christmas-add-btn:hover {
+  background: linear-gradient(135deg, #e53e3e, #d42b2b);
+  border-color: #f5c518;
+  box-shadow: 0 6px 18px rgba(212, 43, 43, 0.5), 0 0 12px rgba(245, 197, 24, 0.4);
+  transform: translateY(-1px);
+}

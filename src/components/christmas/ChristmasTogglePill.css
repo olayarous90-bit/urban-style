@@ -1,0 +1,81 @@
+/* ==========================================================================
+   URBAN STYLE - Botón Flotante de Conmutación de Modo Navideño
+   ========================================================================== */
+
+.christmas-toggle-dock {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  z-index: 998;
+}
+
+.theme-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 9999px;
+  font-family: var(--font-sans, sans-serif);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(10px);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.theme-switch-btn.is-christmas {
+  background: rgba(15, 56, 38, 0.92);
+  color: #fff;
+  border-color: rgba(212, 175, 55, 0.5);
+  box-shadow: 0 4px 20px rgba(212, 43, 43, 0.3), 0 0 10px rgba(212, 175, 55, 0.2);
+}
+
+.theme-switch-btn.is-christmas:hover {
+  background: #0f3826;
+  border-color: #f5c518;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(212, 43, 43, 0.4), 0 0 15px rgba(212, 175, 55, 0.4);
+}
+
+.theme-switch-btn.is-classic {
+  background: rgba(24, 24, 27, 0.92);
+  color: #fff;
+  border-color: rgba(255, 90, 31, 0.4);
+}
+
+.theme-switch-btn.is-classic:hover {
+  background: #18181b;
+  border-color: var(--color-accent, #FF5A1F);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(255, 90, 31, 0.35);
+}
+
+.theme-switch-icon {
+  font-size: 1.05rem;
+}
+
+.theme-switch-text {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.theme-switch-action {
+  font-size: 0.7rem;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 2px 7px;
+  border-radius: 9999px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+@media (max-width: 640px) {
+  .christmas-toggle-dock {
+    bottom: 16px;
+    left: 16px;
+  }
+
+  .theme-switch-action {
+    display: none;
+  }
+}

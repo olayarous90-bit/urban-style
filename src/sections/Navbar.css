@@ -604,3 +604,122 @@
   }
 }
 
+/* ==========================================================================
+   ESTILOS NAVIDEÑOS DE NAVBAR (URBAN STYLE XMAS)
+   ========================================================================== */
+
+.brand-christmas-ornament {
+  display: inline-flex;
+  align-items: center;
+  font-size: 1.1rem;
+  margin-left: 4px;
+  animation: ornamentSway 3s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+@keyframes ornamentSway {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(10deg); }
+  75% { transform: rotate(-10deg); }
+}
+
+.nav-link-christmas {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  color: #F5C518 !important;
+  font-weight: 700 !important;
+  position: relative;
+  text-shadow: 0 0 10px rgba(245, 197, 24, 0.3);
+}
+
+.nav-link-christmas:hover {
+  color: #FFFFFF !important;
+  text-shadow: 0 0 14px rgba(212, 43, 43, 0.6);
+}
+
+.nav-link-christmas-icon {
+  font-size: 1rem;
+}
+
+.nav-tag-christmas {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 1px 5px;
+  background: linear-gradient(135deg, #D42B2B, #9E1010);
+  color: #FFFFFF;
+  border-radius: 4px;
+  border: 1px solid rgba(245, 197, 24, 0.5);
+  box-shadow: 0 0 8px rgba(212, 43, 43, 0.5);
+  animation: pulseChristmas 2s infinite;
+}
+
+@keyframes pulseChristmas {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.85; }
+}
+
+.nav-theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  transition: transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.nav-theme-toggle-btn:hover {
+  transform: scale(1.15);
+  border-color: rgba(245, 197, 24, 0.6);
+}
+
+.nav-theme-toggle-btn.active-christmas {
+  background: rgba(212, 43, 43, 0.15);
+  border-color: rgba(212, 43, 43, 0.4);
+}
+
+/* Mobile drawer festive accents */
+.mobile-nav-christmas {
+  background: linear-gradient(90deg, rgba(212, 43, 43, 0.15), rgba(15, 56, 38, 0.15)) !important;
+  border-left: 3px solid #D42B2B !important;
+  color: #F5C518 !important;
+  font-weight: 700 !important;
+}
+
+.mobile-christmas-tag {
+  background: #D42B2B;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(245, 197, 24, 0.4);
+}
+
+.mobile-theme-toggle-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(245, 197, 24, 0.3);
+  color: #FFFFFF;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.mobile-theme-toggle-btn:hover {
+  background: rgba(245, 197, 24, 0.15);
+  border-color: #F5C518;
+}
+

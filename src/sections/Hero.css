@@ -325,3 +325,72 @@
     transform: none !important;
   }
 }
+
+/* ==========================================================================
+   ESTILOS DE CAMPAÑA NAVIDEÑA (HERO SECTION)
+   ========================================================================== */
+
+.is-christmas-hero {
+  border-bottom: 2px solid rgba(212, 175, 55, 0.35);
+}
+
+.christmas-overlay {
+  background: radial-gradient(circle at 75% 25%, rgba(212, 43, 43, 0.28) 0%, rgba(15, 56, 38, 0.45) 50%, rgba(11, 11, 11, 0.95) 90%),
+              linear-gradient(180deg, rgba(11, 11, 11, 0.3) 0%, rgba(11, 11, 11, 0.85) 75%, #0b0b0b 100%) !important;
+}
+
+.christmas-campaign-badge {
+  background-color: rgba(212, 43, 43, 0.22) !important;
+  border: 1px solid rgba(245, 197, 24, 0.5) !important;
+  box-shadow: 0 0 15px rgba(212, 43, 43, 0.35);
+}
+
+.hero-badge-christmas-icon {
+  font-size: 0.95rem;
+  margin-right: 0.2rem;
+}
+
+.christmas-hero-headline {
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.9);
+}
+
+.christmas-accent-gold {
+  color: #F5C518 !important;
+  text-shadow: 0 0 25px rgba(245, 197, 24, 0.5);
+}
+
+.hero-slogan-festive {
+  font-family: var(--font-display, sans-serif);
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+  font-weight: 800;
+  color: #ff6b6b;
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  margin-bottom: var(--space-3);
+  text-shadow: 0 2px 10px rgba(212, 43, 43, 0.4);
+}
+
+.christmas-primary-cta {
+  background: linear-gradient(135deg, #D42B2B 0%, #B91C1C 100%) !important;
+  border: 1px solid rgba(245, 197, 24, 0.5) !important;
+  box-shadow: 0 4px 22px rgba(212, 43, 43, 0.5), 0 0 18px rgba(245, 197, 24, 0.25) !important;
+}
+
+.christmas-primary-cta:hover {
+  background: linear-gradient(135deg, #E53E3E 0%, #D42B2B 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(212, 43, 43, 0.7), 0 0 25px rgba(245, 197, 24, 0.4) !important;
+}
+
+.christmas-secondary-cta {
+  border-color: rgba(245, 197, 24, 0.5) !important;
+  color: #F5C518 !important;
+}
+
+.christmas-secondary-cta:hover {
+  background-color: #F5C518 !important;
+  color: #111 !important;
+  border-color: #F5C518 !important;
+  box-shadow: 0 4px 18px rgba(245, 197, 24, 0.35) !important;
+}
+

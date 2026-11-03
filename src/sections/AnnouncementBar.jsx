@@ -1,26 +1,31 @@
 import React from 'react';
 import { ANNOUNCEMENT_CONFIG } from '../data/navigation';
+import { useChristmasTheme } from '../context/ChristmasThemeContext';
 import './AnnouncementBar.css';
 
 /**
  * Barra de anuncios superior de URBAN STYLE.
- * Totalmente configurable, compacta y responsiva.
- * 
- * @param {Object} props
- * @param {string} [props.prefix] - Texto inicial destacado
- * @param {string} [props.separator] - Separador estilizado
- * @param {string} [props.suffix] - Texto secundario
- * @param {string} [props.message] - Texto completo configurable alternativo
+ * Totalmente configurable, compacta y responsiva con temática navideña.
  */
 export const AnnouncementBar = ({
-  prefix = ANNOUNCEMENT_CONFIG.prefix,
+  prefix,
   separator = ANNOUNCEMENT_CONFIG.separator,
-  suffix = ANNOUNCEMENT_CONFIG.suffix,
+  suffix,
   message
 }) => {
-  // Si se pasa un mensaje directo que contenga un separador '|', se formatea automáticamente
-  let displayPrefix = prefix;
-  let displaySuffix = suffix;
+  const { isChristmasMode } = useChristmasTheme();
+
+  // Si no se pasaron props explícitas, alternar dinámicamente entre festivo y clásico
+  const defaultPrefix = isChristmasMode
+    ? '🎄 ¡LA NAVIDAD LLEGÓ A URBAN STYLE!'
+    : ANNOUNCEMENT_CONFIG.prefix;
+
+  const defaultSuffix = isChristmasMode
+    ? 'REGALA ESTILO, REGALA MODA — ENVÍOS A TODA COLOMBIA'
+    : ANNOUNCEMENT_CONFIG.suffix;
+
+  let displayPrefix = prefix || defaultPrefix;
+  let displaySuffix = suffix || defaultSuffix;
 
   if (message) {
     if (message.includes('|')) {

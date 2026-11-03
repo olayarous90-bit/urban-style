@@ -1,0 +1,139 @@
+/* ==========================================================================
+   URBAN STYLE - ESTILOS TEMÁTICOS MODO NAVIDEÑO (CHRISTMAS EDITION)
+   Paleta: Rojo Navideño (#D42B2B), Verde Pino (#0F3826), Dorado (#D4AF37 / #F5C518),
+           Blanco Nieve (#FFFFFF), Negro Original (#111111)
+   ========================================================================== */
+
+:root {
+  --xmas-red: #D42B2B;
+  --xmas-red-dark: #9B1A1A;
+  --xmas-pine: #0F3826;
+  --xmas-pine-dark: #072216;
+  --xmas-gold: #D4AF37;
+  --xmas-gold-bright: #F5C518;
+  --xmas-snow: #FFFFFF;
+}
+
+/* Modificaciones dinámicas cuando el modo navideño está activo en <body> */
+body.theme-christmas {
+  /* Resplandor sutil festivo en selección de texto */
+  ::selection {
+    background-color: var(--xmas-red);
+    color: var(--xmas-snow);
+  }
+}
+
+/* 1. DETALLES NAVIDEÑOS EN BOTONES */
+body.theme-christmas .btn-primary {
+  background: linear-gradient(135deg, var(--color-white) 0%, #F5F5F5 100%);
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-normal);
+}
+
+body.theme-christmas .btn-primary:hover {
+  background: linear-gradient(135deg, var(--xmas-gold-bright) 0%, #E5B409 100%);
+  color: #000000;
+  box-shadow: 0 0 20px rgba(245, 197, 24, 0.45);
+  transform: translateY(-2px);
+}
+
+/* Efecto brillo festivo sutil en botones principales al pasar el cursor */
+body.theme-christmas .btn-primary::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 40%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.5),
+    transparent
+  );
+  transform: rotate(25deg);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+body.theme-christmas .btn-primary:hover::after {
+  opacity: 1;
+  animation: shineShimmer 1.2s infinite;
+}
+
+@keyframes shineShimmer {
+  0% { left: -60%; }
+  100% { left: 140%; }
+}
+
+/* Botones secundarios con acento dorado festivo */
+body.theme-christmas .btn-secondary:hover {
+  border-color: var(--xmas-gold-bright);
+  color: var(--xmas-gold-bright);
+  box-shadow: 0 0 15px rgba(245, 197, 24, 0.25);
+}
+
+/* 2. DETALLES NAVIDEÑOS EN TARJETAS DE PRODUCTOS */
+body.theme-christmas .product-card {
+  position: relative;
+  transition: transform var(--transition-normal),
+              box-shadow var(--transition-normal),
+              border-color var(--transition-normal);
+}
+
+body.theme-christmas .product-card:hover {
+  border-color: rgba(212, 175, 55, 0.4);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7),
+              0 0 18px rgba(212, 43, 43, 0.25),
+              0 0 10px rgba(245, 197, 24, 0.15);
+}
+
+/* Indicador festivo navideño en insignias de descuento de tarjetas */
+body.theme-christmas .product-card .card-discount-badge,
+body.theme-christmas .discount-tag,
+body.theme-christmas .product-badge-discount {
+  background: linear-gradient(135deg, var(--xmas-red) 0%, var(--xmas-red-dark) 100%) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(245, 197, 24, 0.6) !important;
+  box-shadow: 0 2px 8px rgba(212, 43, 43, 0.45) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.05em !important;
+}
+
+/* Toque festivo en botones de añadir a la bolsa dentro de las tarjetas */
+body.theme-christmas .product-card .card-add-btn:hover {
+  background-color: var(--xmas-gold-bright) !important;
+  color: #000000 !important;
+  border-color: var(--xmas-gold-bright) !important;
+}
+
+/* 3. DETALLES FESTIVOS EN EL ENCABEZADO Y ANUNCIOS */
+body.theme-christmas .announcement-bar {
+  background: linear-gradient(90deg, #071E14 0%, #170505 50%, #071E14 100%);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.35);
+}
+
+body.theme-christmas .announcement-dot {
+  background-color: var(--xmas-gold-bright);
+  box-shadow: 0 0 10px var(--xmas-gold-bright);
+}
+
+body.theme-christmas .announcement-highlight {
+  color: #FFFFFF;
+  text-shadow: 0 0 12px rgba(245, 197, 24, 0.5);
+}
+
+/* 4. SECCIÓN HERO EN MODO NAVIDEÑO */
+body.theme-christmas .hero-badge {
+  border-color: rgba(245, 197, 24, 0.6) !important;
+  box-shadow: 0 0 15px rgba(212, 43, 43, 0.35) !important;
+}
+
+/* 5. RESPETO A PREFERENCIAS DE REDUCCIÓN DE MOVIMIENTO */
+@media (prefers-reduced-motion: reduce) {
+  body.theme-christmas .btn-primary::after {
+    animation: none !important;
+  }
+}

@@ -10,6 +10,7 @@ import {
   ChevronRightIcon
 } from '../components/common/icons';
 import { useCart } from '../context/CartContext';
+import { useChristmasTheme } from '../context/ChristmasThemeContext';
 import './Navbar.css';
 
 /**
@@ -18,6 +19,7 @@ import './Navbar.css';
  */
 export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
   const { cartCount, openCart, isCartOpen } = useCart();
+  const { isChristmasMode, toggleChristmasTheme } = useChristmasTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
@@ -124,6 +126,11 @@ export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
             >
               <span className="brand-text">{BRAND_INFO.name}</span>
               <span className="brand-accent-dot" aria-hidden="true" />
+              {isChristmasMode && (
+                <span className="brand-christmas-ornament" title="Modo Navideño Activo" aria-hidden="true">
+                  🎄
+                </span>
+              )}
             </a>
 
             {/* CENTRO: ENLACES DE NAVEGACIÓN EN ESCRITORIO */}
@@ -140,10 +147,34 @@ export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
                   </a>
                 </li>
               ))}
+              {isChristmasMode && (
+                <li>
+                  <a
+                    href="#ofertas-navidenas"
+                    className="nav-link nav-link-christmas"
+                    onClick={(e) => handleNavClick(e, '#ofertas-navidenas')}
+                  >
+                    <span className="nav-link-christmas-icon">🎁</span>
+                    <span>Ofertas Navideñas</span>
+                    <span className="nav-tag-christmas" aria-hidden="true">HOT</span>
+                  </a>
+                </li>
+              )}
             </ul>
 
             {/* LADO DERECHO: ACCIONES E ICONOS */}
             <div className="navbar-actions">
+              {/* Botón Conmutador Navideño / Clásico */}
+              <button
+                type="button"
+                className={`action-btn nav-theme-toggle-btn ${isChristmasMode ? 'active-christmas' : ''}`}
+                onClick={toggleChristmasTheme}
+                title={isChristmasMode ? 'Cambiar a Estilo Clásico' : 'Activar Modo Navideño 🎄'}
+                aria-label={isChristmasMode ? 'Cambiar a Estilo Clásico' : 'Activar Modo Navideño'}
+              >
+                <span className="theme-toggle-icon">{isChristmasMode ? '🎄' : '✨'}</span>
+              </button>
+
               {/* Botón de Búsqueda */}
               <button
                 type="button"
@@ -314,6 +345,18 @@ export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
 
             <nav aria-label="Categorías en menú móvil">
               <ul className="mobile-nav-list">
+                {isChristmasMode && (
+                  <li>
+                    <a
+                      href="#ofertas-navidenas"
+                      className="mobile-nav-link mobile-nav-christmas"
+                      onClick={(e) => handleNavClick(e, '#ofertas-navidenas')}
+                    >
+                      <span className="mobile-christmas-text">🎁 Ofertas Navideñas</span>
+                      <span className="mobile-christmas-tag">HOT</span>
+                    </a>
+                  </li>
+                )}
                 {NAV_LINKS.map((link) => (
                   <li key={link.id}>
                     <a
@@ -330,6 +373,13 @@ export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
             </nav>
 
             <div className="mobile-drawer-footer">
+              <button
+                type="button"
+                className="mobile-theme-toggle-btn"
+                onClick={toggleChristmasTheme}
+              >
+                {isChristmasMode ? '✨ Volver a Estilo Clásico' : '🎄 Activar Modo Navideño'}
+              </button>
               <p className="mobile-slogan">"{BRAND_INFO.slogan}"</p>
             </div>
           </aside>
