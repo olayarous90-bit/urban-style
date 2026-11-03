@@ -23,7 +23,9 @@ import {
   createProduct,
   updateProduct,
   toggleProductStatus,
-  deleteProduct
+  deleteProduct,
+  updateProductDiscount,
+  toggleProductDiscount
 } from '../services/productService.js';
 import {
   uploadProductImage,
@@ -506,8 +508,8 @@ router.get('/config-status', requireAdmin, (req, res) => {
  */
 router.get('/products', requireAdmin, async (req, res) => {
   try {
-    const { search, category, status } = req.query;
-    const products = await getAdminProducts({ search, category, status });
+    const { search, category, status, discount_status } = req.query;
+    const products = await getAdminProducts({ search, category, status, discount_status });
     res.json({
       success: true,
       count: products.length,
@@ -659,6 +661,57 @@ router.delete('/products/:id', requireAdmin, async (req, res) => {
     res.json(result);
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * PUT /api/admin/products/:id/discount
+ * Configura o modifica la promoción, porcentaje y fechas del producto
+ */
+router.put('/products/:id/discount', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { price, discount_active, discount_percent, discount_start_at, discount_end_at } = req.body;
+
+    const updated = await updateProductDiscount(id, {
+      price,
+      discount_active,
+      discount_percent,
+      discount_start_at,
+      discount_end_at
+    });
+
+    res.json({
+      success: true,
+      message: 'Configuración de descuento y precios actualizada exitosamente.',
+      product: updated
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * PATCH /api/admin/products/:id/discount/status
+ * Activa o desactiva rápidamente el descuento de un producto
+ */
+router.patch('/products/:id/discount/status', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { discount_active } = req.body;
+
+    if (discount_active === undefined) {
+      return res.status(400).json({ success: false, message: 'El campo discount_active es requerido.' });
+    }
+
+    const updated = await toggleProductDiscount(id, discount_active);
+    res.json({
+      success: true,
+      message: `Descuento ${updated.discountActive ? 'activado' : 'desactivado'} para el producto.`,
+      product: updated
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
   }
 });
 

@@ -997,3 +997,353 @@
   text-decoration: underline;
 }
 
+/* ==========================================================================
+   ESTILOS DE ADMINISTRACIÓN DE DESCUENTOS Y PROMOCIONES
+   ========================================================================== */
+
+/* Badges de Estado de Promoción */
+.badge-promo-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  padding: 0.25rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.badge-promo-scheduled {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  padding: 0.25rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.badge-promo-expired {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(156, 163, 175, 0.15);
+  color: #9ca3af;
+  border: 1px solid rgba(156, 163, 175, 0.3);
+  padding: 0.25rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.badge-promo-none {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+/* Columna de Precios */
+.price-text-cop.normal-price {
+  font-size: 0.85rem;
+  color: #aaa;
+  font-weight: 600;
+}
+
+.price-final-highlight {
+  font-family: var(--font-display, sans-serif);
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.price-final-highlight.is-discounted {
+  color: var(--color-accent, #FF5A1F);
+}
+
+/* Botón de Descuento en Tabla */
+.btn-action-discount {
+  background: rgba(255, 90, 31, 0.1);
+  color: var(--color-accent, #FF5A1F);
+  border: 1px solid rgba(255, 90, 31, 0.35);
+  border-radius: 4px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-action-discount:hover {
+  background: var(--color-accent, #FF5A1F);
+  color: #fff;
+  border-color: var(--color-accent, #FF5A1F);
+  transform: translateY(-1px);
+}
+
+/* Panel de Configuración de Descuentos en Modal */
+.discount-management-panel {
+  background: #141416;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.discount-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  padding-bottom: 0.85rem;
+}
+
+.discount-panel-title {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 0.25rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.discount-panel-desc {
+  font-size: 0.78rem;
+  color: #888;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.discount-toggle-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0.4rem 0.75rem;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.discount-toggle-switch:hover {
+  border-color: var(--color-accent, #FF5A1F);
+}
+
+.discount-toggle-switch input[type="checkbox"] {
+  accent-color: var(--color-accent, #FF5A1F);
+  cursor: pointer;
+}
+
+.discount-toggle-switch .toggle-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #eee;
+}
+
+.discount-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@media (max-width: 768px) {
+  .discount-fields-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.percent-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.percent-input-wrapper .modal-input {
+  padding-right: 4.5rem;
+}
+
+.percent-suffix {
+  position: absolute;
+  right: 12px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--color-accent, #FF5A1F);
+  pointer-events: none;
+}
+
+.field-hint {
+  display: block;
+  font-size: 0.7rem;
+  color: #777;
+  margin-top: 0.25rem;
+}
+
+/* Caja de Previsualización en Tiempo Real */
+.discount-live-preview-box {
+  grid-column: 1 / -1;
+  background: #0d0d0f;
+  border: 1px solid rgba(255, 90, 31, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 0.5rem;
+}
+
+.preview-heading {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--color-accent, #FF5A1F);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 0.65rem;
+}
+
+.preview-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+@media (max-width: 640px) {
+  .preview-metrics-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.preview-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.preview-metric .metric-label {
+  font-size: 0.7rem;
+  color: #888;
+  text-transform: uppercase;
+}
+
+.preview-metric .metric-val {
+  font-family: var(--font-display, sans-serif);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.preview-metric .discount-val {
+  color: var(--color-accent, #FF5A1F);
+}
+
+.preview-metric .savings-val {
+  color: #10b981;
+}
+
+.preview-metric.final-metric .highlight-final {
+  font-size: 1.15rem;
+  color: var(--color-accent, #FF5A1F);
+  font-weight: 900;
+}
+
+.preview-status-indicator {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: #aaa;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.status-badge-active {
+  color: #10b981;
+}
+
+.status-badge-scheduled {
+  color: #f59e0b;
+}
+
+.status-badge-expired {
+  color: #9ca3af;
+}
+
+.status-badge-inactive {
+  color: #666;
+}
+
+/* Diálogo de Descuento Rápido */
+.discount-modal-dialog {
+  max-width: 580px;
+}
+
+.discount-modal-intro {
+  margin-bottom: 1.25rem;
+}
+
+.discount-product-summary {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: #18181b;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.discount-thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.summary-title {
+  display: block;
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.category-text {
+  font-size: 0.78rem;
+  color: #888;
+}
+
+.discount-form-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.discount-dates-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 560px) {
+  .discount-dates-row {
+    grid-template-columns: 1fr;
+  }
+}
+

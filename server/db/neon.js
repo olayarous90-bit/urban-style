@@ -118,8 +118,31 @@ export async function initNeonTables() {
         color VARCHAR(100),
         stock INTEGER DEFAULT 50,
         is_active BOOLEAN DEFAULT TRUE,
+        discount_percent INTEGER DEFAULT 0,
+        discount_active BOOLEAN DEFAULT FALSE,
+        discount_start_at TIMESTAMPTZ,
+        discount_end_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_percent INTEGER DEFAULT 0;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_active BOOLEAN DEFAULT FALSE;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_start_at TIMESTAMPTZ;
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS discount_end_at TIMESTAMPTZ;
+
+      CREATE TABLE IF NOT EXISTS product_images (
+        id VARCHAR(64) PRIMARY KEY,
+        product_id VARCHAR(64) NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+        url TEXT NOT NULL,
+        alt_text VARCHAR(255),
+        is_primary BOOLEAN DEFAULT FALSE,
+        sort_order INTEGER DEFAULT 0,
+        file_size INTEGER DEFAULT 0,
+        mime_type VARCHAR(64) DEFAULT 'image/jpeg',
+        storage_key VARCHAR(255),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_product_images_product_id ON product_images(product_id);
+      CREATE INDEX IF NOT EXISTS idx_product_images_sort_order ON product_images(product_id, sort_order ASC);
 
       CREATE TABLE IF NOT EXISTS orders (
         id SERIAL PRIMARY KEY,

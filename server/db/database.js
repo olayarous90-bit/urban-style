@@ -39,7 +39,25 @@ export function initDatabase() {
       composition TEXT,
       color TEXT,
       stock INTEGER DEFAULT 50,
-      is_active INTEGER DEFAULT 1
+      is_active INTEGER DEFAULT 1,
+      discount_percent INTEGER DEFAULT 0,
+      discount_active INTEGER DEFAULT 0,
+      discount_start_at TEXT,
+      discount_end_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS product_images (
+      id TEXT PRIMARY KEY,
+      product_id TEXT NOT NULL,
+      url TEXT NOT NULL,
+      alt_text TEXT,
+      is_primary INTEGER DEFAULT 0,
+      sort_order INTEGER DEFAULT 0,
+      file_size INTEGER DEFAULT 0,
+      mime_type TEXT DEFAULT 'image/jpeg',
+      storage_key TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS orders (
@@ -178,6 +196,12 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_admin_sessions_token ON admin_sessions(session_token);
     CREATE INDEX IF NOT EXISTS idx_admin_attempts_ip ON admin_login_attempts(ip_address, attempted_at);
   `);
+
+  // Asegurar columnas de descuentos en bases de datos existentes
+  try { db.prepare('ALTER TABLE products ADD COLUMN discount_percent INTEGER DEFAULT 0').run(); } catch {}
+  try { db.prepare('ALTER TABLE products ADD COLUMN discount_active INTEGER DEFAULT 0').run(); } catch {}
+  try { db.prepare('ALTER TABLE products ADD COLUMN discount_start_at TEXT').run(); } catch {}
+  try { db.prepare('ALTER TABLE products ADD COLUMN discount_end_at TEXT').run(); } catch {}
 
   // Sembrar usuario administrador por defecto
   seedAdminUser();

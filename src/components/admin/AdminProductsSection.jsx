@@ -16,12 +16,84 @@ const PRESET_SIZES_NUMERIC = ['28', '30', '32', '34', '36', '38', '39', '40', '4
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
+function toLocalDatetimeInput(isoStr) {
+  if (!isoStr) return '';
+  const d = new Date(isoStr);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n) => String(n).padStart(2, '0');
+  const year = d.getFullYear();
+  const month = pad(d.getMonth() + 1);
+  const day = pad(d.getDate());
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function fromLocalDatetimeInput(localStr) {
+  if (!localStr) return null;
+  const d = new Date(localStr);
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+function calculateLiveDiscountPreview(normalPrice, percent, startAt, endAt, isActive) {
+  const price = Math.round(Number(normalPrice) || 0);
+  const rawPercent = Math.round(Number(percent) || 0);
+  const safePercent = Math.max(0, Math.min(99, rawPercent));
+  const active = Boolean(isActive);
+
+  let startDate = null;
+  if (startAt) {
+    const s = new Date(startAt);
+    if (!isNaN(s.getTime())) startDate = s;
+  }
+
+  let endDate = null;
+  if (endAt) {
+    const e = new Date(endAt);
+    if (!isNaN(e.getTime())) endDate = e;
+  }
+
+  const now = new Date();
+  let status = 'INACTIVE';
+  let isEffective = false;
+
+  if (active && safePercent > 0) {
+    if (startDate && now < startDate) {
+      status = 'SCHEDULED';
+      isEffective = false;
+    } else if (endDate && now > endDate) {
+      status = 'EXPIRED';
+      isEffective = false;
+    } else {
+      status = 'ACTIVE';
+      isEffective = true;
+    }
+  }
+
+  let finalPrice = price;
+  let savings = 0;
+  if (isEffective) {
+    finalPrice = Math.max(1000, Math.round(price * (1 - safePercent / 100)));
+    savings = price - finalPrice;
+  }
+
+  return {
+    normalPrice: price,
+    finalPrice,
+    savings,
+    status,
+    isEffective,
+    percent: safePercent
+  };
+}
+
 export const AdminProductsSection = ({ onNotification = () => {} }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [discountFilter, setDiscountFilter] = useState('ALL');
 
   // Modal de Creación / Edición
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -35,10 +107,27 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
     color: 'Negro Profundo',
     composition: '100% Algodón Premium Heavyweight',
     description: '',
-    is_active: true
+    is_active: true,
+    discount_active: false,
+    discount_percent: 0,
+    discount_start_at: '',
+    discount_end_at: ''
   });
   const [formError, setFormError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Modal de Gestión Rápida de Descuentos
+  const [isDiscountModalOpen, setIsDiscountModalOpen] = useState(false);
+  const [discountTargetProduct, setDiscountTargetProduct] = useState(null);
+  const [discountFormData, setDiscountFormData] = useState({
+    price: 0,
+    discount_active: false,
+    discount_percent: 0,
+    discount_start_at: '',
+    discount_end_at: ''
+  });
+  const [discountModalError, setDiscountModalError] = useState(null);
+  const [isSavingDiscount, setIsSavingDiscount] = useState(false);
 
   // Gestión de Galería de Imágenes (Neon S3 Storage)
   const [productImages, setProductImages] = useState([]);
@@ -56,7 +145,7 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
   // Cargar productos al montar y al cambiar filtros
   useEffect(() => {
     loadProducts();
-  }, [categoryFilter, statusFilter]);
+  }, [categoryFilter, statusFilter, discountFilter]);
 
   const loadProducts = async () => {
     setLoading(true);
@@ -64,7 +153,8 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
       const query = new URLSearchParams({
         search: searchTerm,
         category: categoryFilter,
-        status: statusFilter
+        status: statusFilter,
+        discount_status: discountFilter
       });
       const res = await fetch(`/api/admin/products?${query}`, {
         credentials: 'include'
@@ -92,7 +182,11 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
       color: 'Negro Profundo',
       composition: '100% Algodón Peinado 280 gsm',
       description: '',
-      is_active: true
+      is_active: true,
+      discount_active: false,
+      discount_percent: 0,
+      discount_start_at: '',
+      discount_end_at: ''
     });
     setProductImages([]);
     setDraftImages([]);
@@ -107,13 +201,17 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
     setFormData({
       name: p.name || '',
       category: p.category || 'Camisetas',
-      price: p.price || 0,
+      price: p.originalPrice || p.price || 0,
       stock: p.stock ?? 50,
       sizes: Array.isArray(p.sizes) ? p.sizes : ['S', 'M', 'L'],
       color: p.color || 'Negro',
       composition: p.composition || '',
       description: p.description || '',
-      is_active: Boolean(p.is_active ?? p.isActive)
+      is_active: Boolean(p.is_active ?? p.isActive),
+      discount_active: Boolean(p.discountActive ?? p.discount_active),
+      discount_percent: Number(p.discountPercent ?? p.discount_percent ?? 0),
+      discount_start_at: toLocalDatetimeInput(p.discountStartAt || p.discount_start_at),
+      discount_end_at: toLocalDatetimeInput(p.discountEndAt || p.discount_end_at)
     });
     setDraftImages([]);
     setFormError(null);
@@ -131,6 +229,101 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
       }
     } catch {
       setProductImages(p.images || []);
+    }
+  };
+
+  // Abrir modal de gestión rápida de descuentos
+  const handleOpenDiscountModal = (p) => {
+    setDiscountTargetProduct(p);
+    setDiscountFormData({
+      price: p.originalPrice || p.price || 0,
+      discount_active: Boolean(p.discountActive ?? p.discount_active),
+      discount_percent: Number(p.discountPercent ?? p.discount_percent ?? 0),
+      discount_start_at: toLocalDatetimeInput(p.discountStartAt || p.discount_start_at),
+      discount_end_at: toLocalDatetimeInput(p.discountEndAt || p.discount_end_at)
+    });
+    setDiscountModalError(null);
+    setIsDiscountModalOpen(true);
+  };
+
+  // Guardar configuración de descuento
+  const handleSaveDiscount = async (e) => {
+    e.preventDefault();
+    if (!discountTargetProduct) return;
+
+    const numPrice = Number(discountFormData.price);
+    if (isNaN(numPrice) || numPrice < 1000) {
+      setDiscountModalError('El precio normal del producto debe ser mayor o igual a $1.000 COP.');
+      return;
+    }
+
+    const isActive = Boolean(discountFormData.discount_active);
+    const numPercent = Number(discountFormData.discount_percent);
+    if (isActive && (isNaN(numPercent) || numPercent < 1 || numPercent > 99)) {
+      setDiscountModalError('Para activar el descuento, debes especificar un porcentaje entre 1% y 99%.');
+      return;
+    }
+
+    if (discountFormData.discount_start_at && discountFormData.discount_end_at) {
+      const s = new Date(discountFormData.discount_start_at);
+      const end = new Date(discountFormData.discount_end_at);
+      if (end.getTime() <= s.getTime()) {
+        setDiscountModalError('La fecha y hora de finalización debe ser posterior a la de inicio.');
+        return;
+      }
+    }
+
+    setIsSavingDiscount(true);
+    setDiscountModalError(null);
+
+    try {
+      const res = await fetch(`/api/admin/products/${discountTargetProduct.id}/discount`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          price: numPrice,
+          discount_active: isActive,
+          discount_percent: numPercent,
+          discount_start_at: fromLocalDatetimeInput(discountFormData.discount_start_at),
+          discount_end_at: fromLocalDatetimeInput(discountFormData.discount_end_at)
+        })
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setIsDiscountModalOpen(false);
+        onNotification(`Descuento de "${discountTargetProduct.name}" actualizado exitosamente.`);
+        loadProducts();
+      } else {
+        setDiscountModalError(data.message || 'Error guardando descuento.');
+      }
+    } catch {
+      setDiscountModalError('Error de conexión al guardar descuento.');
+    } finally {
+      setIsSavingDiscount(false);
+    }
+  };
+
+  // Conmutación rápida de estado de descuento
+  const handleToggleProductDiscount = async (p) => {
+    const nextStatus = !Boolean(p.discountActive ?? p.discount_active);
+    try {
+      const res = await fetch(`/api/admin/products/${p.id}/discount/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ discount_active: nextStatus })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        onNotification(`Descuento de "${p.name}" ${nextStatus ? 'ACTIVADO' : 'DESACTIVADO'}.`);
+        loadProducts();
+      } else {
+        alert(data.message || 'Error conmutando descuento.');
+      }
+    } catch {
+      alert('Error de conexión con el servidor.');
     }
   };
 
@@ -370,17 +563,43 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
       return;
     }
 
+    const isDiscountActive = Boolean(formData.discount_active);
+    const numPercent = Number(formData.discount_percent || 0);
+    if (isDiscountActive && (isNaN(numPercent) || numPercent < 1 || numPercent > 99)) {
+      setFormError('Para activar un descuento promocional, el porcentaje debe estar entre 1% y 99%.');
+      return;
+    }
+
+    if (formData.discount_start_at && formData.discount_end_at) {
+      const s = new Date(formData.discount_start_at);
+      const e = new Date(formData.discount_end_at);
+      if (e.getTime() <= s.getTime()) {
+        setFormError('La fecha y hora de finalización debe ser posterior a la de inicio.');
+        return;
+      }
+    }
+
     setIsSaving(true);
     try {
       const isEdit = Boolean(editingId);
       const url = isEdit ? `/api/admin/products/${editingId}` : '/api/admin/products';
       const method = isEdit ? 'PUT' : 'POST';
 
+      const payload = {
+        ...formData,
+        price: numPrice,
+        stock: numStock,
+        discount_active: isDiscountActive,
+        discount_percent: numPercent,
+        discount_start_at: fromLocalDatetimeInput(formData.discount_start_at),
+        discount_end_at: fromLocalDatetimeInput(formData.discount_end_at)
+      };
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       const data = await res.json();
@@ -515,6 +734,20 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
             ))}
           </select>
 
+          <select
+            className="product-select-filter discount-filter"
+            value={discountFilter}
+            onChange={(e) => setDiscountFilter(e.target.value)}
+            title="Filtrar por estado de promociones y descuentos"
+          >
+            <option value="ALL">Todos los Descuentos</option>
+            <option value="ACTIVE">🟢 Activos Ahora</option>
+            <option value="SCHEDULED">🟡 Programados a Futuro</option>
+            <option value="EXPIRED">⌛ Promociones Vencidas</option>
+            <option value="WITH_DISCOUNT">🏷️ Con Algún Descuento</option>
+            <option value="INACTIVE">⚪ Sin Descuento</option>
+          </select>
+
           <div className="status-pill-group">
             <button
               type="button"
@@ -557,7 +790,9 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
               <th>ID</th>
               <th>Prenda y Vista</th>
               <th>Categoría</th>
-              <th>Precio ($ COP)</th>
+              <th>Precio Normal</th>
+              <th>Descuento / Promo</th>
+              <th>Precio Final</th>
               <th>Tallas</th>
               <th>Color</th>
               <th>Inventario</th>
@@ -568,13 +803,13 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="9" className="text-center py-4 text-muted">
+                <td colSpan="11" className="text-center py-4 text-muted">
                   Cargando catálogo e imágenes desde Neon PostgreSQL...
                 </td>
               </tr>
             ) : products.length === 0 ? (
               <tr>
-                <td colSpan="9" className="text-center py-4 text-muted">
+                <td colSpan="11" className="text-center py-4 text-muted">
                   No se encontraron productos con los filtros aplicados.
                 </td>
               </tr>
@@ -616,8 +851,42 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                       <span className="category-tag">{p.category}</span>
                     </td>
                     <td>
-                      <span className="price-text-cop">
-                        {p.formatted_price || formatCOPPreview(p.price)}
+                      <span className="price-text-cop normal-price">
+                        {p.formattedOriginalPrice || p.formatted_price || formatCOPPreview(p.price)}
+                      </span>
+                    </td>
+                    <td>
+                      {p.discountStatus === 'ACTIVE' && (
+                        <span
+                          className="badge-promo-active"
+                          title={p.discountEndAt ? `Vence: ${new Date(p.discountEndAt).toLocaleString('es-CO')}` : 'Sin fecha fin'}
+                        >
+                          🟢 -{p.discountPercent}% ACTIVO
+                        </span>
+                      )}
+                      {p.discountStatus === 'SCHEDULED' && (
+                        <span
+                          className="badge-promo-scheduled"
+                          title={p.discountStartAt ? `Inicia: ${new Date(p.discountStartAt).toLocaleString('es-CO')}` : ''}
+                        >
+                          🟡 -{p.discountPercent}% PROG
+                        </span>
+                      )}
+                      {p.discountStatus === 'EXPIRED' && (
+                        <span
+                          className="badge-promo-expired"
+                          title={p.discountEndAt ? `Venció: ${new Date(p.discountEndAt).toLocaleString('es-CO')}` : ''}
+                        >
+                          ⌛ VENCIDO (-{p.discountPercent}%)
+                        </span>
+                      )}
+                      {p.discountStatus === 'INACTIVE' && (
+                        <span className="badge-promo-none">—</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`price-final-highlight ${p.hasActiveDiscount ? 'is-discounted' : ''}`}>
+                        {p.formattedPrice || p.formatted_price || formatCOPPreview(p.price)}
                       </span>
                     </td>
                     <td>
@@ -653,6 +922,14 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                     </td>
                     <td>
                       <div className="action-buttons-cell">
+                        <button
+                          type="button"
+                          className="btn-action-discount"
+                          onClick={() => handleOpenDiscountModal(p)}
+                          title="Gestionar precios y promociones"
+                        >
+                          🏷️ Descuento
+                        </button>
                         <button
                           type="button"
                           className="btn-action-gallery"
@@ -846,6 +1123,111 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     />
+                  </div>
+
+                  {/* SECCIÓN DE PROMOCIÓN Y DESCUENTOS */}
+                  <div className="form-full-width discount-management-panel">
+                    <div className="discount-panel-header">
+                      <div>
+                        <h4 className="discount-panel-title">🏷️ Promoción y Descuentos</h4>
+                        <p className="discount-panel-desc">
+                          Configura promociones temporales o permanentes. El servidor calcula los precios finales y revierte automáticamente al precio normal cuando expire.
+                        </p>
+                      </div>
+                      <label className="discount-toggle-switch">
+                        <input
+                          type="checkbox"
+                          checked={formData.discount_active}
+                          onChange={(e) => setFormData({ ...formData, discount_active: e.target.checked })}
+                        />
+                        <span className="toggle-label">{formData.discount_active ? 'Promoción ACTIVA' : 'Promoción INACTIVA'}</span>
+                      </label>
+                    </div>
+
+                    {formData.discount_active && (
+                      <div className="discount-fields-grid">
+                        <div className="modal-field-group">
+                          <label className="modal-field-label">Porcentaje de Descuento (%) *</label>
+                          <div className="percent-input-wrapper">
+                            <input
+                              type="number"
+                              className="modal-input"
+                              min="1"
+                              max="99"
+                              step="1"
+                              placeholder="Ej: 20"
+                              value={formData.discount_percent || ''}
+                              onChange={(e) => setFormData({ ...formData, discount_percent: e.target.value })}
+                              required={formData.discount_active}
+                            />
+                            <span className="percent-suffix">% OFF</span>
+                          </div>
+                        </div>
+
+                        <div className="modal-field-group">
+                          <label className="modal-field-label">Fecha y Hora de Inicio (Opcional)</label>
+                          <input
+                            type="datetime-local"
+                            className="modal-input"
+                            value={formData.discount_start_at}
+                            onChange={(e) => setFormData({ ...formData, discount_start_at: e.target.value })}
+                          />
+                          <small className="field-hint">Vacío = Activo inmediatamente</small>
+                        </div>
+
+                        <div className="modal-field-group">
+                          <label className="modal-field-label">Fecha y Hora de Fin (Opcional)</label>
+                          <input
+                            type="datetime-local"
+                            className="modal-input"
+                            value={formData.discount_end_at}
+                            onChange={(e) => setFormData({ ...formData, discount_end_at: e.target.value })}
+                          />
+                          <small className="field-hint">Vacío = Sin vencimiento automático</small>
+                        </div>
+
+                        {/* CALCULADORA EN TIEMPO REAL */}
+                        {(() => {
+                          const preview = calculateLiveDiscountPreview(
+                            formData.price,
+                            formData.discount_percent,
+                            formData.discount_start_at,
+                            formData.discount_end_at,
+                            formData.discount_active
+                          );
+                          return (
+                            <div className="discount-live-preview-box">
+                              <span className="preview-heading">⚡ Cálculo Oficial en Servidor:</span>
+                              <div className="preview-metrics-row">
+                                <div className="preview-metric">
+                                  <span className="metric-label">Precio Normal:</span>
+                                  <span className="metric-val">{formatCOPPreview(preview.normalPrice)}</span>
+                                </div>
+                                <div className="preview-metric">
+                                  <span className="metric-label">Descuento:</span>
+                                  <span className="metric-val discount-val">-{preview.percent}%</span>
+                                </div>
+                                <div className="preview-metric">
+                                  <span className="metric-label">Ahorro Cliente:</span>
+                                  <span className="metric-val savings-val">{formatCOPPreview(preview.savings)}</span>
+                                </div>
+                                <div className="preview-metric final-metric">
+                                  <span className="metric-label">Precio Final Calculado:</span>
+                                  <span className="metric-val highlight-final">{formatCOPPreview(preview.finalPrice)}</span>
+                                </div>
+                              </div>
+                              <div className="preview-status-indicator">
+                                <span>Estado estimado: </span>
+                                {preview.status === 'ACTIVE' && <strong className="status-badge-active">🟢 ACTIVO AHORA en tienda pública</strong>}
+                                {preview.status === 'SCHEDULED' && <strong className="status-badge-scheduled">🟡 PROGRAMADO (inicia en fecha futura)</strong>}
+                                {preview.status === 'EXPIRED' && <strong className="status-badge-expired">⌛ VENCIDO (precio normal automático)</strong>}
+                                {preview.status === 'INACTIVE' && <strong className="status-badge-inactive">⚪ INACTIVO</strong>}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </div>
 
                   {/* SECCIÓN DE GALERÍA DE IMÁGENES (NEON S3 STORAGE) */}
@@ -1082,6 +1464,194 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                 {isDeleting ? 'Eliminando...' : 'Sí, Eliminar Producto'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE GESTIÓN RÁPIDA DE DESCUENTOS */}
+      {isDiscountModalOpen && discountTargetProduct && (
+        <div className="product-modal-backdrop" onClick={() => setIsDiscountModalOpen(false)}>
+          <div className="product-modal-card discount-modal-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="product-modal-header">
+              <div>
+                <span className="modal-badge-tag">Gestión de Precios & Descuentos</span>
+                <h3 className="modal-header-title">
+                  🏷️ {discountTargetProduct.name}
+                </h3>
+              </div>
+              <button
+                type="button"
+                className="btn-modal-close"
+                onClick={() => setIsDiscountModalOpen(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveDiscount}>
+              <div className="product-modal-body">
+                {discountModalError && (
+                  <div className="modal-error-box" role="alert">
+                    ⚠️ {discountModalError}
+                  </div>
+                )}
+
+                <div className="discount-modal-intro">
+                  <div className="discount-product-summary">
+                    <img
+                      src={discountTargetProduct.image || discountTargetProduct.images?.[0]?.url || '/images/products/prod-tshirt.jpg'}
+                      alt={discountTargetProduct.name}
+                      className="discount-thumb"
+                    />
+                    <div>
+                      <strong className="summary-title">{discountTargetProduct.name}</strong>
+                      <span className="category-text">{discountTargetProduct.category} | ID: <code>{discountTargetProduct.id}</code></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="discount-form-body">
+                  {/* PRECIO NORMAL */}
+                  <div className="modal-field-group">
+                    <label className="modal-field-label">
+                      <span>Precio Normal ($ COP) *</span>
+                      <strong style={{ color: 'var(--color-accent, #FF5A1F)' }}>
+                        {formatCOPPreview(discountFormData.price)}
+                      </strong>
+                    </label>
+                    <input
+                      type="number"
+                      className="modal-input"
+                      min="1000"
+                      step="500"
+                      value={discountFormData.price}
+                      onChange={(e) => setDiscountFormData({ ...discountFormData, price: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  {/* ACTIVACIÓN DE DESCUENTO */}
+                  <div className="modal-field-group">
+                    <label className="modal-field-label">Estado del Descuento</label>
+                    <label className="discount-toggle-switch">
+                      <input
+                        type="checkbox"
+                        checked={discountFormData.discount_active}
+                        onChange={(e) => setDiscountFormData({ ...discountFormData, discount_active: e.target.checked })}
+                      />
+                      <span className="toggle-label">
+                        {discountFormData.discount_active ? '🟢 Descuento Promocional Activado' : '⚪ Descuento Desactivado'}
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* PORCENTAJE */}
+                  <div className="modal-field-group">
+                    <label className="modal-field-label">Porcentaje de Descuento (1% - 99%)</label>
+                    <div className="percent-input-wrapper">
+                      <input
+                        type="number"
+                        className="modal-input"
+                        min="1"
+                        max="99"
+                        step="1"
+                        placeholder="20"
+                        value={discountFormData.discount_percent || ''}
+                        onChange={(e) => setDiscountFormData({ ...discountFormData, discount_percent: e.target.value })}
+                        disabled={!discountFormData.discount_active}
+                      />
+                      <span className="percent-suffix">% OFF</span>
+                    </div>
+                  </div>
+
+                  {/* FECHAS */}
+                  <div className="discount-dates-row">
+                    <div className="modal-field-group">
+                      <label className="modal-field-label">Fecha y Hora de Inicio</label>
+                      <input
+                        type="datetime-local"
+                        className="modal-input"
+                        value={discountFormData.discount_start_at}
+                        onChange={(e) => setDiscountFormData({ ...discountFormData, discount_start_at: e.target.value })}
+                        disabled={!discountFormData.discount_active}
+                      />
+                      <small className="field-hint">En blanco = Activo inmediatamente</small>
+                    </div>
+
+                    <div className="modal-field-group">
+                      <label className="modal-field-label">Fecha y Hora de Finalización</label>
+                      <input
+                        type="datetime-local"
+                        className="modal-input"
+                        value={discountFormData.discount_end_at}
+                        onChange={(e) => setDiscountFormData({ ...discountFormData, discount_end_at: e.target.value })}
+                        disabled={!discountFormData.discount_active}
+                      />
+                      <small className="field-hint">En blanco = Sin vencimiento automático</small>
+                    </div>
+                  </div>
+
+                  {/* LIVE PREVIEW CALCULATOR */}
+                  {(() => {
+                    const preview = calculateLiveDiscountPreview(
+                      discountFormData.price,
+                      discountFormData.discount_percent,
+                      discountFormData.discount_start_at,
+                      discountFormData.discount_end_at,
+                      discountFormData.discount_active
+                    );
+                    return (
+                      <div className="discount-live-preview-box">
+                        <span className="preview-heading">⚡ Cálculo Oficial en Servidor:</span>
+                        <div className="preview-metrics-row">
+                          <div className="preview-metric">
+                            <span className="metric-label">Precio Normal:</span>
+                            <span className="metric-val">{formatCOPPreview(preview.normalPrice)}</span>
+                          </div>
+                          <div className="preview-metric">
+                            <span className="metric-label">Descuento:</span>
+                            <span className="metric-val discount-val">-{preview.percent}%</span>
+                          </div>
+                          <div className="preview-metric">
+                            <span className="metric-label">Ahorro Cliente:</span>
+                            <span className="metric-val savings-val">{formatCOPPreview(preview.savings)}</span>
+                          </div>
+                          <div className="preview-metric final-metric">
+                            <span className="metric-label">Precio Final Calculado:</span>
+                            <span className="metric-val highlight-final">{formatCOPPreview(preview.finalPrice)}</span>
+                          </div>
+                        </div>
+                        <div className="preview-status-indicator">
+                          <span>Estado: </span>
+                          {preview.status === 'ACTIVE' && <strong className="status-badge-active">🟢 ACTIVO AHORA en tienda pública</strong>}
+                          {preview.status === 'SCHEDULED' && <strong className="status-badge-scheduled">🟡 PROGRAMADO (iniciará a la fecha establecida)</strong>}
+                          {preview.status === 'EXPIRED' && <strong className="status-badge-expired">⌛ VENCIDO (la tienda muestra precio normal)</strong>}
+                          {preview.status === 'INACTIVE' && <strong className="status-badge-inactive">⚪ INACTIVO</strong>}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+
+              <div className="product-modal-footer">
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setIsDiscountModalOpen(false)}
+                  disabled={isSavingDiscount}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn-modal-save"
+                  disabled={isSavingDiscount}
+                >
+                  {isSavingDiscount ? 'Guardando en Servidor...' : 'Guardar Promoción & Precios'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

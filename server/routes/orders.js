@@ -1,5 +1,6 @@
 import express from 'express';
 import { db } from '../db/database.js';
+import { getProductById } from '../services/productService.js';
 import { createSending } from '../services/mipaquete.js';
 import { sendOrderConfirmationEmail, generateOrderEmailHtml } from '../services/mailer.js';
 
@@ -77,14 +78,12 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // 3. VALIDACIÓN DE PRECIOS Y PRODUCTOS DESDE BASE DE DATOS
+    // 3. VALIDACIÓN DE PRECIOS Y PRODUCTOS DESDE BASE DE DATOS (PRECIOS AUTORITATIVOS DEL SERVIDOR)
     let validatedSubtotal = 0;
     const validatedItems = [];
 
-    const getProduct = db.prepare('SELECT id, name, price, formatted_price FROM products WHERE id = ?');
-
     for (const item of items) {
-      const product = getProduct.get(item.productId || item.id);
+      const product = await getProductById(item.productId || item.id);
       if (!product) {
         return res.status(400).json({
           success: false,
@@ -101,13 +100,18 @@ router.post('/', async (req, res) => {
       }
 
       const qty = rawQty;
-      const itemSubtotal = product.price * qty;
+      // El precio final lo calcula estrictamente el servidor considerando promociones activas
+      const unitPrice = Number(product.finalPrice || product.price);
+      const itemSubtotal = unitPrice * qty;
       validatedSubtotal += itemSubtotal;
 
       validatedItems.push({
         productId: product.id,
         productName: product.name,
-        price: product.price,
+        price: unitPrice,
+        originalPrice: product.originalPrice || unitPrice,
+        hasDiscount: Boolean(product.hasDiscount),
+        discountPercent: Number(product.discountPercent || 0),
         quantity: qty,
         size: item.size || 'Única',
         color: item.color || 'Estándar',

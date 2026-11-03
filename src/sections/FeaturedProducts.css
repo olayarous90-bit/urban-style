@@ -215,6 +215,20 @@
   margin-top: var(--space-1);
 }
 
+.product-discounted-price-group {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.product-original-price {
+  font-size: 0.8rem;
+  color: var(--color-gray-muted);
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+
 .product-price {
   font-family: var(--font-display);
   font-size: 1.15rem;
@@ -485,6 +499,47 @@
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-xs);
   margin: var(--space-2) 0;
+}
+
+.modal-discount-pricing {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.modal-price-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.modal-original-price {
+  font-size: 1.05rem;
+  color: var(--color-gray-muted);
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+
+.modal-discount-badge {
+  background: rgba(255, 90, 31, 0.15);
+  border: 1px solid var(--color-accent);
+  color: var(--color-accent);
+  padding: 2px 8px;
+  border-radius: var(--radius-xs);
+  font-size: 0.75rem;
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.modal-savings-text {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #10b981;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .modal-price {

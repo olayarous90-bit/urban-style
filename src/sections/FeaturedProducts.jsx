@@ -136,7 +136,14 @@ export const FeaturedProducts = ({
                     <h3 className="product-name">{product.name}</h3>
 
                     <div className="product-price-wrapper">
-                      <span className="product-price">{product.formattedPrice || product.formatted_price}</span>
+                      {product.hasDiscount ? (
+                        <div className="product-discounted-price-group">
+                          <span className="product-price discount-highlight">{product.formattedPrice}</span>
+                          <del className="product-original-price">{product.formattedOriginalPrice}</del>
+                        </div>
+                      ) : (
+                        <span className="product-price">{product.formattedPrice || product.formatted_price}</span>
+                      )}
                       <span className="product-demo-tag">DEMO</span>
                     </div>
                   </div>
@@ -258,9 +265,22 @@ export const FeaturedProducts = ({
                 </h3>
 
                 <div className="modal-price-box">
-                  <span className="modal-price">{selectedProduct.formattedPrice || selectedProduct.formatted_price}</span>
+                  {selectedProduct.hasDiscount ? (
+                    <div className="modal-discount-pricing">
+                      <div className="modal-price-row">
+                        <span className="modal-price discount-highlight">{selectedProduct.formattedPrice}</span>
+                        <del className="modal-original-price">{selectedProduct.formattedOriginalPrice}</del>
+                        <span className="modal-discount-badge">-{selectedProduct.discountPercent}% OFF</span>
+                      </div>
+                      {selectedProduct.formattedSavings && (
+                        <span className="modal-savings-text">Ahorras {selectedProduct.formattedSavings}</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="modal-price">{selectedProduct.formattedPrice || selectedProduct.formatted_price}</span>
+                  )}
                   <p className="modal-demo-notice">
-                    * Precio ficticio para fines de demostración en pesos colombianos.
+                    * Precio oficial en pesos colombianos (COP).
                   </p>
                 </div>
 
