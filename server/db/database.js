@@ -30,6 +30,9 @@ export function initDatabase() {
     CREATE TABLE IF NOT EXISTS products (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
+      brand TEXT DEFAULT 'URBAN STYLE',
+      model TEXT DEFAULT '',
+      department TEXT DEFAULT '',
       category TEXT NOT NULL,
       price INTEGER NOT NULL,
       formatted_price TEXT,
@@ -203,6 +206,24 @@ export function initDatabase() {
   try { db.prepare('ALTER TABLE products ADD COLUMN discount_start_at TEXT').run(); } catch {}
   try { db.prepare('ALTER TABLE products ADD COLUMN discount_end_at TEXT').run(); } catch {}
 
+  // Asegurar columnas de marca, modelo y departamento
+  try { db.prepare("ALTER TABLE products ADD COLUMN brand TEXT DEFAULT 'URBAN STYLE'").run(); } catch {}
+  try { db.prepare("ALTER TABLE products ADD COLUMN model TEXT DEFAULT ''").run(); } catch {}
+  try { db.prepare("ALTER TABLE products ADD COLUMN department TEXT DEFAULT ''").run(); } catch {}
+
+  // Sincronizar metadatos para productos iniciales existentes
+  try {
+    db.prepare("UPDATE products SET brand = 'URBAN STYLE' WHERE brand IS NULL OR brand = ''").run();
+    db.prepare("UPDATE products SET model = 'Urban Artifacts', department = 'Unisex / Hombre / Mujer' WHERE id = 'prod-1'").run();
+    db.prepare("UPDATE products SET model = 'Midnight Raw', department = 'Unisex / Hombre / Mujer' WHERE id = 'prod-2'").run();
+    db.prepare("UPDATE products SET model = 'Tactical Utility', department = 'Hombre / Unisex' WHERE id = 'prod-3'").run();
+    db.prepare("UPDATE products SET model = 'Cyber Tech', department = 'Unisex / Hombre / Mujer' WHERE id = 'prod-4'").run();
+    db.prepare("UPDATE products SET model = 'Apex Monochrome', department = 'Tenis / Calzado' WHERE id = 'prod-5'").run();
+    db.prepare("UPDATE products SET model = 'Crossbody Sling', department = 'Accesorios' WHERE id = 'prod-6'").run();
+    db.prepare("UPDATE products SET model = 'Minimalist S', department = 'Accesorios' WHERE id = 'prod-7'").run();
+    db.prepare("UPDATE products SET model = 'Geometric Steel', department = 'Accesorios' WHERE id = 'prod-8'").run();
+  } catch {}
+
   // Sembrar usuario administrador por defecto
   seedAdminUser();
 
@@ -214,14 +235,17 @@ function seedInitialProducts() {
   const count = db.prepare('SELECT count(*) as count FROM products').get();
   if (count.count === 0) {
     const insert = db.prepare(`
-      INSERT INTO products (id, name, category, price, formatted_price, image, description, sizes, composition, color, stock)
-      VALUES (@id, @name, @category, @price, @formattedPrice, @image, @description, @sizes, @composition, @color, @stock)
+      INSERT INTO products (id, name, brand, model, department, category, price, formatted_price, image, description, sizes, composition, color, stock)
+      VALUES (@id, @name, @brand, @model, @department, @category, @price, @formattedPrice, @image, @description, @sizes, @composition, @color, @stock)
     `);
 
     const initialProducts = [
       {
         id: 'prod-1',
         name: "Camiseta Heavyweight 'Urban Artifacts'",
+        brand: 'URBAN STYLE',
+        model: 'Urban Artifacts',
+        department: 'Unisex / Hombre / Mujer',
         category: 'Camisetas',
         price: 129900,
         formattedPrice: '$129.900 COP',
@@ -235,6 +259,9 @@ function seedInitialProducts() {
       {
         id: 'prod-2',
         name: "Hoodie Essential 'Midnight Raw'",
+        brand: 'URBAN STYLE',
+        model: 'Midnight Raw',
+        department: 'Unisex / Hombre / Mujer',
         category: 'Sudaderas',
         price: 249900,
         formattedPrice: '$249.900 COP',
@@ -248,6 +275,9 @@ function seedInitialProducts() {
       {
         id: 'prod-3',
         name: "Pantalón Cargo 'Tactical Utility'",
+        brand: 'URBAN STYLE',
+        model: 'Tactical Utility',
+        department: 'Hombre / Unisex',
         category: 'Pantalones',
         price: 289900,
         formattedPrice: '$289.900 COP',
@@ -261,6 +291,9 @@ function seedInitialProducts() {
       {
         id: 'prod-4',
         name: "Bomber Jacket 'Cyber Tech'",
+        brand: 'URBAN STYLE',
+        model: 'Cyber Tech',
+        department: 'Unisex / Hombre / Mujer',
         category: 'Chaquetas',
         price: 389900,
         formattedPrice: '$389.900 COP',
@@ -274,6 +307,9 @@ function seedInitialProducts() {
       {
         id: 'prod-5',
         name: "Sneakers Low-Top 'Apex Monochrome'",
+        brand: 'URBAN STYLE',
+        model: 'Apex Monochrome',
+        department: 'Tenis / Calzado',
         category: 'Zapatillas',
         price: 459900,
         formattedPrice: '$459.900 COP',
@@ -287,6 +323,9 @@ function seedInitialProducts() {
       {
         id: 'prod-6',
         name: "Bolso Táctico 'Crossbody Sling'",
+        brand: 'URBAN STYLE',
+        model: 'Crossbody Sling',
+        department: 'Accesorios',
         category: 'Bolsos',
         price: 159900,
         formattedPrice: '$159.900 COP',
@@ -300,6 +339,9 @@ function seedInitialProducts() {
       {
         id: 'prod-7',
         name: "Gorra Dad Cap 'Minimalist S'",
+        brand: 'URBAN STYLE',
+        model: 'Minimalist S',
+        department: 'Accesorios',
         category: 'Gorras',
         price: 99900,
         formattedPrice: '$99.900 COP',
@@ -313,6 +355,9 @@ function seedInitialProducts() {
       {
         id: 'prod-8',
         name: "Cadena Cubana 'Geometric Steel'",
+        brand: 'URBAN STYLE',
+        model: 'Geometric Steel',
+        department: 'Accesorios',
         category: 'Accesorios',
         price: 119900,
         formattedPrice: '$119.900 COP',

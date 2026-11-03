@@ -7,12 +7,15 @@ const DEFAULT_CATEGORIES = [
   'Sudaderas',
   'Pantalones',
   'Chaquetas',
+  'Zapatillas',
   'Calzado',
+  'Bolsos',
+  'Gorras',
   'Accesorios'
 ];
 
 const PRESET_SIZES_APPAREL = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
-const PRESET_SIZES_NUMERIC = ['28', '30', '32', '34', '36', '38', '39', '40', '41', '42'];
+const PRESET_SIZES_NUMERIC = ['28', '30', '32', '34', '36', '38', '39', '40', '41', '42', '43'];
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif', 'image/gif'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -101,6 +104,9 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
+    brand: 'URBAN STYLE',
+    model: '',
+    department: 'Hombre',
     category: 'Camisetas',
     price: 129900,
     stock: 50,
@@ -176,6 +182,9 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
     setEditingId(null);
     setFormData({
       name: '',
+      brand: 'URBAN STYLE',
+      model: '',
+      department: 'Hombre',
       category: 'Camisetas',
       price: 129900,
       stock: 50,
@@ -201,6 +210,9 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
     setEditingId(p.id);
     setFormData({
       name: p.name || '',
+      brand: p.brand || 'URBAN STYLE',
+      model: p.model || '',
+      department: p.department || 'Hombre',
       category: p.category || 'Camisetas',
       price: p.originalPrice || p.price || 0,
       stock: p.stock ?? 50,
@@ -913,6 +925,11 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                         </div>
                         <div className="product-cell-name">
                           <span className="product-title-bold">{p.name}</span>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px', fontSize: '0.72rem', flexWrap: 'wrap' }}>
+                            <span style={{ color: 'var(--color-accent, #ff5a1f)', fontWeight: 'bold' }}>{p.brand || 'URBAN STYLE'}</span>
+                            {p.model && <span style={{ color: '#ccc' }}>• Mod: {p.model}</span>}
+                            {p.department && <span style={{ color: '#888' }}>({p.department})</span>}
+                          </div>
                           {p.composition && (
                             <span className="product-sub-meta">{p.composition}</span>
                           )}
@@ -1070,15 +1087,58 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                   
                   {/* NOMBRE */}
                   <div className="modal-field-group form-full-width">
-                    <label className="modal-field-label">Nombre de la Prenda *</label>
+                    <label className="modal-field-label">Nombre de la Prenda o Tenis *</label>
                     <input
                       type="text"
                       className="modal-input"
-                      placeholder="Ej: Camiseta Oversize 'Urban Artifacts'"
+                      placeholder="Ej: Sneakers Low-Top 'Apex Monochrome' o Camiseta 'Urban Artifacts'"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       required
                     />
+                  </div>
+
+                  {/* MARCA */}
+                  <div className="modal-field-group">
+                    <label className="modal-field-label">Marca del Producto *</label>
+                    <input
+                      type="text"
+                      className="modal-input"
+                      placeholder="URBAN STYLE"
+                      value={formData.brand}
+                      onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  {/* MODELO */}
+                  <div className="modal-field-group">
+                    <label className="modal-field-label">Modelo (Crucial para Tenis / Calzado)</label>
+                    <input
+                      type="text"
+                      className="modal-input"
+                      placeholder="Ej: Apex Monochrome, Cyber Tech..."
+                      value={formData.model}
+                      onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                    />
+                  </div>
+
+                  {/* DEPARTAMENTO / SECCIÓN */}
+                  <div className="modal-field-group">
+                    <label className="modal-field-label">Departamento *</label>
+                    <select
+                      className="modal-input"
+                      value={formData.department}
+                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                      required
+                    >
+                      <option value="Tenis / Calzado">👟 Tenis / Calzado</option>
+                      <option value="Hombre">👕 Hombre</option>
+                      <option value="Mujer">👗 Mujer</option>
+                      <option value="Unisex / Hombre / Mujer">✨ Unisex / Hombre y Mujer</option>
+                      <option value="Hombre / Unisex">Hombre / Unisex</option>
+                      <option value="Accesorios">🎒 Accesorios</option>
+                    </select>
                   </div>
 
                   {/* CATEGORÍA */}

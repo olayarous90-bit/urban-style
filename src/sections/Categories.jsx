@@ -7,31 +7,42 @@ import './Categories.css';
  * Sección Visual de Categorías de URBAN STYLE
  * Presenta 4 tarjetas visuales de alto impacto editorial para
  * Moda para Hombre, Moda para Mujer, Zapatillas y Accesorios.
+ * Al hacer clic, navega y filtra directamente el catálogo de productos con sus datos reales.
  */
 export const Categories = () => {
   const [activeFeedback, setActiveFeedback] = useState(null);
 
   const handleCategoryClick = (category) => {
-    // Si la tarjeta tiene un id, aseguramos scroll suave a la sección
-    const element = document.getElementById(category.id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Determinar la categoría correspondiente en la sección de productos
+    let targetFilter = 'ALL';
+    if (category.id === 'zapatillas') targetFilter = 'TENIS';
+    else if (category.id === 'hombre') targetFilter = 'HOMBRE';
+    else if (category.id === 'mujer') targetFilter = 'MUJER';
+    else if (category.id === 'accesorios') targetFilter = 'ACCESORIOS';
+
+    // Disparar evento para actualizar el filtro reactivo en FeaturedProducts
+    window.dispatchEvent(new CustomEvent('filter-products-category', { detail: targetFilter }));
+
+    // Scroll suave y centrado a la sección de productos
+    const productsSection = document.getElementById('productos');
+    if (productsSection) {
+      productsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
-    // Feedback visual provisional de navegación activa
+    // Feedback visual elegante de navegación activa
     setActiveFeedback({
       title: category.title,
-      message: `Catálogo de ${category.title.toLowerCase()} preparado. La selección de productos se conectará en la siguiente etapa.`
+      message: `Mostrando modelos y artículos de ${category.title.toLowerCase()} en el catálogo.`
     });
 
-    // Auto-ocultar el toast después de 3.5 segundos
+    // Auto-ocultar el toast después de 3 segundos
     setTimeout(() => {
       setActiveFeedback((current) => (current?.title === category.title ? null : current));
-    }, 3500);
+    }, 3000);
   };
 
   return (
-    <section className="categories-section" id="categorias" aria-label="Categorías de la tienda">
+    <section className="categories-section" id="categorias" aria-label="Categorías principales de la tienda">
       <div className="container">
         {/* CABECERA DE LA SECCIÓN */}
         <div className="categories-header reveal-on-scroll">
@@ -40,11 +51,11 @@ export const Categories = () => {
           </div>
           <h2 className="categories-title">Encuentra Tu Estilo</h2>
           <p className="categories-subtitle">
-            Explora nuestras categorías y descubre nuevas formas de expresar tu personalidad.
+            Explora nuestras categorías y descubre tenis exclusivos, prendas oversize, streetwear vanguardista y accesorios de diseño.
           </p>
         </div>
 
-        {/* CUADRÍCULA DE 4 TARJETAS VISUALES */}
+        {/* CUADRÍCULA DE 4 TARJETAS VISUALES CONECTADAS AL CATÁLOGO */}
         <div className="categories-grid">
           {CATEGORIES_DATA.map((cat, index) => (
             <article
@@ -60,7 +71,7 @@ export const Categories = () => {
                   handleCategoryClick(cat);
                 }
               }}
-              aria-label={`Explorar categoría ${cat.title}`}
+              aria-label={`Explorar catálogo de ${cat.title}`}
             >
               {/* Imagen de fondo con recorte consistente */}
               <div className="category-image-wrapper">
@@ -83,7 +94,7 @@ export const Categories = () => {
                 <p className="category-card-desc">{cat.description}</p>
 
                 <div className="category-btn-action">
-                  <span>Explorar</span>
+                  <span>Ver Productos</span>
                   <ChevronRightIcon size={16} className="category-btn-arrow" />
                 </div>
               </div>

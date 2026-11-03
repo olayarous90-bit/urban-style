@@ -167,7 +167,7 @@ export async function getAdminProducts({ search = '', category = 'ALL', status =
 
       if (search && search.trim()) {
         const term = `%${search.trim().toLowerCase()}%`;
-        queryStr += ` AND (LOWER(name) LIKE $${idx} OR LOWER(id) LIKE $${idx} OR LOWER(description) LIKE $${idx} OR LOWER(color) LIKE $${idx})`;
+        queryStr += ` AND (LOWER(name) LIKE $${idx} OR LOWER(id) LIKE $${idx} OR LOWER(description) LIKE $${idx} OR LOWER(color) LIKE $${idx} OR LOWER(COALESCE(brand, '')) LIKE $${idx} OR LOWER(COALESCE(model, '')) LIKE $${idx} OR LOWER(COALESCE(department, '')) LIKE $${idx})`;
         params.push(term);
         idx++;
       }
@@ -225,8 +225,8 @@ export async function getAdminProducts({ search = '', category = 'ALL', status =
 
   if (search && search.trim()) {
     const term = `%${search.trim().toLowerCase()}%`;
-    sql += ' AND (LOWER(name) LIKE ? OR LOWER(id) LIKE ? OR LOWER(description) LIKE ? OR LOWER(color) LIKE ?)';
-    params.push(term, term, term, term);
+    sql += ' AND (LOWER(name) LIKE ? OR LOWER(id) LIKE ? OR LOWER(description) LIKE ? OR LOWER(color) LIKE ? OR LOWER(COALESCE(brand, "")) LIKE ? OR LOWER(COALESCE(model, "")) LIKE ? OR LOWER(COALESCE(department, "")) LIKE ?)';
+    params.push(term, term, term, term, term, term, term);
   }
 
   sql += ' ORDER BY id DESC';
@@ -283,6 +283,9 @@ export async function getPublicActiveProducts() {
             return {
               id: p.id,
               name: p.name,
+              brand: p.brand || 'URBAN STYLE',
+              model: p.model || '',
+              department: p.department || '',
               category: p.category,
               // Precios calculados dinámicamente en servidor
               price: pricing.finalPrice,
@@ -327,6 +330,9 @@ export async function getPublicActiveProducts() {
       return {
         id: p.id,
         name: p.name,
+        brand: p.brand || 'URBAN STYLE',
+        model: p.model || '',
+        department: p.department || '',
         category: p.category,
         price: pricing.finalPrice,
         finalPrice: pricing.finalPrice,
@@ -463,6 +469,9 @@ export function validateDiscountInput({ price, discount_active, discount_percent
  */
 export async function createProduct({
   name,
+  brand = 'URBAN STYLE',
+  model = '',
+  department = '',
   category,
   price,
   description = '',
@@ -507,13 +516,16 @@ export async function createProduct({
     try {
       await neonQuery(
         `INSERT INTO products (
-          id, name, category, price, formatted_price, image, description, sizes,
+          id, name, brand, model, department, category, price, formatted_price, image, description, sizes,
           composition, color, stock, is_active, discount_percent, discount_active,
           discount_start_at, discount_end_at, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, NOW())`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW())`,
         [
           id,
           name.trim(),
+          (brand || 'URBAN STYLE').trim(),
+          (model || '').trim(),
+          (department || '').trim(),
           category.trim(),
           numPrice,
           formattedPrice,
@@ -540,13 +552,16 @@ export async function createProduct({
   try {
     sqliteDb.prepare(`
       INSERT INTO products (
-        id, name, category, price, formatted_price, image, description, sizes,
+        id, name, brand, model, department, category, price, formatted_price, image, description, sizes,
         composition, color, stock, is_active, discount_percent, discount_active,
         discount_start_at, discount_end_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       name.trim(),
+      (brand || 'URBAN STYLE').trim(),
+      (model || '').trim(),
+      (department || '').trim(),
       category.trim(),
       numPrice,
       formattedPrice,
@@ -570,6 +585,9 @@ export async function createProduct({
   return created || {
     id,
     name: name.trim(),
+    brand: (brand || 'URBAN STYLE').trim(),
+    model: (model || '').trim(),
+    department: (department || '').trim(),
     category: category.trim(),
     price: numPrice,
     formatted_price: formattedPrice,
@@ -594,6 +612,9 @@ export async function updateProduct(id, fields) {
   }
 
   const name = fields.name !== undefined ? fields.name.trim() : existing.name;
+  const brand = fields.brand !== undefined ? fields.brand.trim() : (existing.brand || 'URBAN STYLE');
+  const model = fields.model !== undefined ? fields.model.trim() : (existing.model || '');
+  const department = fields.department !== undefined ? fields.department.trim() : (existing.department || '');
   const category = fields.category !== undefined ? fields.category.trim() : existing.category;
   const price = fields.price !== undefined ? Math.round(Number(fields.price)) : existing.originalPrice || existing.price;
   if (isNaN(price) || price < 1000) {
@@ -628,12 +649,16 @@ export async function updateProduct(id, fields) {
     try {
       await neonQuery(
         `UPDATE products
-         SET name = $1, category = $2, price = $3, formatted_price = $4, description = $5,
-             sizes = $6, composition = $7, color = $8, stock = $9, is_active = $10,
-             discount_percent = $11, discount_active = $12, discount_start_at = $13, discount_end_at = $14
-         WHERE id = $15`,
+         SET name = $1, brand = $2, model = $3, department = $4, category = $5,
+             price = $6, formatted_price = $7, description = $8,
+             sizes = $9, composition = $10, color = $11, stock = $12, is_active = $13,
+             discount_percent = $14, discount_active = $15, discount_start_at = $16, discount_end_at = $17
+         WHERE id = $18`,
         [
           name,
+          brand,
+          model,
+          department,
           category,
           price,
           formattedPrice,
@@ -659,12 +684,16 @@ export async function updateProduct(id, fields) {
   try {
     sqliteDb.prepare(`
       UPDATE products
-      SET name = ?, category = ?, price = ?, formatted_price = ?, description = ?,
+      SET name = ?, brand = ?, model = ?, department = ?, category = ?,
+          price = ?, formatted_price = ?, description = ?,
           sizes = ?, composition = ?, color = ?, stock = ?, is_active = ?,
           discount_percent = ?, discount_active = ?, discount_start_at = ?, discount_end_at = ?
       WHERE id = ?
     `).run(
       name,
+      brand,
+      model,
+      department,
       category,
       price,
       formattedPrice,

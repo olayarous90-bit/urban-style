@@ -543,7 +543,7 @@ router.get('/products/:id', requireAdmin, async (req, res) => {
  */
 router.post('/products', requireAdmin, async (req, res) => {
   try {
-    const { name, category, price, description, sizes, composition, color, stock, is_active } = req.body;
+    const { name, brand, model, department, category, price, description, sizes, composition, color, stock, is_active } = req.body;
 
     if (!name || typeof name !== 'string' || name.trim().length < 3) {
       return res.status(400).json({ success: false, message: 'El nombre del producto debe tener al menos 3 caracteres.' });
@@ -569,6 +569,9 @@ router.post('/products', requireAdmin, async (req, res) => {
 
     const newProduct = await createProduct({
       name,
+      brand: brand || 'URBAN STYLE',
+      model: model || '',
+      department: department || '',
       category,
       price: numPrice,
       description: description || '',

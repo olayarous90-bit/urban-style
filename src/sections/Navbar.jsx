@@ -64,16 +64,46 @@ export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
     };
   }, [isMobileMenuOpen]);
 
-  // Manejo de navegación suave a secciones
+  // Manejo de navegación suave a secciones y filtros de catálogo
   const handleNavClick = (e, href) => {
     setIsMobileMenuOpen(false);
     setIsWishlistOpen(false);
 
     if (href.startsWith('#')) {
-      const targetId = href.replace('#', '');
+      const targetId = href.replace('#', '').toLowerCase();
       if (targetId === 'inicio') {
         e.preventDefault();
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      // Si es una categoría de producto, filtrar el catálogo y desplazarse a productos
+      if (['zapatillas', 'tenis', 'calzado', 'hombre', 'mujer', 'accesorios'].includes(targetId)) {
+        e.preventDefault();
+        let catFilter = 'ALL';
+        if (['zapatillas', 'tenis', 'calzado'].includes(targetId)) catFilter = 'TENIS';
+        else if (targetId === 'hombre') catFilter = 'HOMBRE';
+        else if (targetId === 'mujer') catFilter = 'MUJER';
+        else if (targetId === 'accesorios') catFilter = 'ACCESORIOS';
+
+        window.dispatchEvent(new CustomEvent('filter-products-category', { detail: catFilter }));
+        const prodSec = document.getElementById('productos');
+        if (prodSec) {
+          prodSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        return;
+      }
+
+      // Si es la sección de ofertas
+      if (targetId === 'ofertas') {
+        e.preventDefault();
+        const ofertasSec = document.getElementById('ofertas-navidenas') || document.getElementById('productos');
+        if (ofertasSec) {
+          if (ofertasSec.id === 'productos') {
+            window.dispatchEvent(new CustomEvent('filter-products-category', { detail: 'OFERTAS' }));
+          }
+          ofertasSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
         return;
       }
 
@@ -105,11 +135,16 @@ export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
     e.preventDefault();
     const query = searchQuery.trim();
     if (!query) return;
-    // Búsqueda demostrativa no invasiva sin alert() del navegador
-    setSearchToast(`Búsqueda: "${query}". Modo demostración: el catálogo está disponible en la sección de productos.`);
+
+    // Disparar búsqueda interactiva en el catálogo de productos
+    window.dispatchEvent(new CustomEvent('search-products', { detail: query }));
     setSearchQuery('');
     setIsSearchOpen(false);
-    setTimeout(() => setSearchToast(null), 4000);
+
+    const prodSec = document.getElementById('productos');
+    if (prodSec) {
+      prodSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   };
 
   return (
