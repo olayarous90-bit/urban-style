@@ -166,11 +166,23 @@
   background-color: #151515;
 }
 
+/* ==========================================================================
+   TABLA DE PRODUCTOS REESTRUCTURADA - 9 COLUMNAS PROFESIONALES Y ESPACIOSAS
+   ========================================================================== */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm, 6px);
+  background-color: #151515;
+}
+
 .admin-products-table {
-  width: 1580px;
-  min-width: 1580px;
+  width: 1680px;
+  min-width: 1680px;
   border-collapse: collapse;
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   text-align: left;
   table-layout: fixed;
 }
@@ -181,14 +193,14 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  padding: 0.85rem 0.95rem;
+  padding: 1rem 0.85rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   white-space: nowrap;
   vertical-align: middle;
 }
 
 .admin-products-table td {
-  padding: 0.85rem 0.95rem;
+  padding: 1rem 0.85rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   color: #ddd;
   vertical-align: middle;
@@ -198,33 +210,61 @@
   background-color: rgba(255, 255, 255, 0.02);
 }
 
-/* Columna ID */
+/* ==========================================================================
+   1. COLUMNA IDENTIFICADOR (140px) - HORIZONTAL, SIN SEPARAR LETRAS
+   ========================================================================== */
 .admin-products-table .th-id,
 .admin-products-table .col-id {
-  width: 65px;
-  min-width: 65px;
-  max-width: 65px;
-  text-align: center;
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
+  vertical-align: middle;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.id-cell-wrapper {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 130px;
 }
 
 .id-code-badge {
-  font-family: var(--font-numeric, 'Inter', 'Roboto', monospace);
-  font-size: 0.75rem;
-  color: #888;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 2px 6px;
-  border-radius: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: 'Inter', 'Roboto', monospace !important;
+  font-size: 0.76rem !important;
+  font-weight: 600 !important;
+  color: #a0a0a0 !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  padding: 3px 7px !important;
+  border-radius: 4px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: inline-block !important;
+  max-width: 125px !important;
+  line-height: 1.3 !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  hyphens: none !important;
+  transition: all 0.15s ease !important;
+}
+
+.id-code-badge:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
 }
 
 /* ==========================================================================
-   COLUMNA PRENDA Y PRODUCTO - PRESENTACIÓN 100% HORIZONTAL, LIMPIA Y ESTABLE
+   2. COLUMNA PRODUCTO (380px) - IMAGEN, NOMBRE, MARCA Y DESCRIPCIÓN
    ========================================================================== */
 .admin-products-table .th-product,
 .admin-products-table .col-product {
-  width: 360px;
-  min-width: 360px;
-  max-width: 360px;
+  width: 380px;
+  min-width: 380px;
+  max-width: 380px;
   vertical-align: middle;
   text-align: left;
   box-sizing: border-box;
@@ -239,10 +279,10 @@
 
 .admin-product-thumb {
   position: relative;
-  width: 48px;
-  height: 48px;
-  min-width: 48px;
-  max-width: 48px;
+  width: 52px;
+  height: 52px;
+  min-width: 52px;
+  max-width: 52px;
   border-radius: 6px;
   overflow: hidden;
   background-color: #1a1a1a;
@@ -253,7 +293,7 @@
 }
 
 .admin-product-thumb:hover {
-  transform: scale(1.08);
+  transform: scale(1.06);
   border-color: var(--color-accent, #FF5A1F);
 }
 
@@ -288,11 +328,10 @@
   text-align: left;
 }
 
-/* NOMBRE DEL PRODUCTO: Tipografía Inter / Roboto, palabras completas, horizontal */
 .admin-product-name {
   font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif !important;
-  font-size: 0.9rem !important;
-  font-weight: 600 !important;
+  font-size: 0.92rem !important;
+  font-weight: 700 !important;
   color: #ffffff !important;
   line-height: 1.35 !important;
   letter-spacing: 0 !important;
@@ -319,164 +358,320 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 0.73rem;
-  color: #888888;
-  line-height: 1.2;
-  white-space: nowrap;
+  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 0.74rem !important;
+  color: #888888 !important;
+  line-height: 1.2 !important;
+  white-space: nowrap !important;
 }
 
 .admin-product-brand {
-  color: var(--color-accent, #ff5a1f);
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  color: var(--color-accent, #ff5a1f) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
 }
 
 .admin-product-model {
-  color: #cccccc;
+  color: #cccccc !important;
 }
 
 .admin-product-dept {
-  color: #888888;
+  color: #888888 !important;
 }
 
-.admin-product-composition {
-  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 0.7rem;
-  color: #777777;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.2;
+.admin-product-desc-snippet {
+  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 0.72rem !important;
+  color: #777777 !important;
+  line-height: 1.25 !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 300px !important;
 }
 
-/* Clases auxiliares para compatibilidad */
-.product-cell-with-thumb {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.product-cell-name {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 3px;
-}
-
-.product-title-bold {
-  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #ffffff;
-  line-height: 1.35;
-  display: block;
-}
-
-/* Columnas de Categoría, Precios y Descuentos */
+/* ==========================================================================
+   3. COLUMNA CATEGORÍA (120px)
+   ========================================================================== */
 .admin-products-table .th-category,
 .admin-products-table .col-category {
-  width: 110px;
-  min-width: 110px;
-  white-space: nowrap;
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+  vertical-align: middle;
+  text-align: left;
+  box-sizing: border-box;
 }
 
-.category-tag {
+.category-pill-tag {
   display: inline-block;
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 4px;
-  padding: 0.25rem 0.55rem;
-  font-size: 0.72rem;
+  padding: 4px 9px;
+  font-size: 0.74rem;
   font-weight: 700;
-  color: #dddddd;
+  color: #e0e0e0;
   text-transform: uppercase;
   letter-spacing: 0.04em;
   white-space: nowrap;
 }
 
-.admin-products-table .th-price-normal,
-.admin-products-table .col-price-normal {
-  width: 110px;
-  min-width: 110px;
-  white-space: nowrap;
-}
-
-.price-text-cop {
-  font-family: var(--font-numeric);
-  font-feature-settings: "tnum" 1, "lnum" 1;
-  font-variant-numeric: tabular-nums lining-nums;
-  font-weight: 800;
-  color: #52c41a;
-  font-size: 0.88rem;
-  letter-spacing: -0.01em;
-}
-
+/* ==========================================================================
+   4, 5, 6. COLUMNAS DE PRECIOS Y DESCUENTOS (135px cada una)
+   ========================================================================== */
+.admin-products-table .th-price-original,
+.admin-products-table .col-price-original,
 .admin-products-table .th-discount,
-.admin-products-table .col-discount {
-  width: 135px;
-  min-width: 130px;
-  white-space: nowrap;
-}
-
+.admin-products-table .col-discount,
 .admin-products-table .th-price-final,
 .admin-products-table .col-price-final {
-  width: 110px;
-  min-width: 110px;
+  width: 135px;
+  min-width: 135px;
+  max-width: 135px;
+  vertical-align: middle;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.table-price-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
   white-space: nowrap;
 }
 
-.price-final-highlight {
-  font-family: var(--font-numeric);
+.price-numeric-val {
+  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-feature-settings: "tnum" 1, "lnum" 1 !important;
+  font-variant-numeric: tabular-nums lining-nums !important;
+  font-size: 0.92rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  white-space: nowrap !important;
+  display: inline-block !important;
+}
+
+.price-numeric-val.original-val {
+  color: #a0a0a0 !important;
+}
+
+.price-numeric-val.final-val {
+  color: #52c41a !important;
+}
+
+.price-numeric-val.final-val.is-discounted {
+  color: var(--color-accent, #FF5A1F) !important;
+}
+
+.price-currency-tag {
+  font-family: 'Inter', 'Roboto', sans-serif !important;
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+  color: #777777 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+}
+
+.table-discount-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+}
+
+.discount-pill-active {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(82, 196, 26, 0.14);
+  border: 1px solid rgba(82, 196, 26, 0.35);
+  color: #73d13d;
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-family: 'Inter', 'Roboto', sans-serif;
   font-feature-settings: "tnum" 1, "lnum" 1;
   font-variant-numeric: tabular-nums lining-nums;
-  font-weight: 800;
-  color: #ffffff;
-  font-size: 0.88rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
-.price-final-highlight.is-discounted {
-  color: var(--color-accent, #FF5A1F);
+.discount-pill-scheduled {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(250, 173, 20, 0.14);
+  border: 1px solid rgba(250, 173, 20, 0.35);
+  color: #ffc53d;
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
+.discount-pill-expired {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 77, 79, 0.14);
+  border: 1px solid rgba(255, 77, 79, 0.35);
+  color: #ff7875;
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.discount-pill-none {
+  font-size: 0.74rem;
+  color: #666666;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.discount-saving-sub {
+  font-family: 'Inter', 'Roboto', sans-serif;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 0.68rem;
+  color: #888888;
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   7. COLUMNA TALLAS Y VARIANTES (150px) - BOTONES ORDENADOS Y ESPACIADOS
+   ========================================================================== */
 .admin-products-table .th-sizes,
 .admin-products-table .col-sizes {
-  width: 130px;
-  min-width: 120px;
+  width: 150px;
+  min-width: 150px;
+  max-width: 150px;
+  vertical-align: middle;
+  text-align: left;
+  box-sizing: border-box;
 }
 
-.sizes-badge-container {
+.sizes-grid-wrapper {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.3rem;
+  gap: 5px;
+  align-items: center;
   max-width: 140px;
 }
 
-.size-chip {
-  font-family: var(--font-numeric);
-  font-feature-settings: "tnum" 1, "lnum" 1;
-  font-variant-numeric: tabular-nums lining-nums;
-  background: #222;
-  border: 1px solid #333;
-  color: #ccc;
-  font-size: 0.7rem;
-  font-weight: 700;
-  padding: 0.15rem 0.4rem;
-  border-radius: 3px;
+.size-badge-box {
+  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-feature-settings: "tnum" 1, "lnum" 1 !important;
+  font-variant-numeric: tabular-nums lining-nums !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 26px !important;
+  height: 22px !important;
+  padding: 0 5px !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  color: #e0e0e0 !important;
+  background: #202020 !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 4px !important;
+  box-sizing: border-box !important;
+  line-height: 1 !important;
+  transition: all 0.15s ease !important;
 }
 
+.size-badge-box:hover {
+  border-color: var(--color-accent, #FF5A1F) !important;
+  color: #ffffff !important;
+}
+
+.size-badge-empty {
+  font-size: 0.74rem;
+  color: #777777;
+  font-style: italic;
+}
+
+/* ==========================================================================
+   8. COLUMNA COLOR E INVENTARIO (140px)
+   ========================================================================== */
 .admin-products-table .th-color,
 .admin-products-table .col-color {
-  width: 90px;
-  min-width: 90px;
-  white-space: nowrap;
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
+  vertical-align: middle;
+  text-align: left;
+  box-sizing: border-box;
 }
 
-.admin-products-table .th-stock,
-.admin-products-table .col-stock {
-  width: 100px;
-  min-width: 100px;
+.color-stock-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.color-chip-text {
+  font-family: 'Inter', 'Roboto', sans-serif !important;
+  font-size: 0.76rem !important;
+  font-weight: 600 !important;
+  color: #cccccc !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 130px !important;
+}
+
+.stock-status-pill {
+  display: inline-flex;
+  align-items: center;
+  font-family: 'Inter', 'Roboto', sans-serif !important;
+  font-feature-settings: "tnum" 1, "lnum" 1 !important;
+  font-variant-numeric: tabular-nums !important;
+  font-size: 0.7rem !important;
+  font-weight: 700 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  white-space: nowrap !important;
+}
+
+.stock-status-pill.stock-high {
+  background: rgba(82, 196, 26, 0.12) !important;
+  color: #73d13d !important;
+  border: 1px solid rgba(82, 196, 26, 0.3) !important;
+}
+
+.stock-status-pill.stock-low {
+  background: rgba(250, 173, 20, 0.12) !important;
+  color: #ffc53d !important;
+  border: 1px solid rgba(255, 173, 20, 0.3) !important;
+}
+
+.stock-status-pill.stock-out {
+  background: rgba(255, 77, 79, 0.12) !important;
+  color: #ff7875 !important;
+  border: 1px solid rgba(255, 77, 79, 0.3) !important;
+}
+
+/* ==========================================================================
+   9. COLUMNA ACCIONES (320px) - BOTONES UNIFORMES DE 34px
+   ========================================================================== */
+.admin-products-table .th-actions,
+.admin-products-table .col-actions {
+  width: 320px;
+  min-width: 320px;
+  max-width: 320px;
+  vertical-align: middle;
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .stock-badge {
@@ -510,19 +705,6 @@
   border: 1px solid rgba(255, 77, 79, 0.3);
 }
 
-.admin-products-table .th-status,
-.admin-products-table .col-status {
-  width: 110px;
-  min-width: 110px;
-  text-align: center;
-}
-
-.admin-products-table .th-actions,
-.admin-products-table .col-actions {
-  width: 330px;
-  min-width: 320px;
-  white-space: nowrap;
-}
 
 /* ==========================================================================
    BOTONES DE ACCIÓN EN FILAS - DIMENSIONES Y ALTURAS 100% UNIFORMES

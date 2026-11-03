@@ -97,6 +97,7 @@ function ProductNameCell({ product, mainImage, imageCount, onPreviewImage }) {
   const brand = product.brand || 'URBAN STYLE';
   const model = product.model;
   const department = product.department;
+  const desc = product.description;
 
   return (
     <div className="admin-product-item">
@@ -121,8 +122,10 @@ function ProductNameCell({ product, mainImage, imageCount, onPreviewImage }) {
           {model && <span className="admin-product-model">• Mod: {model}</span>}
           {department && <span className="admin-product-dept">({department})</span>}
         </div>
-        {product.composition && (
-          <span className="admin-product-composition">{product.composition}</span>
+        {desc && (
+          <p className="admin-product-desc-snippet" title={desc}>
+            {desc}
+          </p>
         )}
       </div>
     </div>
@@ -908,47 +911,43 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
         </div>
       </div>
 
-      {/* TABLA DE PRODUCTOS */}
+      {/* TABLA DE PRODUCTOS REESTRUCTURADA */}
       <div className="table-responsive">
         <table className="admin-table admin-products-table">
           <colgroup>
-            <col style={{ width: '65px' }} />
-            <col style={{ width: '360px' }} />
-            <col style={{ width: '115px' }} />
+            <col style={{ width: '140px' }} />
+            <col style={{ width: '380px' }} />
             <col style={{ width: '120px' }} />
             <col style={{ width: '135px' }} />
-            <col style={{ width: '120px' }} />
-            <col style={{ width: '130px' }} />
-            <col style={{ width: '100px' }} />
-            <col style={{ width: '105px' }} />
-            <col style={{ width: '110px' }} />
+            <col style={{ width: '135px' }} />
+            <col style={{ width: '135px' }} />
+            <col style={{ width: '150px' }} />
+            <col style={{ width: '140px' }} />
             <col style={{ width: '320px' }} />
           </colgroup>
           <thead>
             <tr>
               <th className="th-id">ID</th>
-              <th className="th-product">Prenda y Producto</th>
+              <th className="th-product">Producto y Prenda</th>
               <th className="th-category">Categoría</th>
-              <th className="th-price-normal">Precio Normal</th>
+              <th className="th-price-original">Precio Original</th>
               <th className="th-discount">Descuento</th>
               <th className="th-price-final">Precio Final</th>
               <th className="th-sizes">Tallas</th>
-              <th className="th-color">Color</th>
-              <th className="th-stock">Inventario</th>
-              <th className="th-status">Estado</th>
+              <th className="th-color">Color y Stock</th>
               <th className="th-actions">Acciones</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="11" className="text-center py-4 text-muted">
+                <td colSpan="9" className="text-center py-4 text-muted">
                   Cargando catálogo e imágenes desde Neon PostgreSQL...
                 </td>
               </tr>
             ) : products.length === 0 ? (
               <tr>
-                <td colSpan="11" className="text-center py-4 text-muted">
+                <td colSpan="9" className="text-center py-4 text-muted">
                   No se encontraron productos con los filtros aplicados.
                 </td>
               </tr>
@@ -958,12 +957,20 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                 const stockNum = Number(p.stock ?? 50);
                 const mainImage = p.image || p.images?.[0]?.url || '/images/products/prod-tshirt.jpg';
                 const imageCount = p.images?.length || 1;
+                const origPriceNum = Number(p.originalPrice || p.normalPrice || p.price || 0);
+                const finalPriceNum = Number(p.finalPrice || p.price || origPriceNum);
+                const hasActiveDiscount = Boolean(p.discountStatus === 'ACTIVE' && p.discountPercent > 0);
 
                 return (
                   <tr key={p.id}>
+                    {/* 1. Identificador */}
                     <td className="col-id">
-                      <code className="id-code-badge">{p.id}</code>
+                      <div className="id-cell-wrapper" title={`ID completo: ${p.id}`}>
+                        <code className="id-code-badge">{p.id}</code>
+                      </div>
                     </td>
+
+                    {/* 2. Producto (imagen, nombre, marca, desc) */}
                     <td className="col-product">
                       <ProductNameCell
                         product={p}
@@ -972,81 +979,115 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                         onPreviewImage={setPreviewModalUrl}
                       />
                     </td>
+
+                    {/* 3. Categoría */}
                     <td className="col-category">
-                      <span className="category-tag">{p.category}</span>
+                      <span className="category-pill-tag">{p.category}</span>
                     </td>
-                    <td className="col-price-normal">
-                      <span className="price-text-cop normal-price">
-                        {p.formattedOriginalPrice || p.formatted_price || formatCOPPreview(p.price)}
-                      </span>
-                    </td>
-                    <td className="col-discount">
-                      {p.discountStatus === 'ACTIVE' && (
-                        <span
-                          className="badge-promo-active"
-                          title={p.discountEndAt ? `Vence: ${new Date(p.discountEndAt).toLocaleString('es-CO')}` : 'Sin fecha fin'}
-                        >
-                          🟢 -{p.discountPercent}% ACTIVO
+
+                    {/* 4. Precio original */}
+                    <td className="col-price-original">
+                      <div className="table-price-block">
+                        <span className="price-numeric-val original-val">
+                          ${origPriceNum.toLocaleString('es-CO')}
                         </span>
-                      )}
-                      {p.discountStatus === 'SCHEDULED' && (
-                        <span
-                          className="badge-promo-scheduled"
-                          title={p.discountStartAt ? `Inicia: ${new Date(p.discountStartAt).toLocaleString('es-CO')}` : ''}
-                        >
-                          🟡 -{p.discountPercent}% PROG
-                        </span>
-                      )}
-                      {p.discountStatus === 'EXPIRED' && (
-                        <span
-                          className="badge-promo-expired"
-                          title={p.discountEndAt ? `Venció: ${new Date(p.discountEndAt).toLocaleString('es-CO')}` : ''}
-                        >
-                          ⌛ VENCIDO (-{p.discountPercent}%)
-                        </span>
-                      )}
-                      {p.discountStatus === 'INACTIVE' && (
-                        <span className="badge-promo-none">—</span>
-                      )}
-                    </td>
-                    <td className="col-price-final">
-                      <span className={`price-final-highlight ${p.hasActiveDiscount ? 'is-discounted' : ''}`}>
-                        {p.formattedPrice || p.formatted_price || formatCOPPreview(p.price)}
-                      </span>
-                    </td>
-                    <td className="col-sizes">
-                      <div className="sizes-badge-container">
-                        {Array.isArray(p.sizes) && p.sizes.map((s) => (
-                          <span key={s} className="size-chip">{s}</span>
-                        ))}
+                        <span className="price-currency-tag">COP</span>
                       </div>
                     </td>
-                    <td className="col-color">{p.color || 'Negro'}</td>
-                    <td className="col-stock">
-                      <span
-                        className={`stock-badge ${
-                          stockNum === 0
-                            ? 'stock-out'
-                            : stockNum <= 10
-                            ? 'stock-low'
-                            : 'stock-high'
-                        }`}
-                      >
-                        {stockNum} u. {stockNum <= 10 ? '⚠️' : '✓'}
-                      </span>
+
+                    {/* 5. Descuento */}
+                    <td className="col-discount">
+                      {hasActiveDiscount ? (
+                        <div className="table-discount-block">
+                          <span
+                            className="discount-pill-active"
+                            title={p.discountEndAt ? `Vence: ${new Date(p.discountEndAt).toLocaleString('es-CO')}` : 'Sin fecha fin'}
+                          >
+                            🟢 -{p.discountPercent}% OFF
+                          </span>
+                          {p.savings > 0 && (
+                            <span className="discount-saving-sub" title={`Ahorro: $${p.savings.toLocaleString('es-CO')} COP`}>
+                              Ahorra: ${p.savings.toLocaleString('es-CO')}
+                            </span>
+                          )}
+                        </div>
+                      ) : p.discountStatus === 'SCHEDULED' ? (
+                        <div className="table-discount-block">
+                          <span
+                            className="discount-pill-scheduled"
+                            title={p.discountStartAt ? `Inicia: ${new Date(p.discountStartAt).toLocaleString('es-CO')}` : ''}
+                          >
+                            🟡 -{p.discountPercent}% PROG
+                          </span>
+                        </div>
+                      ) : p.discountStatus === 'EXPIRED' ? (
+                        <div className="table-discount-block">
+                          <span
+                            className="discount-pill-expired"
+                            title={p.discountEndAt ? `Venció: ${new Date(p.discountEndAt).toLocaleString('es-CO')}` : ''}
+                          >
+                            ⌛ VENCIDO (-{p.discountPercent}%)
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="discount-pill-none">Sin dcto.</span>
+                      )}
                     </td>
-                    <td className="col-status">
-                      <button
-                        type="button"
-                        className={`status-toggle-btn ${isActive ? 'active' : 'inactive'}`}
-                        onClick={() => handleToggleStatus(p)}
-                        title="Haz clic para alternar activación"
-                      >
-                        {isActive ? '🟢 Activo' : '⚪ Inactivo'}
-                      </button>
+
+                    {/* 6. Precio final */}
+                    <td className="col-price-final">
+                      <div className="table-price-block">
+                        <span className={`price-numeric-val final-val ${hasActiveDiscount ? 'is-discounted' : ''}`}>
+                          ${finalPriceNum.toLocaleString('es-CO')}
+                        </span>
+                        <span className="price-currency-tag">COP</span>
+                      </div>
                     </td>
+
+                    {/* 7. Tallas y variantes */}
+                    <td className="col-sizes">
+                      <div className="sizes-grid-wrapper">
+                        {Array.isArray(p.sizes) && p.sizes.length > 0 ? (
+                          p.sizes.map((s) => (
+                            <span key={s} className="size-badge-box">{s}</span>
+                          ))
+                        ) : (
+                          <span className="size-badge-empty">Única</span>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* 8. Color y stock */}
+                    <td className="col-color">
+                      <div className="color-stock-container">
+                        <span className="color-chip-text" title={`Color: ${p.color || 'Negro'}`}>
+                          🎨 {p.color || 'Negro'}
+                        </span>
+                        <span
+                          className={`stock-status-pill ${
+                            stockNum === 0
+                              ? 'stock-out'
+                              : stockNum <= 10
+                              ? 'stock-low'
+                              : 'stock-high'
+                          }`}
+                        >
+                          {stockNum > 0 ? `📦 ${stockNum} un.` : '❌ Agotado'}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* 9. Acciones */}
                     <td className="col-actions">
                       <div className="action-buttons-cell">
+                        <button
+                          type="button"
+                          className={`status-toggle-btn ${isActive ? 'active' : 'inactive'}`}
+                          onClick={() => handleToggleStatus(p)}
+                          title={isActive ? 'Clic para ocultar/desactivar' : 'Clic para publicar en tienda'}
+                        >
+                          {isActive ? '🟢 Activo' : '⚪ Inactivo'}
+                        </button>
                         <button
                           type="button"
                           className="btn-action-discount"
