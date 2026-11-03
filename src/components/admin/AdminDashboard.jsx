@@ -30,6 +30,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFeedback, setActionFeedback] = useState(null);
   const [loadingData, setLoadingData] = useState(false);
+  const [resendingEmail, setResendingEmail] = useState(null);
 
   // Filtros de Inventario
   const [inventorySearch, setInventorySearch] = useState('');
@@ -482,21 +483,32 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
   };
 
   // Reintento de envío de correo
-  const handleResendEmail = async (orderNumber) => {
+  const handleResendEmail = async (orderNumber, emailType = 'ALL') => {
+    setResendingEmail(`${orderNumber}-${emailType}`);
     try {
       const res = await fetch(`/api/admin/orders/${orderNumber}/resend-email`, {
         method: 'POST',
-        credentials: 'include'
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ emailType })
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setActionFeedback(`Correo reenviado para el pedido #${orderNumber}.`);
-        setTimeout(() => setActionFeedback(null), 3500);
+        const typeLabel = emailType === 'placed' ? 'de Confirmación' : emailType === 'shipping' ? 'con Guía' : 'de Confirmación y Guía';
+        setActionFeedback(`✅ Notificación ${typeLabel} procesada para #${orderNumber}.`);
+        setTimeout(() => setActionFeedback(null), 4000);
+        // Recargar datos y detalle si está abierto
+        loadAdminData();
+        if (selectedOrder && selectedOrder.order.order_number === orderNumber) {
+          handleViewOrderDetail(orderNumber);
+        }
       } else {
         alert(data.message || 'Error reenviando correo.');
       }
     } catch {
       alert('Error de red al reenviar correo.');
+    } finally {
+      setResendingEmail(null);
     }
   };
 
@@ -1330,6 +1342,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                           <th>Total</th>
                           <th>Método</th>
                           <th>Guía Mi Paquete</th>
+                          <th>Notificaciones Correo</th>
                           <th>Estado</th>
                           <th>Acciones</th>
                         </tr>
@@ -1337,7 +1350,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                       <tbody>
                         {orders.length === 0 ? (
                           <tr>
-                            <td colSpan="9" className="text-center py-4 text-muted">
+                            <td colSpan="10" className="text-center py-4 text-muted">
                               No se encontraron pedidos con el criterio seleccionado.
                             </td>
                           </tr>
@@ -1374,6 +1387,39 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                                 ) : (
                                   <span className="text-muted">Pendiente</span>
                                 )}
+                              </td>
+                              <td>
+                                <div className="email-status-cell">
+                                  <div className="email-badge-row">
+                                    <span className="email-label">✉️ Compra:</span>
+                                    <span className={`email-badge ${order.order_placed_email_status?.toLowerCase() || 'pending_config'}`}>
+                                      {order.order_placed_email_status === 'ACCEPTED' ? 'Aceptado' :
+                                       order.order_placed_email_status === 'DELIVERED' ? 'Entregado' :
+                                       order.order_placed_email_status === 'SENT' ? 'Enviado' :
+                                       order.order_placed_email_status === 'FAILED' ? 'Falló' : 'Pendiente'}
+                                    </span>
+                                  </div>
+                                  <div className="email-badge-row">
+                                    <span className="email-label">🚚 Guía:</span>
+                                    <span className={`email-badge ${order.shipping_email_status?.toLowerCase() || 'not_dispatched'}`}>
+                                      {order.shipping_email_status === 'ACCEPTED' ? 'Aceptada' :
+                                       order.shipping_email_status === 'DELIVERED' ? 'Entregada' :
+                                       order.shipping_email_status === 'SENT' ? 'Enviada' :
+                                       order.shipping_email_status === 'NOT_DISPATCHED' ? 'Sin Despacho' :
+                                       order.shipping_email_status === 'FAILED' ? 'Falló' : 'Pendiente'}
+                                    </span>
+                                  </div>
+                                  {order.email_last_sent && (
+                                    <div className="text-muted text-xs" style={{ marginTop: '2px' }}>
+                                      🕒 {new Date(order.email_last_sent).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
+                                  )}
+                                  {order.order_placed_email_error && (
+                                    <div className="email-error-hint" title={order.order_placed_email_error}>
+                                      ⚠️ {order.order_placed_email_error.substring(0, 24)}...
+                                    </div>
+                                  )}
+                                </div>
                               </td>
                               <td>
                                 <span className={`status-pill status-${order.status.toLowerCase()}`}>
@@ -1413,10 +1459,11 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                                   <button
                                     type="button"
                                     className="action-btn-status email"
-                                    onClick={() => handleResendEmail(order.order_number)}
-                                    title="Reenviar correo con guía"
+                                    onClick={() => handleResendEmail(order.order_number, 'ALL')}
+                                    title="Reenviar correos de compra y guía"
+                                    disabled={resendingEmail?.startsWith(order.order_number)}
                                   >
-                                    ✉️ Reenviar
+                                    {resendingEmail?.startsWith(order.order_number) ? '⏳ Enviando...' : '✉️ Reenviar'}
                                   </button>
                                 </div>
                               </td>
@@ -1793,17 +1840,18 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                         <tr>
                           <th>ID</th>
                           <th>N° Orden</th>
+                          <th>Tipo Notificación</th>
                           <th>Destinatario</th>
-                          <th>Asunto</th>
+                          <th>Message-ID & Proveedor</th>
                           <th>Estado</th>
                           <th>Fecha y Hora</th>
-                          <th>Detalle / Archivo</th>
+                          <th>Vista Previa</th>
                         </tr>
                       </thead>
                       <tbody>
                         {emailLogs.length === 0 ? (
                           <tr>
-                            <td colSpan="7" className="text-center py-4 text-muted">
+                            <td colSpan="8" className="text-center py-4 text-muted">
                               No hay registros de correo aún.
                             </td>
                           </tr>
@@ -1811,24 +1859,63 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                           emailLogs.map((log) => (
                             <tr key={log.id}>
                               <td>{log.id}</td>
-                              <td>#{log.order_number}</td>
-                              <td><strong>{log.recipient_email}</strong></td>
-                              <td>{log.subject}</td>
+                              <td><strong>#{log.order_number}</strong></td>
                               <td>
-                                <span className={`email-status-pill status-${log.status.toLowerCase()}`}>
-                                  {log.status}
-                                </span>
+                                <div>
+                                  <strong>
+                                    {log.email_type === 'ORDER_CONFIRMATION' ? '✉️ Confirmación' : '🚚 Guía Despacho'}
+                                  </strong>
+                                </div>
+                                <div className="text-muted text-xs">{log.subject}</div>
                               </td>
-                              <td>{new Date(log.sent_at).toLocaleString('es-CO')}</td>
+                              <td><strong>{log.recipient_email}</strong></td>
                               <td>
-                                <a
-                                  href={`/api/orders/${log.order_number}/email-preview`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="btn-table-action preview"
-                                >
-                                  🔍 Ver Correo
-                                </a>
+                                {log.message_id ? (
+                                  <div><code style={{ fontSize: '0.72rem' }}>{log.message_id}</code></div>
+                                ) : (
+                                  <div className="text-muted text-xs">Sin Message-ID</div>
+                                )}
+                                <div className="text-muted text-xs">
+                                  {log.provider_name || 'SMTP'} {log.provider_response ? `(${log.provider_response})` : ''}
+                                </div>
+                              </td>
+                              <td>
+                                <span className={`email-badge ${log.status?.toLowerCase() || 'pending_config'}`}>
+                                  {log.status === 'ACCEPTED' ? 'Aceptado SMTP' :
+                                   log.status === 'DELIVERED' ? 'Entregado' :
+                                   log.status === 'SENT' ? 'Enviado' :
+                                   log.status === 'PENDING_CONFIG' ? 'Config Pendiente' :
+                                   log.status === 'IDEMPOTENT_SKIPPED' ? 'Omitido' : 'Falló'}
+                                </span>
+                                {log.error_message && (
+                                  <div className="email-error-hint" title={log.error_message}>
+                                    ⚠️ {log.error_message.substring(0, 24)}...
+                                  </div>
+                                )}
+                              </td>
+                              <td>{new Date(log.sent_at || log.created_at).toLocaleString('es-CO')}</td>
+                              <td>
+                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                  <a
+                                    href={`/api/orders/${log.order_number}/email-preview?type=${log.email_type === 'SHIPPING_NOTIFICATION' ? 'shipping' : 'placed'}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn-table-action preview"
+                                  >
+                                    🔍 HTML
+                                  </a>
+                                  {log.preview_url && log.preview_url.startsWith('http') && (
+                                    <a
+                                      href={log.preview_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="btn-table-action edit"
+                                      title="Ver mensaje en buzón web real"
+                                    >
+                                      🌐 Buzón
+                                    </a>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           ))
@@ -1868,16 +1955,40 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                     <h4 className="diag-title">2. Servicio de Notificaciones por Correo</h4>
                     <div className="diag-details">
                       <p><strong>Proveedor:</strong> {configStatus.mailer.provider}</p>
-                      <p><strong>Remitente Oficial:</strong> {configStatus.mailer.fromAddress}</p>
+                      <p><strong>Modo de Ejecución:</strong> <span className="badge-ok">{configStatus.mailer.activeMode}</span></p>
+                      <p><strong>Remitente Oficial:</strong> <code>{configStatus.mailer.fromAddress}</code></p>
                       <p>
                         <strong>Servidor SMTP:</strong>{' '}
                         {configStatus.mailer.smtpHostConfigured ? (
-                          <span className="badge-ok">Configurado en .env</span>
+                          <span className="badge-ok">Configurado ({configStatus.mailer.host}:{configStatus.mailer.port})</span>
                         ) : (
-                          <span className="badge-pending">Modo Local Activo (SMTP_HOST pendiente en .env)</span>
+                          <span className="badge-pending">Modo Pruebas Real Activo ({configStatus.mailer.host})</span>
                         )}
                       </p>
-                      <p><strong>Respaldo en Disco:</strong> Todos los correos se renderizan con la guía adjunta y se respaldan en <code>server/logs/emails/</code>.</p>
+                      <p>
+                        <strong>Credenciales en Producción Vercel:</strong>{' '}
+                        {configStatus.mailer.isConfigured ? (
+                          <span className="badge-ok">Credenciales Detectadas</span>
+                        ) : (
+                          <span className="badge-pending">Pendientes en Vercel Dashboard</span>
+                        )}
+                      </p>
+                      <div style={{ marginTop: '0.75rem', background: '#111111', padding: '0.75rem', borderRadius: '4px', border: '1px solid #333' }}>
+                        <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', color: '#FF5A1F', fontWeight: 700 }}>
+                          Variables de Entorno para Vercel Producción:
+                        </p>
+                        <code style={{ fontSize: '0.75rem', color: '#AAAAAA', display: 'block', lineHeight: 1.6 }}>
+                          SMTP_HOST=smtp.resend.com (o proveedor SMTP preferido)<br/>
+                          SMTP_PORT=465 (o 587)<br/>
+                          SMTP_SECURE=true (o false si port 587)<br/>
+                          SMTP_USER=resend (o usuario SMTP)<br/>
+                          SMTP_PASS=re_tu_clave_secreta<br/>
+                          MAIL_FROM="URBAN STYLE" &lt;pedidos@tudominio.com&gt;
+                        </code>
+                      </div>
+                      <p className="diag-note">
+                        * Todas las compras envían automáticamente correo de confirmación y correo de guía de despacho con archivo adjunto.
+                      </p>
                     </div>
                   </div>
 
@@ -1952,6 +2063,93 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                     ))}
                   </ul>
                   <p style={{ marginTop: '0.5rem' }}><strong>Total:</strong> ${selectedOrder.order.total.toLocaleString('es-CO')} COP</p>
+                </div>
+
+                <div className="detail-section">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                    <h4 className="detail-sec-title" style={{ margin: 0 }}>Notificaciones por Correo Electrónico</h4>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-xs"
+                        onClick={() => handleResendEmail(selectedOrder.order.order_number, 'placed')}
+                        disabled={resendingEmail?.startsWith(selectedOrder.order.order_number)}
+                      >
+                        {resendingEmail === `${selectedOrder.order.order_number}-placed` ? '⏳ Enviando...' : '✉️ Reenviar Compra'}
+                      </button>
+                      {selectedOrder.shipment && (
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-xs"
+                          onClick={() => handleResendEmail(selectedOrder.order.order_number, 'shipping')}
+                          disabled={resendingEmail?.startsWith(selectedOrder.order.order_number)}
+                        >
+                          {resendingEmail === `${selectedOrder.order.order_number}-shipping` ? '⏳ Enviando...' : '🚚 Reenviar Guía'}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-xs"
+                        onClick={() => handleResendEmail(selectedOrder.order.order_number, 'ALL')}
+                        disabled={resendingEmail?.startsWith(selectedOrder.order.order_number)}
+                      >
+                        {resendingEmail === `${selectedOrder.order.order_number}-ALL` ? '⏳ Enviando...' : '🔄 Reenviar Ambos'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <p><strong>Destinatario Registrado:</strong> <code>{selectedOrder.order.customer_email}</code></p>
+
+                  {(!selectedOrder.emails || selectedOrder.emails.length === 0) ? (
+                    <p className="text-muted text-xs">No hay registros de envío para esta orden aún.</p>
+                  ) : (
+                    <div className="order-emails-log-list">
+                      {selectedOrder.emails.map((em) => (
+                        <div key={em.id} className="email-log-item-card">
+                          <div className="email-log-item-header">
+                            <span className="email-log-type-tag">
+                              {em.email_type === 'ORDER_CONFIRMATION' ? '✉️ Confirmación de Pedido' : '🚚 Notificación de Guía'}
+                            </span>
+                            <span className={`email-badge ${em.status?.toLowerCase()}`}>
+                              {em.status === 'ACCEPTED' ? 'Aceptado por Servidor SMTP' :
+                               em.status === 'DELIVERED' ? 'Entregado al Destinatario' :
+                               em.status === 'SENT' ? 'Enviado' :
+                               em.status === 'PENDING_CONFIG' ? 'Pendiente Configuración SMTP' :
+                               em.status === 'IDEMPOTENT_SKIPPED' ? 'Omitido (Duplicado)' : 'Fallido'}
+                            </span>
+                          </div>
+                          <div className="email-log-item-meta text-xs">
+                            <div><strong>Asunto:</strong> {em.subject}</div>
+                            {em.message_id && <div><strong>Message-ID:</strong> <code>{em.message_id}</code></div>}
+                            {em.provider_name && <div><strong>Proveedor:</strong> {em.provider_name}</div>}
+                            {em.provider_response && <div><strong>Respuesta SMTP:</strong> <code>{em.provider_response}</code></div>}
+                            <div><strong>Fecha/Hora:</strong> {new Date(em.sent_at || em.created_at).toLocaleString('es-CO')}</div>
+                            {em.error_message && <div style={{ color: '#F56565' }}><strong>Detalle:</strong> {em.error_message}</div>}
+                          </div>
+                          <div style={{ marginTop: '0.6rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                            <a
+                              href={`/api/orders/${selectedOrder.order.order_number}/email-preview?type=${em.email_type === 'ORDER_CONFIRMATION' ? 'placed' : 'shipping'}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn btn-secondary btn-xs"
+                            >
+                              🔍 Ver Plantilla HTML
+                            </a>
+                            {em.preview_url && em.preview_url.startsWith('http') && (
+                              <a
+                                href={em.preview_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-primary btn-xs"
+                              >
+                                🌐 Ver en Buzón SMTP Ethereal
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="detail-section">

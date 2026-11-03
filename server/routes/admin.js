@@ -357,11 +357,12 @@ router.post('/orders/:orderNumber/resend-email', requireAdmin, async (req, res) 
       return res.status(404).json({ success: false, message: 'Pedido no encontrado' });
     }
 
-    const result = await retryOrderEmail(details.order.id);
+    const emailType = req.body?.emailType || 'ALL';
+    const result = await retryOrderEmail(details.order.id, emailType, true);
 
     res.json({
       success: true,
-      message: 'Reintento de envío de correo procesado.',
+      message: `Reintento de correo (${emailType}) procesado exitosamente.`,
       result
     });
   } catch (error) {
@@ -420,11 +421,17 @@ router.get('/config-status', requireAdmin, (req, res) => {
         originCity: process.env.ORIGIN_CITY || 'BOGOTÁ D.C.'
       },
       mailer: {
-        provider: 'Nodemailer SMTP',
+        provider: 'Nodemailer Transport (SMTP / Resend)',
+        isConfigured: !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) || !!process.env.RESEND_API_KEY,
         smtpHostConfigured: !!process.env.SMTP_HOST,
         smtpUserConfigured: !!process.env.SMTP_USER,
+        smtpPassConfigured: !!process.env.SMTP_PASS,
+        activeMode: process.env.SMTP_HOST ? 'SMTP Producción' : process.env.RESEND_API_KEY ? 'Resend API/SMTP' : 'Buzón de Pruebas Ethereal SMTP (Red Real)',
         fromAddress: process.env.MAIL_FROM || 'despachos@urbanstyle.com.co',
-        fallbackMode: 'Local HTML Log en server/logs/emails/'
+        host: process.env.SMTP_HOST || 'smtp.ethereal.email (pruebas)',
+        port: Number(process.env.SMTP_PORT) || 587,
+        secure: process.env.SMTP_SECURE === 'true',
+        requiredVercelVars: ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_SECURE', 'MAIL_FROM']
       },
       database: {
         engine: 'Neon PostgreSQL (Primary) / SQLite3 (Fallback)',

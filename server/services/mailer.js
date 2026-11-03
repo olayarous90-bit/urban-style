@@ -21,15 +21,115 @@ if (!fs.existsSync(EMAIL_LOGS_DIR)) {
   fs.mkdirSync(EMAIL_LOGS_DIR, { recursive: true });
 }
 
+// Cuenta de pruebas Ethereal en caché para no recrearla en cada llamada
+let cachedEtherealAccount = null;
+
 /**
- * Crea el transportador de correo con fallback seguro
+ * Obtiene el transportador configurado con detección inteligente de proveedor
+ */
+export async function getTransporterInfo() {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const port = Number(process.env.SMTP_PORT) || 587;
+  const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+
+  // 1. Configuración SMTP explícita (Producción o staging)
+  if (host && user && pass) {
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth: { user, pass },
+      tls: {
+        rejectUnauthorized: process.env.NODE_ENV === 'production'
+      }
+    });
+
+    return {
+      transporter,
+      providerName: `SMTP (${host})`,
+      mode: 'PRODUCTION_SMTP',
+      isLive: true
+    };
+  }
+
+  // 2. Soporte nativo para Resend SMTP vía RESEND_API_KEY
+  if (process.env.RESEND_API_KEY) {
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.resend.com',
+      port: 465,
+      secure: true,
+      auth: {
+        user: 'resend',
+        pass: process.env.RESEND_API_KEY
+      }
+    });
+
+    return {
+      transporter,
+      providerName: 'Resend SMTP (smtp.resend.com)',
+      mode: 'RESEND_SMTP',
+      isLive: true
+    };
+  }
+
+  // 3. Si estamos en producción estricta en Vercel y no hay credenciales
+  if (process.env.NODE_ENV === 'production' && !process.env.ENABLE_ETHEREAL_TEST) {
+    return {
+      transporter: null,
+      providerName: 'Pendiente de Configuración en Vercel',
+      mode: 'UNCONFIGURED_PRODUCTION',
+      isLive: false,
+      reason: 'Variables SMTP_HOST, SMTP_USER y SMTP_PASS no definidas en el panel de Vercel.'
+    };
+  }
+
+  // 4. Modo Desarrollo / Pruebas Controladas: Ethereal SMTP (Servidor SMTP real con buzón web)
+  try {
+    if (!cachedEtherealAccount) {
+      cachedEtherealAccount = await nodemailer.createTestAccount();
+      console.log(`[Mailer] Buzón de pruebas Ethereal inicializado: ${cachedEtherealAccount.user}`);
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: cachedEtherealAccount.smtp.host,
+      port: cachedEtherealAccount.smtp.port,
+      secure: cachedEtherealAccount.smtp.secure,
+      auth: {
+        user: cachedEtherealAccount.user,
+        pass: cachedEtherealAccount.pass
+      }
+    });
+
+    return {
+      transporter,
+      providerName: `Ethereal Test SMTP (${cachedEtherealAccount.smtp.host})`,
+      mode: 'ETHEREAL_TEST',
+      isLive: true,
+      testUser: cachedEtherealAccount.user
+    };
+  } catch (err) {
+    console.warn('[Mailer Ethereal Warning] No se pudo crear cuenta de prueba Ethereal:', err.message);
+    return {
+      transporter: null,
+      providerName: 'Local Fallback (Sin conexión)',
+      mode: 'LOCAL_FALLBACK',
+      isLive: false,
+      reason: err.message
+    };
+  }
+}
+
+/**
+ * Función compatible síncrona/rápida para retrocompatibilidad
  */
 export function createTransporter() {
   const host = process.env.SMTP_HOST;
   const user = process.env.SMTP_USER;
   const pass = process.env.SMTP_PASS;
   const port = Number(process.env.SMTP_PORT) || 587;
-  const secure = process.env.SMTP_SECURE === 'true';
+  const secure = process.env.SMTP_SECURE === 'true' || port === 465;
 
   if (host && user && pass) {
     return nodemailer.createTransport({
@@ -39,20 +139,60 @@ export function createTransporter() {
       auth: { user, pass }
     });
   }
+  return null;
+}
+
+/**
+ * Protección de idempotencia: verifica si un correo idéntico fue aceptado recientemente
+ */
+export async function wasEmailRecentlySent(orderId, orderNumber, emailType, windowSeconds = 120) {
+  const cutoff = new Date(Date.now() - windowSeconds * 1000).toISOString();
+
+  // 1. Neon check
+  try {
+    const res = await query(
+      `SELECT id, message_id, status, sent_at, preview_url FROM email_logs
+       WHERE (order_id = $1 OR order_number = $2)
+         AND email_type = $3
+         AND status IN ('ACCEPTED', 'DELIVERED', 'SENT')
+         AND (sent_at >= $4 OR created_at >= $4)
+       ORDER BY id DESC LIMIT 1`,
+      [orderId || -1, orderNumber || '', emailType, cutoff]
+    );
+    if (res.rows && res.rows.length > 0) return res.rows[0];
+  } catch (e) {}
+
+  // 2. SQLite fallback
+  try {
+    const row = db.prepare(`
+      SELECT id, message_id, status, sent_at, preview_url FROM email_logs
+      WHERE (order_id = ? OR order_number = ?)
+        AND email_type = ?
+        AND status IN ('ACCEPTED', 'DELIVERED', 'SENT')
+        AND sent_at >= ?
+      ORDER BY id DESC LIMIT 1
+    `).get(orderId || -1, orderNumber || '', emailType, cutoff);
+    if (row) return row;
+  } catch (e) {}
 
   return null;
 }
 
 /**
- * Registra un envío de correo en Neon PostgreSQL y SQLite
+ * Registra un envío de correo en Neon PostgreSQL y SQLite con auditoría completa
  */
-async function logEmailRecord({
+export async function logEmailRecord({
   orderId,
   orderNumber,
   recipientEmail,
   subject,
   emailType,
-  status,
+  status, // 'ACCEPTED', 'DELIVERED', 'PENDING_CONFIG', 'FAILED', 'IDEMPOTENT_SKIPPED'
+  messageId = null,
+  providerName = null,
+  providerResponse = null,
+  attemptCount = 1,
+  previewUrl = null,
   errorMessage = null,
   htmlFilePath = null
 }) {
@@ -63,8 +203,9 @@ async function logEmailRecord({
     await query(
       `INSERT INTO email_logs (
         order_id, order_number, recipient_email, subject, email_type,
-        status, error_message, content_preview, html_file_path, sent_at, created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)`,
+        status, message_id, provider_name, provider_response, attempt_count,
+        preview_url, error_message, content_preview, html_file_path, sent_at, created_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $15)`,
       [
         orderId || null,
         orderNumber,
@@ -72,6 +213,11 @@ async function logEmailRecord({
         subject,
         emailType,
         status,
+        messageId,
+        providerName,
+        providerResponse,
+        attemptCount,
+        previewUrl,
         errorMessage,
         subject,
         htmlFilePath,
@@ -86,15 +232,22 @@ async function logEmailRecord({
   try {
     db.prepare(`
       INSERT INTO email_logs (
-        order_id, order_number, recipient_email, subject, status,
-        error_message, html_file_path, sent_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        order_id, order_number, recipient_email, subject, email_type,
+        status, message_id, provider_name, provider_response, attempt_count,
+        preview_url, error_message, html_file_path, sent_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       orderId || null,
       orderNumber,
       recipientEmail,
       subject,
+      emailType,
       status,
+      messageId,
+      providerName,
+      providerResponse,
+      attemptCount,
+      previewUrl,
       errorMessage,
       htmlFilePath,
       now
@@ -117,11 +270,11 @@ export function generateOrderPlacedEmailHtml({ order, items = [] }) {
     .map(
       (item) => `
       <tr>
-        <td style="padding: 12px 8px; border-bottom: 1px solid #222222; color: #FFFFFF; font-size: 14px;">
-          <strong>${item.product_name || item.name}</strong><br>
-          <span style="font-size: 12px; color: #888888;">Talla: ${item.size || 'Única'} | Cantidad: ${item.quantity}</span>
+        <td style="padding: 14px 10px; border-bottom: 1px solid #222222; color: #FFFFFF; font-size: 14px;">
+          <strong style="color: #FFFFFF; font-size: 15px;">${item.product_name || item.name}</strong><br>
+          <span style="font-size: 12px; color: #888888;">Talla: <strong>${item.size || 'Única'}</strong> | Cantidad: <strong>${item.quantity}</strong></span>
         </td>
-        <td style="padding: 12px 8px; border-bottom: 1px solid #222222; color: #FFFFFF; text-align: right; font-size: 14px; font-weight: 600;">
+        <td style="padding: 14px 10px; border-bottom: 1px solid #222222; color: #FFFFFF; text-align: right; font-size: 15px; font-weight: 700; font-family: 'Roboto', 'Inter', -apple-system, sans-serif;">
           $${(item.subtotal || (item.price || item.unit_price || 0) * item.quantity).toLocaleString('es-CO')} COP
         </td>
       </tr>
@@ -137,7 +290,7 @@ export function generateOrderPlacedEmailHtml({ order, items = [] }) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Confirmación de Pedido #${order.order_number} - URBAN STYLE</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #0B0B0B; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #EEEEEE;">
+<body style="margin: 0; padding: 0; background-color: #0B0B0B; font-family: 'Roboto', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; color: #EEEEEE;">
   <div style="max-width: 600px; margin: 0 auto; background-color: #111111; border: 1px solid #222222;">
     
     <!-- CABECERA -->
@@ -157,8 +310,8 @@ export function generateOrderPlacedEmailHtml({ order, items = [] }) {
       </div>
       <h2 style="margin: 0 0 8px 0; font-size: 22px; color: #FFFFFF;">¡Gracias por tu compra, ${order.customer_name}!</h2>
       <p style="margin: 0; font-size: 14px; color: #AAAAAA; line-height: 1.5;">
-        Hemos recibido tu pedido con el identificador oficial <strong style="color: #FFFFFF;">#${order.order_number}</strong>.
-        Nuestro equipo ya está preparando tus prendas en bodega.
+        Hemos recibido tu pedido oficial <strong style="color: #FFFFFF;">#${order.order_number}</strong>.
+        Nuestro equipo ya se encuentra preparando tus prendas en bodega.
       </p>
     </div>
 
@@ -166,7 +319,7 @@ export function generateOrderPlacedEmailHtml({ order, items = [] }) {
     <div style="margin: 0 24px 20px 24px; background-color: #1A1A1A; border-left: 4px solid #FF5A1F; padding: 14px 18px; border-radius: 4px;">
       <strong style="color: #FF5A1F; font-size: 13px; text-transform: uppercase;">Próximo paso: Generación de Guía de Transporte</strong>
       <p style="margin: 6px 0 0 0; font-size: 13px; color: #CCCCCC; line-height: 1.4;">
-        En un momento recibirás un segundo correo con el número de guía de Mi Paquete, la transportadora asignada y el enlace de seguimiento en tiempo real.
+        En cuanto despachemos tu paquete recibirás un segundo correo con el número de guía de Mi Paquete, la transportadora asignada y el enlace de rastreo en tiempo real.
       </p>
     </div>
 
@@ -175,21 +328,21 @@ export function generateOrderPlacedEmailHtml({ order, items = [] }) {
       <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
         <tr>
           <td style="width: 50%; vertical-align: top; padding-right: 10px;">
-            <div style="background-color: #161616; padding: 14px; border-radius: 4px; border: 1px solid #222222; min-height: 120px;">
+            <div style="background-color: #161616; padding: 16px; border-radius: 4px; border: 1px solid #222222; min-height: 130px;">
               <strong style="color: #FF5A1F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Datos del Destinatario</strong>
-              <p style="margin: 8px 0 0 0; color: #FFFFFF; line-height: 1.4;">
-                ${order.customer_name} ${order.customer_surname || ''}<br>
+              <p style="margin: 8px 0 0 0; color: #FFFFFF; line-height: 1.5;">
+                <strong>${order.customer_name} ${order.customer_surname || ''}</strong><br>
                 ${order.delivery_address}<br>
                 ${order.delivery_neighborhood ? `Barrio: ${order.delivery_neighborhood}<br>` : ''}
                 ${order.delivery_city}, ${order.delivery_department}<br>
-                Teléfono: ${order.customer_phone}
+                Teléfono: <strong>${order.customer_phone}</strong>
               </p>
             </div>
           </td>
           <td style="width: 50%; vertical-align: top; padding-left: 10px;">
-            <div style="background-color: #161616; padding: 14px; border-radius: 4px; border: 1px solid #222222; min-height: 120px;">
+            <div style="background-color: #161616; padding: 16px; border-radius: 4px; border: 1px solid #222222; min-height: 130px;">
               <strong style="color: #FF5A1F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Método de Pago</strong>
-              <p style="margin: 8px 0 0 0; color: #FFFFFF; line-height: 1.4;">
+              <p style="margin: 8px 0 0 0; color: #FFFFFF; line-height: 1.5;">
                 ${paymentLabel}
               </p>
               ${order.delivery_notes ? `<p style="margin: 8px 0 0 0; color: #888888; font-size: 12px;"><strong>Notas:</strong> ${order.delivery_notes}</p>` : ''}
@@ -209,18 +362,18 @@ export function generateOrderPlacedEmailHtml({ order, items = [] }) {
       </table>
 
       <!-- TOTALES -->
-      <table style="width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px;">
+      <table style="width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px; font-family: 'Roboto', 'Inter', -apple-system, sans-serif;">
         <tr>
-          <td style="padding: 6px 0; color: #888888;">Subtotal de Productos:</td>
-          <td style="padding: 6px 0; color: #FFFFFF; text-align: right;">$${Number(order.subtotal).toLocaleString('es-CO')} COP</td>
+          <td style="padding: 8px 0; color: #888888;">Subtotal de Productos:</td>
+          <td style="padding: 8px 0; color: #FFFFFF; text-align: right; font-weight: 600;">$${Number(order.subtotal).toLocaleString('es-CO')} COP</td>
         </tr>
         <tr>
-          <td style="padding: 6px 0; color: #888888;">Flete de Envío:</td>
-          <td style="padding: 6px 0; color: #FFFFFF; text-align: right;">$${Number(order.shipping_cost).toLocaleString('es-CO')} COP</td>
+          <td style="padding: 8px 0; color: #888888;">Flete de Envío:</td>
+          <td style="padding: 8px 0; color: #FFFFFF; text-align: right; font-weight: 600;">$${Number(order.shipping_cost).toLocaleString('es-CO')} COP</td>
         </tr>
         <tr style="border-top: 2px solid #2E2E2E;">
-          <td style="padding: 12px 0; color: #FFFFFF; font-size: 16px; font-weight: 700;">TOTAL DE LA ORDEN:</td>
-          <td style="padding: 12px 0; color: #FF5A1F; font-size: 18px; font-weight: 900; text-align: right;">$${Number(order.total).toLocaleString('es-CO')} COP</td>
+          <td style="padding: 14px 0; color: #FFFFFF; font-size: 16px; font-weight: 700;">TOTAL DE LA ORDEN:</td>
+          <td style="padding: 14px 0; color: #FF5A1F; font-size: 20px; font-weight: 900; text-align: right;">$${Number(order.total).toLocaleString('es-CO')} COP</td>
         </tr>
       </table>
     </div>
@@ -246,7 +399,7 @@ export function generateOrderPlacedEmailHtml({ order, items = [] }) {
  */
 export function generateShippingDispatchedEmailHtml({ order, shipment, items = [] }) {
   const isCOD = order.payment_method === 'COD';
-  const baseUrl = process.env.PUBLIC_URL || `http://localhost:${process.env.PORT || 4000}`;
+  const baseUrl = process.env.PUBLIC_URL || process.env.CLIENT_URL || `http://localhost:${process.env.PORT || 4000}`;
   const guideUrl = shipment.pdf_guide_url?.startsWith('http')
     ? shipment.pdf_guide_url
     : `${baseUrl}${shipment.pdf_guide_url || `/api/shipping/guide/${shipment.guide_number}`}`;
@@ -260,7 +413,7 @@ export function generateShippingDispatchedEmailHtml({ order, shipment, items = [
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tu Guía de Envío ${shipment.guide_number} - URBAN STYLE</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #0B0B0B; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #EEEEEE;">
+<body style="margin: 0; padding: 0; background-color: #0B0B0B; font-family: 'Roboto', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif; color: #EEEEEE;">
   <div style="max-width: 600px; margin: 0 auto; background-color: #111111; border: 1px solid #222222;">
     
     <!-- CABECERA -->
@@ -293,10 +446,10 @@ export function generateShippingDispatchedEmailHtml({ order, shipment, items = [
         </h3>
       </div>
       
-      <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 13px; font-family: 'Roboto', 'Inter', -apple-system, sans-serif;">
         <tr>
-          <td style="padding: 6px 0; color: #888888;">Número de Guía:</td>
-          <td style="padding: 6px 0; color: #FFFFFF; font-weight: 700; text-align: right; font-family: monospace; font-size: 15px; letter-spacing: 1px;">
+          <td style="padding: 8px 0; color: #888888;">Número de Guía:</td>
+          <td style="padding: 8px 0; color: #FFFFFF; font-weight: 700; text-align: right; font-family: monospace; font-size: 16px; letter-spacing: 1px;">
             ${shipment.guide_number}
           </td>
         </tr>
@@ -314,8 +467,8 @@ export function generateShippingDispatchedEmailHtml({ order, shipment, items = [
         </tr>
         ${isCOD ? `
         <tr style="border-top: 1px solid #2A2A2A;">
-          <td style="padding: 8px 0; color: #FF5A1F; font-weight: bold;">Valor a pagar contra entrega:</td>
-          <td style="padding: 8px 0; color: #FF5A1F; font-weight: 900; font-size: 16px; text-align: right;">$${Number(order.total).toLocaleString('es-CO')} COP</td>
+          <td style="padding: 10px 0; color: #FF5A1F; font-weight: bold; font-size: 14px;">Valor a pagar contra entrega:</td>
+          <td style="padding: 10px 0; color: #FF5A1F; font-weight: 900; font-size: 18px; text-align: right;">$${Number(order.total).toLocaleString('es-CO')} COP</td>
         </tr>
         ` : ''}
       </table>
@@ -340,7 +493,7 @@ export function generateShippingDispatchedEmailHtml({ order, shipment, items = [
           ${order.delivery_address}<br>
           ${order.delivery_neighborhood ? `Barrio: ${order.delivery_neighborhood}<br>` : ''}
           ${order.delivery_city}, ${order.delivery_department} (DANE: ${order.delivery_dane_code})<br>
-          Teléfono: ${order.customer_phone}
+          Teléfono: <strong>${order.customer_phone}</strong>
         </p>
       </div>
     </div>
@@ -364,9 +517,26 @@ export function generateShippingDispatchedEmailHtml({ order, shipment, items = [
 /**
  * EMAIL 1: Envía el correo de Confirmación de Pedido (Inmediato)
  */
-export async function sendOrderPlacedEmail({ order, items = [] }) {
+export async function sendOrderPlacedEmail({ order, items = [], force = false }) {
+  const emailType = 'ORDER_CONFIRMATION';
+
+  // 1. Protección de Idempotencia
+  if (!force) {
+    const recent = await wasEmailRecentlySent(order.id, order.order_number, emailType, 120);
+    if (recent) {
+      console.log(`[Mailer Idempotency] Email de confirmación ya enviado recientemente para #${order.order_number}. Omitiendo.`);
+      return {
+        success: true,
+        status: 'IDEMPOTENT_SKIPPED',
+        messageId: recent.message_id,
+        emailType,
+        previewUrl: recent.preview_url || `/api/orders/${order.order_number}/email-preview?type=placed`,
+        notice: 'Notificación ya enviada recientemente (protección contra duplicados).'
+      };
+    }
+  }
+
   const htmlContent = generateOrderPlacedEmailHtml({ order, items });
-  const transporter = createTransporter();
   const from = process.env.MAIL_FROM || '"URBAN STYLE Pedidos" <pedidos@urbanstyle.com.co>';
   const subject = `¡Tu pedido #${order.order_number} en URBAN STYLE está confirmado!`;
 
@@ -376,32 +546,43 @@ export async function sendOrderPlacedEmail({ order, items = [] }) {
     fs.writeFileSync(logFilePath, htmlContent, 'utf8');
   } catch (e) {}
 
-  if (transporter) {
+  const providerInfo = await getTransporterInfo();
+
+  if (providerInfo.transporter) {
     try {
-      const info = await transporter.sendMail({
+      const info = await providerInfo.transporter.sendMail({
         from,
         to: order.customer_email,
         subject,
         html: htmlContent
       });
 
+      const previewUrl = nodemailer.getTestMessageUrl(info) || `/api/orders/${order.order_number}/email-preview?type=placed`;
+
       await logEmailRecord({
         orderId: order.id,
         orderNumber: order.order_number,
         recipientEmail: order.customer_email,
         subject,
-        emailType: 'ORDER_CONFIRMATION',
-        status: 'SENT',
+        emailType,
+        status: 'ACCEPTED',
+        messageId: info.messageId,
+        providerName: providerInfo.providerName,
+        providerResponse: info.response || '250 OK: queued for delivery',
+        attemptCount: force ? 2 : 1,
+        previewUrl,
         errorMessage: null,
         htmlFilePath: logFilePath
       });
 
       return {
         success: true,
-        status: 'SENT',
+        status: 'ACCEPTED',
         messageId: info.messageId,
-        emailType: 'ORDER_CONFIRMATION',
-        previewUrl: `/api/orders/${order.order_number}/email-preview?type=placed`
+        providerName: providerInfo.providerName,
+        providerResponse: info.response || '250 OK',
+        emailType,
+        previewUrl
       };
     } catch (err) {
       console.error(`[Mailer Error] Fallo al enviar Email 1: ${err.message}`);
@@ -410,8 +591,13 @@ export async function sendOrderPlacedEmail({ order, items = [] }) {
         orderNumber: order.order_number,
         recipientEmail: order.customer_email,
         subject,
-        emailType: 'ORDER_CONFIRMATION',
+        emailType,
         status: 'FAILED',
+        messageId: null,
+        providerName: providerInfo.providerName,
+        providerResponse: null,
+        attemptCount: force ? 2 : 1,
+        previewUrl: `/api/orders/${order.order_number}/email-preview?type=placed`,
         errorMessage: err.message,
         htmlFilePath: logFilePath
       });
@@ -420,30 +606,35 @@ export async function sendOrderPlacedEmail({ order, items = [] }) {
         success: false,
         status: 'FAILED',
         error: err.message,
-        emailType: 'ORDER_CONFIRMATION',
+        emailType,
         previewUrl: `/api/orders/${order.order_number}/email-preview?type=placed`
       };
     }
   } else {
     // Modo local / Fallback (Credenciales SMTP pendientes)
-    const notice = 'Credenciales SMTP pendientes en .env. Correo de confirmación generado y respaldado en disco y base de datos.';
+    const notice = providerInfo.reason || 'Credenciales SMTP pendientes en variables de entorno Vercel.';
     await logEmailRecord({
       orderId: order.id,
       orderNumber: order.order_number,
       recipientEmail: order.customer_email,
       subject,
-      emailType: 'ORDER_CONFIRMATION',
-      status: 'PENDING_SMTP_CONFIG',
+      emailType,
+      status: 'PENDING_CONFIG',
+      messageId: null,
+      providerName: providerInfo.providerName,
+      providerResponse: null,
+      attemptCount: 1,
+      previewUrl: `/api/orders/${order.order_number}/email-preview?type=placed`,
       errorMessage: notice,
       htmlFilePath: logFilePath
     });
 
     return {
       success: true,
-      status: 'PENDING_SMTP_CONFIG',
+      status: 'PENDING_CONFIG',
       simulated: true,
       notice,
-      emailType: 'ORDER_CONFIRMATION',
+      emailType,
       previewUrl: `/api/orders/${order.order_number}/email-preview?type=placed`
     };
   }
@@ -452,9 +643,26 @@ export async function sendOrderPlacedEmail({ order, items = [] }) {
 /**
  * EMAIL 2: Envía el correo de Despacho y Guía de Envío
  */
-export async function sendShippingConfirmationEmail({ order, shipment, items = [] }) {
+export async function sendShippingConfirmationEmail({ order, shipment, items = [], force = false }) {
+  const emailType = 'SHIPPING_NOTIFICATION';
+
+  // 1. Protección de Idempotencia
+  if (!force) {
+    const recent = await wasEmailRecentlySent(order.id, order.order_number, emailType, 120);
+    if (recent) {
+      console.log(`[Mailer Idempotency] Email de despacho ya enviado recientemente para #${order.order_number}. Omitiendo.`);
+      return {
+        success: true,
+        status: 'IDEMPOTENT_SKIPPED',
+        messageId: recent.message_id,
+        emailType,
+        previewUrl: recent.preview_url || `/api/orders/${order.order_number}/email-preview?type=shipping`,
+        notice: 'Notificación de guía ya enviada recientemente (protección contra duplicados).'
+      };
+    }
+  }
+
   const htmlContent = generateShippingDispatchedEmailHtml({ order, shipment, items });
-  const transporter = createTransporter();
   const from = process.env.MAIL_FROM || '"URBAN STYLE Despachos" <despachos@urbanstyle.com.co>';
   const subject = `¡Tu guía de envío #${shipment.guide_number} está lista! - Pedido #${order.order_number}`;
 
@@ -474,9 +682,11 @@ export async function sendShippingConfirmationEmail({ order, shipment, items = [
     }
   ];
 
-  if (transporter) {
+  const providerInfo = await getTransporterInfo();
+
+  if (providerInfo.transporter) {
     try {
-      const info = await transporter.sendMail({
+      const info = await providerInfo.transporter.sendMail({
         from,
         to: order.customer_email,
         subject,
@@ -484,23 +694,32 @@ export async function sendShippingConfirmationEmail({ order, shipment, items = [
         attachments
       });
 
+      const previewUrl = nodemailer.getTestMessageUrl(info) || `/api/orders/${order.order_number}/email-preview?type=shipping`;
+
       await logEmailRecord({
         orderId: order.id,
         orderNumber: order.order_number,
         recipientEmail: order.customer_email,
         subject,
-        emailType: 'SHIPPING_NOTIFICATION',
-        status: 'SENT',
+        emailType,
+        status: 'ACCEPTED',
+        messageId: info.messageId,
+        providerName: providerInfo.providerName,
+        providerResponse: info.response || '250 OK: queued for delivery',
+        attemptCount: force ? 2 : 1,
+        previewUrl,
         errorMessage: null,
         htmlFilePath: logFilePath
       });
 
       return {
         success: true,
-        status: 'SENT',
+        status: 'ACCEPTED',
         messageId: info.messageId,
-        emailType: 'SHIPPING_NOTIFICATION',
-        previewUrl: `/api/orders/${order.order_number}/email-preview?type=shipping`
+        providerName: providerInfo.providerName,
+        providerResponse: info.response || '250 OK',
+        emailType,
+        previewUrl
       };
     } catch (err) {
       console.error(`[Mailer Error] Fallo al enviar Email 2: ${err.message}`);
@@ -509,8 +728,13 @@ export async function sendShippingConfirmationEmail({ order, shipment, items = [
         orderNumber: order.order_number,
         recipientEmail: order.customer_email,
         subject,
-        emailType: 'SHIPPING_NOTIFICATION',
+        emailType,
         status: 'FAILED',
+        messageId: null,
+        providerName: providerInfo.providerName,
+        providerResponse: null,
+        attemptCount: force ? 2 : 1,
+        previewUrl: `/api/orders/${order.order_number}/email-preview?type=shipping`,
         errorMessage: err.message,
         htmlFilePath: logFilePath
       });
@@ -519,29 +743,34 @@ export async function sendShippingConfirmationEmail({ order, shipment, items = [
         success: false,
         status: 'FAILED',
         error: err.message,
-        emailType: 'SHIPPING_NOTIFICATION',
+        emailType,
         previewUrl: `/api/orders/${order.order_number}/email-preview?type=shipping`
       };
     }
   } else {
-    const notice = 'Credenciales SMTP pendientes en .env. Correo de guía generado y respaldado en disco y base de datos.';
+    const notice = providerInfo.reason || 'Credenciales SMTP pendientes en variables de entorno Vercel.';
     await logEmailRecord({
       orderId: order.id,
       orderNumber: order.order_number,
       recipientEmail: order.customer_email,
       subject,
-      emailType: 'SHIPPING_NOTIFICATION',
-      status: 'PENDING_SMTP_CONFIG',
+      emailType,
+      status: 'PENDING_CONFIG',
+      messageId: null,
+      providerName: providerInfo.providerName,
+      providerResponse: null,
+      attemptCount: 1,
+      previewUrl: `/api/orders/${order.order_number}/email-preview?type=shipping`,
       errorMessage: notice,
       htmlFilePath: logFilePath
     });
 
     return {
       success: true,
-      status: 'PENDING_SMTP_CONFIG',
+      status: 'PENDING_CONFIG',
       simulated: true,
       notice,
-      emailType: 'SHIPPING_NOTIFICATION',
+      emailType,
       previewUrl: `/api/orders/${order.order_number}/email-preview?type=shipping`
     };
   }
@@ -550,18 +779,18 @@ export async function sendShippingConfirmationEmail({ order, shipment, items = [
 /**
  * Función compatible con código anterior (envía confirmación combinada o Email 2)
  */
-export async function sendOrderConfirmationEmail({ order, shipment, items = [] }) {
+export async function sendOrderConfirmationEmail({ order, shipment, items = [], force = false }) {
   if (shipment && shipment.guide_number) {
-    return await sendShippingConfirmationEmail({ order, shipment, items });
+    return await sendShippingConfirmationEmail({ order, shipment, items, force });
   } else {
-    return await sendOrderPlacedEmail({ order, items });
+    return await sendOrderPlacedEmail({ order, items, force });
   }
 }
 
 /**
  * Reintento controlado de envío de correo por el administrador
  */
-export async function retryOrderEmail(orderId) {
+export async function retryOrderEmail(orderId, emailType = 'ALL', force = true) {
   // Buscar orden en Neon o SQLite
   let order = null;
   let items = [];
@@ -586,11 +815,16 @@ export async function retryOrderEmail(orderId) {
   }
 
   const results = [];
-  const placedRes = await sendOrderPlacedEmail({ order, items });
-  results.push(placedRes);
 
-  if (shipment) {
-    const shipRes = await sendShippingConfirmationEmail({ order, shipment, items });
+  // Enviar Email 1 si aplica
+  if (emailType === 'ALL' || emailType === 'placed' || emailType === 'ORDER_CONFIRMATION') {
+    const placedRes = await sendOrderPlacedEmail({ order, items, force });
+    results.push(placedRes);
+  }
+
+  // Enviar Email 2 si aplica y hay guía
+  if ((emailType === 'ALL' || emailType === 'shipping' || emailType === 'SHIPPING_NOTIFICATION') && shipment) {
+    const shipRes = await sendShippingConfirmationEmail({ order, shipment, items, force });
     results.push(shipRes);
   }
 

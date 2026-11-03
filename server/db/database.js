@@ -125,7 +125,13 @@ export function initDatabase() {
       order_number TEXT,
       recipient_email TEXT NOT NULL,
       subject TEXT NOT NULL,
+      email_type TEXT DEFAULT 'ORDER_CONFIRMATION',
       status TEXT NOT NULL,
+      message_id TEXT,
+      provider_name TEXT,
+      provider_response TEXT,
+      attempt_count INTEGER DEFAULT 1,
+      preview_url TEXT,
       error_message TEXT,
       html_file_path TEXT,
       sent_at TEXT NOT NULL
@@ -244,6 +250,14 @@ export function initDatabase() {
     db.prepare("UPDATE products SET model = 'Minimalist S', department = 'Accesorios' WHERE id = 'prod-7'").run();
     db.prepare("UPDATE products SET model = 'Geometric Steel', department = 'Accesorios' WHERE id = 'prod-8'").run();
   } catch {}
+
+  // Asegurar columnas de auditoría en email_logs
+  try { db.prepare("ALTER TABLE email_logs ADD COLUMN email_type TEXT DEFAULT 'ORDER_CONFIRMATION'").run(); } catch {}
+  try { db.prepare("ALTER TABLE email_logs ADD COLUMN message_id TEXT").run(); } catch {}
+  try { db.prepare("ALTER TABLE email_logs ADD COLUMN provider_name TEXT").run(); } catch {}
+  try { db.prepare("ALTER TABLE email_logs ADD COLUMN provider_response TEXT").run(); } catch {}
+  try { db.prepare("ALTER TABLE email_logs ADD COLUMN attempt_count INTEGER DEFAULT 1").run(); } catch {}
+  try { db.prepare("ALTER TABLE email_logs ADD COLUMN preview_url TEXT").run(); } catch {}
 
   // Sembrar usuario administrador por defecto
   seedAdminUser();

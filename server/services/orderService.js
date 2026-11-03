@@ -527,10 +527,41 @@ export async function getAdminOrdersList({ status, search }) {
         });
       });
 
-      return orders.map((o) => ({
-        ...o,
-        items: itemsByOrderId[o.id] || []
-      }));
+      // Cargar correos en masa
+      let emailsByOrderId = {};
+      try {
+        const emailsRes = await query(
+          `SELECT * FROM email_logs WHERE order_id = ANY($1) ORDER BY id DESC`,
+          [orderIds]
+        );
+        emailsRes.rows.forEach((em) => {
+          if (!emailsByOrderId[em.order_id]) emailsByOrderId[em.order_id] = [];
+          emailsByOrderId[em.order_id].push(em);
+        });
+      } catch (e) {}
+
+      return orders.map((o) => {
+        const orderEmails = emailsByOrderId[o.id] || [];
+        const placedEmail = orderEmails.find((e) => e.email_type === 'ORDER_CONFIRMATION');
+        const shippingEmail = orderEmails.find((e) => e.email_type === 'SHIPPING_NOTIFICATION');
+
+        return {
+          ...o,
+          items: itemsByOrderId[o.id] || [],
+          email_recipient: o.customer_email,
+          order_placed_email_status: placedEmail ? placedEmail.status : 'PENDING_CONFIG',
+          order_placed_email_sent_at: placedEmail ? placedEmail.sent_at : null,
+          order_placed_email_error: placedEmail ? placedEmail.error_message : null,
+          order_placed_email_message_id: placedEmail ? placedEmail.message_id : null,
+          order_placed_email_preview_url: placedEmail ? placedEmail.preview_url : null,
+          shipping_email_status: shippingEmail ? shippingEmail.status : (o.guide_number ? 'PENDING_CONFIG' : 'NOT_DISPATCHED'),
+          shipping_email_sent_at: shippingEmail ? shippingEmail.sent_at : null,
+          shipping_email_error: shippingEmail ? shippingEmail.error_message : null,
+          shipping_email_message_id: shippingEmail ? shippingEmail.message_id : null,
+          shipping_email_preview_url: shippingEmail ? shippingEmail.preview_url : null,
+          email_last_sent: (placedEmail || shippingEmail) ? (shippingEmail?.sent_at || placedEmail?.sent_at) : null
+        };
+      });
     }
 
     // Si Neon retornó 0 órdenes, verificar si en SQLite hay órdenes para sincronizar
@@ -592,11 +623,30 @@ export async function getAdminOrdersList({ status, search }) {
 
     const orders = db.prepare(sql).all(...params);
     const getItems = db.prepare('SELECT * FROM order_items WHERE order_id = ?');
+    const getEmails = db.prepare('SELECT * FROM email_logs WHERE order_id = ? ORDER BY id DESC');
 
-    return orders.map((ord) => ({
-      ...ord,
-      items: getItems.all(ord.id)
-    }));
+    return orders.map((ord) => {
+      const orderEmails = getEmails.all(ord.id) || [];
+      const placedEmail = orderEmails.find((e) => e.email_type === 'ORDER_CONFIRMATION');
+      const shippingEmail = orderEmails.find((e) => e.email_type === 'SHIPPING_NOTIFICATION');
+
+      return {
+        ...ord,
+        items: getItems.all(ord.id),
+        email_recipient: ord.customer_email,
+        order_placed_email_status: placedEmail ? placedEmail.status : 'PENDING_CONFIG',
+        order_placed_email_sent_at: placedEmail ? placedEmail.sent_at : null,
+        order_placed_email_error: placedEmail ? placedEmail.error_message : null,
+        order_placed_email_message_id: placedEmail ? placedEmail.message_id : null,
+        order_placed_email_preview_url: placedEmail ? placedEmail.preview_url : null,
+        shipping_email_status: shippingEmail ? shippingEmail.status : (ord.guide_number ? 'PENDING_CONFIG' : 'NOT_DISPATCHED'),
+        shipping_email_sent_at: shippingEmail ? shippingEmail.sent_at : null,
+        shipping_email_error: shippingEmail ? shippingEmail.error_message : null,
+        shipping_email_message_id: shippingEmail ? shippingEmail.message_id : null,
+        shipping_email_preview_url: shippingEmail ? shippingEmail.preview_url : null,
+        email_last_sent: (placedEmail || shippingEmail) ? (shippingEmail?.sent_at || placedEmail?.sent_at) : null
+      };
+    });
   } catch (sqliteErr) {
     console.error('[OrderService SQLite Query Error]', sqliteErr);
     return [];

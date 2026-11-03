@@ -219,6 +219,11 @@ export async function initNeonTables() {
         subject VARCHAR(255) NOT NULL,
         email_type VARCHAR(50) DEFAULT 'ORDER_CONFIRMATION',
         status VARCHAR(50) NOT NULL,
+        message_id VARCHAR(255),
+        provider_name VARCHAR(100),
+        provider_response TEXT,
+        attempt_count INTEGER DEFAULT 1,
+        preview_url TEXT,
         error_message TEXT,
         content_preview TEXT,
         html_file_path TEXT,
@@ -226,6 +231,11 @@ export async function initNeonTables() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
       ALTER TABLE email_logs ADD COLUMN IF NOT EXISTS email_type VARCHAR(50) DEFAULT 'ORDER_CONFIRMATION';
+      ALTER TABLE email_logs ADD COLUMN IF NOT EXISTS message_id VARCHAR(255);
+      ALTER TABLE email_logs ADD COLUMN IF NOT EXISTS provider_name VARCHAR(100);
+      ALTER TABLE email_logs ADD COLUMN IF NOT EXISTS provider_response TEXT;
+      ALTER TABLE email_logs ADD COLUMN IF NOT EXISTS attempt_count INTEGER DEFAULT 1;
+      ALTER TABLE email_logs ADD COLUMN IF NOT EXISTS preview_url TEXT;
       ALTER TABLE email_logs ADD COLUMN IF NOT EXISTS html_file_path TEXT;
       ALTER TABLE email_logs ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ DEFAULT NOW();
 

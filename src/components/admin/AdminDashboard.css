@@ -1791,3 +1791,124 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   14. ESTILOS DE ESTADOS DE CORREO ELECTRÓNICO (AUDITORÍA & BADGES)
+   ========================================================================== */
+.email-status-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.email-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+}
+
+.email-label {
+  color: #aaaaaa;
+  font-size: 0.75rem;
+  min-width: 65px;
+}
+
+.email-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.email-badge.accepted,
+.email-badge.sent {
+  background: rgba(72, 187, 120, 0.15);
+  border: 1px solid rgba(72, 187, 120, 0.4);
+  color: #48BB78;
+}
+
+.email-badge.delivered {
+  background: rgba(72, 187, 120, 0.25);
+  border: 1px solid #48BB78;
+  color: #68D391;
+}
+
+.email-badge.pending_config {
+  background: rgba(237, 137, 54, 0.15);
+  border: 1px solid rgba(237, 137, 54, 0.4);
+  color: #ED8936;
+}
+
+.email-badge.failed {
+  background: rgba(245, 101, 101, 0.15);
+  border: 1px solid rgba(245, 101, 101, 0.4);
+  color: #F56565;
+}
+
+.email-badge.not_dispatched {
+  background: rgba(160, 174, 192, 0.1);
+  border: 1px solid rgba(160, 174, 192, 0.25);
+  color: #A0AEC0;
+}
+
+.email-badge.idempotent_skipped {
+  background: rgba(66, 153, 225, 0.15);
+  border: 1px solid rgba(66, 153, 225, 0.4);
+  color: #63B3ED;
+}
+
+.email-error-hint {
+  font-size: 0.7rem;
+  color: #F56565;
+  cursor: help;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.order-emails-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.email-log-item-card {
+  background: #181818;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 0.85rem;
+}
+
+.email-log-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.email-log-type-tag {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.email-log-item-meta {
+  color: #CCCCCC;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  line-height: 1.4;
+}
+
+.email-log-item-meta code {
+  color: #FF5A1F;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
