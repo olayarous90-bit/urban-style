@@ -723,3 +723,184 @@
   border-color: #F5C518;
 }
 
+/* --------------------------------------------------------------------------
+   9. BOTÓN BUSCAR Y BÚSQUEDA MÓVIL
+   -------------------------------------------------------------------------- */
+.search-submit-btn {
+  background: var(--color-accent, #FF5A1F);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-xs, 4px);
+  padding: 0 1rem;
+  height: 38px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+
+.search-submit-btn:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.mobile-search-container {
+  margin-bottom: 1.25rem;
+}
+
+.mobile-search-form {
+  display: flex;
+  align-items: center;
+  background-color: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  overflow: hidden;
+  height: 40px;
+}
+
+.mobile-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 0 0.85rem;
+  color: #ffffff;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.mobile-search-input::placeholder {
+  color: #777777;
+}
+
+.mobile-search-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-accent, #FF5A1F);
+  padding: 0 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   10. POPOVER DE MI CUENTA Y ACCESO
+   -------------------------------------------------------------------------- */
+.account-popover {
+  width: 330px;
+}
+
+.account-body {
+  text-align: left;
+  padding: 0.25rem 0;
+}
+
+.account-welcome {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  padding: 0.75rem 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.account-welcome-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--color-accent, #FF5A1F);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
+}
+
+.account-welcome-text {
+  font-size: 0.76rem;
+  color: #aaa;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.account-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.account-action-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: #ffffff;
+  text-decoration: none;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.account-action-btn.primary {
+  border-color: rgba(255, 90, 31, 0.35);
+  background: rgba(255, 90, 31, 0.08);
+}
+
+.account-action-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.account-action-btn.primary:hover {
+  background: rgba(255, 90, 31, 0.15);
+  border-color: var(--color-accent, #FF5A1F);
+}
+
+.account-btn-icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.account-btn-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.account-btn-text strong {
+  font-size: 0.82rem;
+  color: #ffffff;
+}
+
+.account-btn-text small {
+  font-size: 0.68rem;
+  color: #888888;
+}
+
+.mobile-link-inner {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.mobile-link-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.mobile-account-link {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 0.5rem;
+  color: #fff;
+  width: 100%;
+  cursor: pointer;
+}
+
+

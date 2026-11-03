@@ -37,6 +37,15 @@ import {
   ALLOWED_MIME_TYPES,
   MAX_FILE_SIZE_BYTES
 } from '../services/imageStorageService.js';
+import {
+  getAllAdminAnnouncements,
+  createAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
+  setBarEnabled,
+  setRotationInterval,
+  reorderAnnouncements
+} from '../services/announcementService.js';
 
 const router = express.Router();
 
@@ -903,6 +912,130 @@ router.delete('/products/:id/images/:imageId', requireAdmin, async (req, res) =>
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/* ==========================================================================
+   RUTAS DE GESTIÓN DE BARRA DE ANUNCIOS Y MENSAJES PROMOCIONALES
+   ========================================================================== */
+
+/**
+ * GET /api/admin/announcements
+ * Obtiene todos los anuncios y la configuración general de la barra
+ */
+router.get('/announcements', requireAdmin, async (req, res) => {
+  try {
+    const data = await getAllAdminAnnouncements();
+    res.json({
+      success: true,
+      data
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/announcements
+ * Crea un nuevo anuncio promocional
+ */
+router.post('/announcements', requireAdmin, async (req, res) => {
+  try {
+    const created = await createAnnouncement(req.body);
+    res.status(201).json({
+      success: true,
+      message: 'Anuncio creado correctamente',
+      data: created
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * PUT /api/admin/announcements/:id
+ * Actualiza un anuncio promocional existente
+ */
+router.put('/announcements/:id', requireAdmin, async (req, res) => {
+  try {
+    const updated = await updateAnnouncement(req.params.id, req.body);
+    res.json({
+      success: true,
+      message: 'Anuncio actualizado correctamente',
+      data: updated
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * DELETE /api/admin/announcements/:id
+ * Elimina un anuncio promocional
+ */
+router.delete('/announcements/:id', requireAdmin, async (req, res) => {
+  try {
+    await deleteAnnouncement(req.params.id);
+    res.json({
+      success: true,
+      message: 'Anuncio eliminado correctamente',
+      deletedId: req.params.id
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/announcements/toggle-bar
+ * Activa o desactiva la barra de anuncios completa en la tienda
+ */
+router.post('/announcements/toggle-bar', requireAdmin, async (req, res) => {
+  try {
+    const { enabled } = req.body;
+    const result = await setBarEnabled(enabled);
+    res.json({
+      success: true,
+      message: enabled ? 'Barra de anuncios activada en la tienda' : 'Barra de anuncios desactivada',
+      data: result
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/announcements/rotation-interval
+ * Configura la velocidad de rotación de anuncios en segundos
+ */
+router.post('/announcements/rotation-interval', requireAdmin, async (req, res) => {
+  try {
+    const { rotationSeconds } = req.body;
+    const result = await setRotationInterval(rotationSeconds);
+    res.json({
+      success: true,
+      message: `Intervalo de rotación establecido en ${result.rotationSeconds} segundos`,
+      data: result
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/announcements/reorder
+ * Reordena la lista de anuncios según los IDs enviados
+ */
+router.post('/announcements/reorder', requireAdmin, async (req, res) => {
+  try {
+    const { orderedIds } = req.body;
+    await reorderAnnouncements(orderedIds);
+    res.json({
+      success: true,
+      message: 'Orden de anuncios actualizado exitosamente'
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
   }
 });
 

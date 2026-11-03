@@ -9,6 +9,7 @@ import { db, initDatabase } from './db/database.js';
 import { testNeonConnection, initNeonTables } from './db/neon.js';
 import { countAdminUsers, createAdminUser } from './services/adminAuthService.js';
 import { seedProductsToNeonIfEmpty, getPublicActiveProducts } from './services/productService.js';
+import { getPublicAnnouncements, DEFAULT_ANNOUNCEMENTS } from './services/announcementService.js';
 import locationsRouter from './routes/locations.js';
 import shippingRouter from './routes/shipping.js';
 import ordersRouter from './routes/orders.js';
@@ -118,6 +119,28 @@ app.get('/api/products', async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// 2.1 RUTA PÚBLICA DE BARRA DE ANUNCIOS
+app.get('/api/announcements', async (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    const result = await getPublicAnnouncements();
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (err) {
+    console.error('[Public Announcements API Error]:', err);
+    res.json({
+      success: true,
+      data: {
+        enabled: true,
+        rotationSeconds: 4,
+        announcements: DEFAULT_ANNOUNCEMENTS
+      }
+    });
   }
 });
 

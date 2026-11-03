@@ -7,7 +7,8 @@ import {
   BagIcon,
   MenuIcon,
   CloseIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  UserIcon
 } from '../components/common/icons';
 import { useCart } from '../context/CartContext';
 import { useChristmasTheme } from '../context/ChristmasThemeContext';
@@ -15,18 +16,26 @@ import './Navbar.css';
 
 /**
  * Barra de Navegación Principal de URBAN STYLE
- * Soporte de escritorio y cajón móvil interactivo y accesible.
+ * Soporte completo de escritorio y menú móvil interactivo con todas las categorías,
+ * buscador interactivo, carrito dinámico y acceso a cuenta/administración.
  */
-export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
+export const Navbar = ({
+  favoritesCount = 0,
+  favoriteItems = [],
+  onOpenAccount = () => { window.location.href = '/admin/login'; }
+}) => {
   const { cartCount, openCart, isCartOpen } = useCart();
   const { isChristmasMode, toggleChristmasTheme } = useChristmasTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [mobileSearchQuery, setMobileSearchQuery] = useState('');
   const [searchToast, setSearchToast] = useState(null);
 
   const searchInputRef = useRef(null);
+  const mobileSearchInputRef = useRef(null);
 
   // Enfocar el input de búsqueda automáticamente al abrir
   useEffect(() => {
@@ -43,6 +52,7 @@ export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
         setIsSearchOpen(false);
         setIsCartOpen(false);
         setIsWishlistOpen(false);
+        setIsAccountOpen(false);
         setSearchToast(null);
       }
     };
@@ -68,6 +78,7 @@ export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
   const handleNavClick = (e, href) => {
     setIsMobileMenuOpen(false);
     setIsWishlistOpen(false);
+    setIsAccountOpen(false);
 
     if (href.startsWith('#')) {
       const targetId = href.replace('#', '').toLowerCase();
@@ -118,17 +129,26 @@ export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
   const toggleSearch = () => {
     setIsSearchOpen((prev) => !prev);
     setIsWishlistOpen(false);
+    setIsAccountOpen(false);
   };
 
   const toggleCart = () => {
     openCart();
     setIsSearchOpen(false);
     setIsWishlistOpen(false);
+    setIsAccountOpen(false);
   };
 
   const toggleWishlist = () => {
     setIsWishlistOpen((prev) => !prev);
     setIsSearchOpen(false);
+    setIsAccountOpen(false);
+  };
+
+  const toggleAccount = () => {
+    setIsAccountOpen((prev) => !prev);
+    setIsSearchOpen(false);
+    setIsWishlistOpen(false);
   };
 
   const handleSearchSubmit = (e) => {
@@ -147,12 +167,27 @@ export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
     }
   };
 
+  const handleMobileSearchSubmit = (e) => {
+    e.preventDefault();
+    const query = mobileSearchQuery.trim();
+    if (!query) return;
+
+    window.dispatchEvent(new CustomEvent('search-products', { detail: query }));
+    setMobileSearchQuery('');
+    setIsMobileMenuOpen(false);
+
+    const prodSec = document.getElementById('productos');
+    if (prodSec) {
+      prodSec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   return (
     <>
       <nav className="navbar" role="navigation" aria-label="Navegación principal">
         <div className="container">
           <div className="navbar-inner">
-            {/* LADO IZQUIERDO: LOGOTIPO TIPOGRÁFICO */}
+            {/* LADO IZQUIERDO: LOGOTIPO TIPOGRÁFICO DE URBAN STYLE */}
             <a
               href="#inicio"
               className="navbar-brand"
@@ -216,6 +251,7 @@ export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
                 className={`action-btn ${isSearchOpen ? 'active' : ''}`}
                 onClick={toggleSearch}
                 aria-label="Abrir panel de búsqueda"
+                title="Buscar productos"
                 aria-expanded={isSearchOpen}
               >
                 <SearchIcon size={20} />
@@ -227,6 +263,7 @@ export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
                 className={`action-btn ${isWishlistOpen ? 'active' : ''}`}
                 onClick={toggleWishlist}
                 aria-label={`Ver lista de favoritos, ${favoritesCount} productos`}
+                title="Favoritos"
                 aria-expanded={isWishlistOpen}
               >
                 <HeartIcon size={20} filled={favoritesCount > 0} />
@@ -237,18 +274,31 @@ export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
                 )}
               </button>
 
-              {/* Botón de Carrito con Contador */}
+              {/* Botón de Carrito con Contador Dinámico */}
               <button
                 type="button"
                 className={`action-btn ${isCartOpen ? 'active' : ''}`}
                 onClick={toggleCart}
                 aria-label={`Carrito de compras, ${cartCount} productos`}
+                title="Carrito de compras"
                 aria-expanded={isCartOpen}
               >
                 <BagIcon size={20} />
                 <span className="badge-count" aria-hidden="true">
                   {cartCount}
                 </span>
+              </button>
+
+              {/* Botón de Mi Cuenta / Acceso */}
+              <button
+                type="button"
+                className={`action-btn ${isAccountOpen ? 'active' : ''}`}
+                onClick={toggleAccount}
+                aria-label="Mi Cuenta y Acceso"
+                title="Mi Cuenta / Administración"
+                aria-expanded={isAccountOpen}
+              >
+                <UserIcon size={20} />
               </button>
 
               {/* Botón Hamburguesa para Móvil */}
@@ -279,11 +329,18 @@ export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
                 ref={searchInputRef}
                 type="search"
                 className="search-input"
-                placeholder="Buscar por prendas, zapatillas, estilo..."
+                placeholder="Buscar por zapatillas, camisetas, gorras, chaquetas..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 aria-label="Buscar en la tienda"
               />
+              <button
+                type="submit"
+                className="search-submit-btn"
+                aria-label="Ejecutar búsqueda"
+              >
+                Buscar
+              </button>
               <button
                 type="button"
                 className="search-close-btn"
@@ -293,11 +350,84 @@ export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
                 <CloseIcon size={18} />
               </button>
             </form>
-            <p className="search-feedback">
-              Presiona Enter para buscar en el catálogo (disponible en la siguiente etapa).
-            </p>
           </div>
         </section>
+      )}
+
+      {/* POPOVER DE MI CUENTA / ACCESO */}
+      {isAccountOpen && (
+        <aside className="popover-card account-popover" role="dialog" aria-label="Opciones de cuenta">
+          <div className="popover-header">
+            <span className="popover-title">
+              <UserIcon size={16} /> Mi Cuenta & Acceso
+            </span>
+            <button
+              type="button"
+              className="popover-close"
+              onClick={() => setIsAccountOpen(false)}
+              aria-label="Cerrar menú de cuenta"
+            >
+              <CloseIcon size={16} />
+            </button>
+          </div>
+          <div className="popover-body account-body">
+            <div className="account-welcome">
+              <span className="account-welcome-badge">URBAN STYLE</span>
+              <p className="account-welcome-text">
+                Gestión de pedidos, rastreo de envíos y panel administrativo oficial.
+              </p>
+            </div>
+
+            <div className="account-actions-list">
+              <button
+                type="button"
+                className="account-action-btn primary"
+                onClick={() => {
+                  setIsAccountOpen(false);
+                  onOpenAccount();
+                }}
+              >
+                <span className="account-btn-icon">🔐</span>
+                <span className="account-btn-text">
+                  <strong>Panel Administrativo</strong>
+                  <small>Gestionar productos, ofertas y pedidos</small>
+                </span>
+                <ChevronRightIcon size={16} />
+              </button>
+
+              <button
+                type="button"
+                className="account-action-btn secondary"
+                onClick={(e) => {
+                  setIsAccountOpen(false);
+                  handleNavClick(e, '#beneficios');
+                }}
+              >
+                <span className="account-btn-icon">📦</span>
+                <span className="account-btn-text">
+                  <strong>Rastrear Envíos Mi Paquete</strong>
+                  <small>Guías y cobertura nacional</small>
+                </span>
+                <ChevronRightIcon size={16} />
+              </button>
+
+              <a
+                href="https://wa.me/573009030747?text=Hola%20URBAN%20STYLE,%20tengo%20una%20consulta%20sobre%20mi%20pedido"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="account-action-btn secondary"
+                onClick={() => setIsAccountOpen(false)}
+              >
+                <span className="account-btn-icon">💬</span>
+                <span className="account-btn-text">
+                  <strong>Atención por WhatsApp</strong>
+                  <small>Soporte personalizado al cliente</small>
+                </span>
+                <ChevronRightIcon size={16} />
+              </a>
+            </div>
+          </div>
+        </aside>
       )}
 
       {/* POPOVER DE FAVORITOS */}
@@ -378,6 +508,24 @@ export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
               </button>
             </div>
 
+            {/* Buscador dentro del Drawer Móvil */}
+            <div className="mobile-search-container">
+              <form onSubmit={handleMobileSearchSubmit} className="mobile-search-form">
+                <input
+                  ref={mobileSearchInputRef}
+                  type="search"
+                  className="mobile-search-input"
+                  placeholder="Buscar prendas, tenis..."
+                  value={mobileSearchQuery}
+                  onChange={(e) => setMobileSearchQuery(e.target.value)}
+                  aria-label="Buscar productos en móvil"
+                />
+                <button type="submit" className="mobile-search-btn" aria-label="Buscar">
+                  <SearchIcon size={16} />
+                </button>
+              </form>
+            </div>
+
             <nav aria-label="Categorías en menú móvil">
               <ul className="mobile-nav-list">
                 {isChristmasMode && (
@@ -399,11 +547,30 @@ export const Navbar = ({ favoritesCount = 0, favoriteItems = [] }) => {
                       className={`mobile-nav-link ${link.isSpecial ? 'mobile-nav-special' : ''}`}
                       onClick={(e) => handleNavClick(e, link.href)}
                     >
-                      <span>{link.label}</span>
+                      <span className="mobile-link-inner">
+                        <span className="mobile-link-icon">{link.icon || '•'}</span>
+                        <span>{link.label}</span>
+                      </span>
                       <ChevronRightIcon size={16} />
                     </a>
                   </li>
                 ))}
+                <li>
+                  <button
+                    type="button"
+                    className="mobile-nav-link mobile-account-link"
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      onOpenAccount();
+                    }}
+                  >
+                    <span className="mobile-link-inner">
+                      <span className="mobile-link-icon">👤</span>
+                      <span>Mi Cuenta / Panel Admin</span>
+                    </span>
+                    <ChevronRightIcon size={16} />
+                  </button>
+                </li>
               </ul>
             </nav>
 

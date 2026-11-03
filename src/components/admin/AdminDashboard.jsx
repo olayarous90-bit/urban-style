@@ -24,6 +24,23 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
   const [actionFeedback, setActionFeedback] = useState(null);
   const [loadingData, setLoadingData] = useState(false);
 
+  // Gestión de Barra de Anuncios
+  const [announcements, setAnnouncements] = useState([]);
+  const [isBarEnabled, setIsBarEnabled] = useState(true);
+  const [rotationSeconds, setRotationSeconds] = useState(4);
+  const [isAnnouncementModalOpen, setIsAnnouncementModalOpen] = useState(false);
+  const [editingAnnouncement, setEditingAnnouncement] = useState(null);
+  const [announcementForm, setAnnouncementForm] = useState({
+    text: '',
+    link: '',
+    is_active: true,
+    sort_order: 1,
+    start_date: '',
+    end_date: ''
+  });
+  const [announcementDeleteTarget, setAnnouncementDeleteTarget] = useState(null);
+  const [isSubmittingAnnouncement, setIsSubmittingAnnouncement] = useState(false);
+
   // Verificar sesión administrativa activa al abrir el panel
   useEffect(() => {
     if (isOpen) {
@@ -131,10 +148,222 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
           setConfigStatus(diagData.services);
         }
       }
+
+      // 6. Barra de Anuncios
+      if (activeTab === 'announcements') {
+        const annRes = await fetch('/api/admin/announcements', fetchOpts);
+        if (annRes.ok) {
+          const annData = await annRes.json();
+          if (annData.success && annData.data) {
+            setAnnouncements(annData.data.announcements || []);
+            setIsBarEnabled(annData.data.barEnabled !== false);
+            setRotationSeconds(annData.data.rotationSeconds || 4);
+          }
+        }
+      }
     } catch (err) {
       console.warn('Error cargando datos del panel admin:', err);
     } finally {
       setLoadingData(false);
+    }
+  };
+
+  const loadAnnouncementsData = async () => {
+    try {
+      const res = await fetch('/api/admin/announcements', { credentials: 'include' });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setAnnouncements(json.data.announcements || []);
+          setIsBarEnabled(json.data.barEnabled !== false);
+          setRotationSeconds(json.data.rotationSeconds || 4);
+        }
+      }
+    } catch (err) {
+      console.warn('Error cargando anuncios:', err);
+    }
+  };
+
+  const handleToggleBarEnabled = async (enabled) => {
+    try {
+      const res = await fetch('/api/admin/announcements/toggle-bar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ enabled })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setIsBarEnabled(enabled);
+        setActionFeedback(enabled ? '✅ Barra de anuncios activada en la tienda' : '⚪ Barra de anuncios desactivada');
+        window.dispatchEvent(new Event('announcements-updated'));
+        setTimeout(() => setActionFeedback(null), 3500);
+      }
+    } catch {
+      setActionFeedback('❌ Error al actualizar estado de la barra');
+      setTimeout(() => setActionFeedback(null), 3500);
+    }
+  };
+
+  const handleChangeRotation = async (seconds) => {
+    try {
+      const res = await fetch('/api/admin/announcements/rotation-interval', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ rotationSeconds: seconds })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setRotationSeconds(seconds);
+        setActionFeedback(`⏱️ Velocidad actualizada a ${seconds}s`);
+        window.dispatchEvent(new Event('announcements-updated'));
+        setTimeout(() => setActionFeedback(null), 3500);
+      }
+    } catch {
+      setActionFeedback('❌ Error al actualizar velocidad de rotación');
+      setTimeout(() => setActionFeedback(null), 3500);
+    }
+  };
+
+  const handleOpenCreateAnnouncement = (presetText = '', presetLink = '') => {
+    setEditingAnnouncement(null);
+    setAnnouncementForm({
+      text: presetText,
+      link: presetLink,
+      is_active: true,
+      sort_order: announcements.length + 1,
+      start_date: '',
+      end_date: ''
+    });
+    setIsAnnouncementModalOpen(true);
+  };
+
+  const handleOpenEditAnnouncement = (ann) => {
+    setEditingAnnouncement(ann);
+    setAnnouncementForm({
+      text: ann.text || '',
+      link: ann.link || '',
+      is_active: ann.is_active,
+      sort_order: ann.sort_order || 1,
+      start_date: ann.start_date ? ann.start_date.substring(0, 10) : '',
+      end_date: ann.end_date ? ann.end_date.substring(0, 10) : ''
+    });
+    setIsAnnouncementModalOpen(true);
+  };
+
+  const handleSaveAnnouncement = async (e) => {
+    e.preventDefault();
+    const trimmed = (announcementForm.text || '').trim();
+    if (!trimmed) {
+      alert('Por favor ingresa el texto del anuncio');
+      return;
+    }
+
+    setIsSubmittingAnnouncement(true);
+    try {
+      const url = editingAnnouncement
+        ? `/api/admin/announcements/${editingAnnouncement.id}`
+        : '/api/admin/announcements';
+      const method = editingAnnouncement ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          text: trimmed,
+          link: (announcementForm.link || '').trim(),
+          is_active: announcementForm.is_active,
+          sort_order: Number(announcementForm.sort_order) || 1,
+          start_date: announcementForm.start_date || null,
+          end_date: announcementForm.end_date || null
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setIsAnnouncementModalOpen(false);
+        setActionFeedback(editingAnnouncement ? '✅ Anuncio actualizado correctamente' : '✅ Anuncio creado y publicado');
+        loadAnnouncementsData();
+        window.dispatchEvent(new Event('announcements-updated'));
+        setTimeout(() => setActionFeedback(null), 3500);
+      } else {
+        alert(data.message || 'Error guardando el anuncio');
+      }
+    } catch {
+      alert('Error de conexión al guardar el anuncio');
+    } finally {
+      setIsSubmittingAnnouncement(false);
+    }
+  };
+
+  const handleToggleAnnouncementActive = async (ann) => {
+    try {
+      const newActive = !ann.is_active;
+      const res = await fetch(`/api/admin/announcements/${ann.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ is_active: newActive })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAnnouncements((prev) =>
+          prev.map((item) => (item.id === ann.id ? { ...item, is_active: newActive } : item))
+        );
+        setActionFeedback(newActive ? '🟢 Anuncio activado' : '⚪ Anuncio desactivado');
+        window.dispatchEvent(new Event('announcements-updated'));
+        setTimeout(() => setActionFeedback(null), 3000);
+      }
+    } catch {
+      setActionFeedback('❌ Error al cambiar estado del anuncio');
+      setTimeout(() => setActionFeedback(null), 3000);
+    }
+  };
+
+  const handleConfirmDeleteAnnouncement = async () => {
+    if (!announcementDeleteTarget) return;
+    try {
+      const res = await fetch(`/api/admin/announcements/${announcementDeleteTarget.id}`, {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAnnouncements((prev) => prev.filter((item) => item.id !== announcementDeleteTarget.id));
+        setAnnouncementDeleteTarget(null);
+        setActionFeedback('🗑️ Anuncio eliminado permanentemente');
+        window.dispatchEvent(new Event('announcements-updated'));
+        setTimeout(() => setActionFeedback(null), 3500);
+      }
+    } catch {
+      setActionFeedback('❌ Error al eliminar anuncio');
+      setTimeout(() => setActionFeedback(null), 3500);
+    }
+  };
+
+  const handleMoveAnnouncement = async (index, direction) => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= announcements.length) return;
+
+    const newOrder = [...announcements];
+    const temp = newOrder[index];
+    newOrder[index] = newOrder[targetIndex];
+    newOrder[targetIndex] = temp;
+
+    setAnnouncements(newOrder);
+
+    try {
+      await fetch('/api/admin/announcements/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ orderedIds: newOrder.map((a) => a.id) })
+      });
+      window.dispatchEvent(new Event('announcements-updated'));
+    } catch {
+      loadAnnouncementsData();
     }
   };
 
@@ -320,6 +549,13 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                 onClick={() => { setActiveTab('emails'); setSelectedOrder(null); }}
               >
                 ✉️ Registro de Correos
+              </button>
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === 'announcements' ? 'active' : ''}`}
+                onClick={() => { setActiveTab('announcements'); setSelectedOrder(null); }}
+              >
+                📢 Barra de Anuncios {announcements.length > 0 && `(${announcements.filter(a => a.is_active).length})`}
               </button>
               <button
                 type="button"
@@ -642,6 +878,206 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                 </div>
               </div>
             )}
+
+            {/* PESTAÑA 5: GESTIÓN DE BARRA DE ANUNCIOS */}
+            {activeTab === 'announcements' && (
+              <div className="tab-pane">
+                {/* BARRA SUPERIOR DE CONTROL GLOBAL */}
+                <div className="announcements-control-bar">
+                  <div className="announcements-global-toggle-box">
+                    <label className="toggle-switch-label">
+                      <input
+                        type="checkbox"
+                        className="toggle-switch-input"
+                        checked={isBarEnabled}
+                        onChange={(e) => handleToggleBarEnabled(e.target.checked)}
+                      />
+                      <span className="toggle-switch-slider" />
+                    </label>
+                    <div className="toggle-info">
+                      <span className="toggle-title">
+                        Estado de la Barra de Anuncios:
+                        <strong className={isBarEnabled ? 'text-green' : 'text-muted'}>
+                          {isBarEnabled ? ' 🟢 ACTIVA EN LA TIENDA' : ' ⚪ DESACTIVADA'}
+                        </strong>
+                      </span>
+                      <span className="toggle-subtitle">
+                        {isBarEnabled
+                          ? 'Los anuncios activos se muestran rotando en la parte superior de la tienda.'
+                          : 'La barra está oculta en la tienda pública.'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="announcements-speed-box">
+                    <label htmlFor="rotation-select">Velocidad:</label>
+                    <select
+                      id="rotation-select"
+                      className="filter-select"
+                      value={rotationSeconds}
+                      onChange={(e) => handleChangeRotation(Number(e.target.value))}
+                    >
+                      <option value={3}>3s (Rápido)</option>
+                      <option value={4}>4s (Recomendado)</option>
+                      <option value={5}>5s (Normal)</option>
+                      <option value={6}>6s (Pausado)</option>
+                      <option value={8}>8s (Lento)</option>
+                    </select>
+                    <button
+                      type="button"
+                      className="btn-search"
+                      onClick={() => handleOpenCreateAnnouncement()}
+                    >
+                      ➕ Nuevo Anuncio
+                    </button>
+                  </div>
+                </div>
+
+                {/* PRESETS RÁPIDOS */}
+                <div className="announcement-presets-card">
+                  <span className="presets-label">⚡ Mensajes promocionales sugeridos (clic para añadir):</span>
+                  <div className="presets-buttons-group">
+                    <button
+                      type="button"
+                      className="btn-preset-chip"
+                      onClick={() => handleOpenCreateAnnouncement('¡Envíos a todo Colombia!', '#beneficios')}
+                    >
+                      + ¡Envíos a todo Colombia!
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-preset-chip"
+                      onClick={() => handleOpenCreateAnnouncement('¡Ofertas especiales por tiempo limitado!', '#ofertas')}
+                    >
+                      + ¡Ofertas especiales por tiempo limitado!
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-preset-chip"
+                      onClick={() => handleOpenCreateAnnouncement('¡Nuevas colecciones disponibles!', '#coleccion')}
+                    >
+                      + ¡Nuevas colecciones disponibles!
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-preset-chip"
+                      onClick={() => handleOpenCreateAnnouncement('¡Descuentos especiales en productos seleccionados!', '#productos')}
+                    >
+                      + ¡Descuentos especiales en productos seleccionados!
+                    </button>
+                  </div>
+                </div>
+
+                {/* TABLA DE ANUNCIOS */}
+                <div className="table-responsive">
+                  <table className="admin-table admin-announcements-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: '80px', textAlign: 'center' }}>Orden</th>
+                        <th>Mensaje del Anuncio</th>
+                        <th style={{ width: '180px' }}>Enlace de Destino</th>
+                        <th style={{ width: '170px' }}>Programación Fechas</th>
+                        <th style={{ width: '110px', textAlign: 'center' }}>Estado</th>
+                        <th style={{ width: '180px', textAlign: 'center' }}>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {announcements.length === 0 ? (
+                        <tr>
+                          <td colSpan="6" style={{ textAlign: 'center', padding: '2.5rem', color: '#888' }}>
+                            No hay anuncios registrados. Haz clic en «➕ Nuevo Anuncio» o selecciona un mensaje sugerido.
+                          </td>
+                        </tr>
+                      ) : (
+                        announcements.map((ann, idx) => (
+                          <tr key={ann.id}>
+                            <td style={{ textAlign: 'center' }}>
+                              <div className="order-stepper-btns">
+                                <button
+                                  type="button"
+                                  className="btn-order-step"
+                                  disabled={idx === 0}
+                                  onClick={() => handleMoveAnnouncement(idx, 'up')}
+                                  title="Subir orden"
+                                >
+                                  ▲
+                                </button>
+                                <span className="order-number-badge">{ann.sort_order || idx + 1}</span>
+                                <button
+                                  type="button"
+                                  className="btn-order-step"
+                                  disabled={idx === announcements.length - 1}
+                                  onClick={() => handleMoveAnnouncement(idx, 'down')}
+                                  title="Bajar orden"
+                                >
+                                  ▼
+                                </button>
+                              </div>
+                            </td>
+                            <td>
+                              <div className="announcement-row-content">
+                                <span className="announcement-row-text">{ann.text}</span>
+                              </div>
+                            </td>
+                            <td>
+                              {ann.link ? (
+                                <code className="announcement-link-badge">{ann.link}</code>
+                              ) : (
+                                <span style={{ color: '#666', fontSize: '0.75rem' }}>Sin enlace</span>
+                              )}
+                            </td>
+                            <td>
+                              {ann.start_date || ann.end_date ? (
+                                <div className="date-schedule-cell">
+                                  {ann.start_date && (
+                                    <span>Desde: {new Date(ann.start_date).toLocaleDateString('es-CO')}</span>
+                                  )}
+                                  {ann.end_date && (
+                                    <span>Hasta: {new Date(ann.end_date).toLocaleDateString('es-CO')}</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <span style={{ color: '#777', fontSize: '0.75rem' }}>Permanente</span>
+                              )}
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <button
+                                type="button"
+                                className={`status-toggle-btn ${ann.is_active ? 'active' : 'inactive'}`}
+                                onClick={() => handleToggleAnnouncementActive(ann)}
+                                title={ann.is_active ? 'Desactivar anuncio' : 'Activar anuncio'}
+                              >
+                                {ann.is_active ? '🟢 Activo' : '⚪ Inactivo'}
+                              </button>
+                            </td>
+                            <td style={{ textAlign: 'center' }}>
+                              <div className="actions-cell" style={{ justifyContent: 'center' }}>
+                                <button
+                                  type="button"
+                                  className="action-link"
+                                  onClick={() => handleOpenEditAnnouncement(ann)}
+                                  title="Editar mensaje y configuración"
+                                >
+                                  ✏️ Editar
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-action-delete"
+                                  onClick={() => setAnnouncementDeleteTarget(ann)}
+                                  title="Eliminar anuncio permanentemente"
+                                >
+                                  🗑️ Borrar
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -713,6 +1149,173 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                     ))}
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL CREAR / EDITAR ANUNCIO */}
+        {isAnnouncementModalOpen && (
+          <div className="product-modal-backdrop" onClick={() => setIsAnnouncementModalOpen(false)}>
+            <div className="product-modal-card announcement-modal-card" onClick={(e) => e.stopPropagation()}>
+              <div className="product-modal-header">
+                <div>
+                  <span className="modal-badge-tag">Barra Superior</span>
+                  <h3 className="modal-title-text">
+                    {editingAnnouncement ? 'Editar Anuncio Promocional' : 'Nuevo Anuncio Promocional'}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  className="btn-modal-close"
+                  onClick={() => setIsAnnouncementModalOpen(false)}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveAnnouncement} className="product-modal-body">
+                {/* VISTA PREVIA EN VIVO */}
+                <div className="announcement-live-preview-box">
+                  <span className="preview-label">Vista previa en tiempo real:</span>
+                  <div className="announcement-preview-bar">
+                    <span className="announcement-bullet">🔥</span>
+                    <span className="announcement-text">
+                      {announcementForm.text || 'Texto del anuncio...'}
+                    </span>
+                    {announcementForm.link && (
+                      <span className="announcement-cta">Ver más →</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="modal-field-group">
+                  <label className="modal-field-label">Texto del Anuncio *</label>
+                  <input
+                    type="text"
+                    className="modal-input"
+                    placeholder="Ej: ¡Envíos a todo Colombia!"
+                    value={announcementForm.text}
+                    onChange={(e) => setAnnouncementForm({ ...announcementForm, text: e.target.value })}
+                    required
+                  />
+                  <small style={{ color: '#888', fontSize: '0.72rem' }}>
+                    Recomendamos mensajes breves, directos y atractivos para una óptima lectura.
+                  </small>
+                </div>
+
+                <div className="modal-field-group">
+                  <label className="modal-field-label">Enlace de Destino (Opcional)</label>
+                  <input
+                    type="text"
+                    className="modal-input"
+                    placeholder="Ej: #ofertas, #tenis, #hombre, #beneficios o URL completa"
+                    value={announcementForm.link}
+                    onChange={(e) => setAnnouncementForm({ ...announcementForm, link: e.target.value })}
+                  />
+                  <small style={{ color: '#888', fontSize: '0.72rem' }}>
+                    Si defines un enlace, los usuarios podrán hacer clic en el anuncio para ir directamente a la sección.
+                  </small>
+                </div>
+
+                <div className="product-form-grid">
+                  <div className="modal-field-group">
+                    <label className="modal-field-label">Fecha de Inicio (Opcional)</label>
+                    <input
+                      type="date"
+                      className="modal-input"
+                      value={announcementForm.start_date}
+                      onChange={(e) => setAnnouncementForm({ ...announcementForm, start_date: e.target.value })}
+                    />
+                  </div>
+                  <div className="modal-field-group">
+                    <label className="modal-field-label">Fecha de Finalización (Opcional)</label>
+                    <input
+                      type="date"
+                      className="modal-input"
+                      value={announcementForm.end_date}
+                      onChange={(e) => setAnnouncementForm({ ...announcementForm, end_date: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="modal-field-group" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
+                  <input
+                    type="checkbox"
+                    id="ann-active-check"
+                    checked={announcementForm.is_active}
+                    onChange={(e) => setAnnouncementForm({ ...announcementForm, is_active: e.target.checked })}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="ann-active-check" style={{ color: '#fff', fontSize: '0.85rem', cursor: 'pointer' }}>
+                    Activar y mostrar inmediatamente en la tienda pública
+                  </label>
+                </div>
+
+                <div className="product-modal-footer">
+                  <button
+                    type="button"
+                    className="btn-modal-cancel"
+                    onClick={() => setIsAnnouncementModalOpen(false)}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn-modal-save"
+                    disabled={isSubmittingAnnouncement}
+                  >
+                    {isSubmittingAnnouncement ? 'Guardando...' : editingAnnouncement ? 'Guardar Cambios' : 'Publicar Anuncio'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL DE CONFIRMACIÓN PARA ELIMINAR ANUNCIO */}
+        {announcementDeleteTarget && (
+          <div className="product-modal-backdrop" onClick={() => setAnnouncementDeleteTarget(null)}>
+            <div className="product-modal-card" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+              <div className="product-modal-header">
+                <div>
+                  <span className="modal-badge-tag text-danger">Eliminación</span>
+                  <h3 className="modal-title-text">¿Eliminar este anuncio?</h3>
+                </div>
+                <button
+                  type="button"
+                  className="btn-modal-close"
+                  onClick={() => setAnnouncementDeleteTarget(null)}
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="product-modal-body" style={{ gap: '0.75rem' }}>
+                <p style={{ color: '#ccc', fontSize: '0.88rem', margin: 0, lineHeight: 1.4 }}>
+                  Estás a punto de eliminar permanentemente el anuncio:
+                </p>
+                <div style={{ background: '#1c1c1c', padding: '0.85rem', borderRadius: '6px', borderLeft: '3px solid #ff4d4f' }}>
+                  <strong style={{ color: '#fff', fontSize: '0.9rem' }}>«{announcementDeleteTarget.text}»</strong>
+                </div>
+                <p style={{ color: '#888', fontSize: '0.78rem', margin: 0 }}>
+                  Esta acción no se puede deshacer y el anuncio dejará de rotar en la tienda.
+                </p>
+              </div>
+              <div className="product-modal-footer">
+                <button
+                  type="button"
+                  className="btn-modal-cancel"
+                  onClick={() => setAnnouncementDeleteTarget(null)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn-confirm-delete"
+                  onClick={handleConfirmDeleteAnnouncement}
+                >
+                  Eliminar Anuncio
+                </button>
               </div>
             </div>
           </div>

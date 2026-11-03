@@ -190,6 +190,26 @@ export function initDatabase() {
       attempted_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS announcements (
+      id TEXT PRIMARY KEY,
+      text TEXT NOT NULL,
+      link TEXT DEFAULT '',
+      is_active INTEGER DEFAULT 1,
+      sort_order INTEGER DEFAULT 0,
+      bg_color TEXT DEFAULT '',
+      text_color TEXT DEFAULT '',
+      start_date TEXT,
+      end_date TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS store_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_orders_order_number ON orders(order_number);
     CREATE INDEX IF NOT EXISTS idx_orders_customer_email ON orders(customer_email);
     CREATE INDEX IF NOT EXISTS idx_shipments_order_id ON shipments(order_id);
@@ -198,6 +218,7 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_status_history_order_id ON order_status_history(order_id);
     CREATE INDEX IF NOT EXISTS idx_admin_sessions_token ON admin_sessions(session_token);
     CREATE INDEX IF NOT EXISTS idx_admin_attempts_ip ON admin_login_attempts(ip_address, attempted_at);
+    CREATE INDEX IF NOT EXISTS idx_announcements_order ON announcements(sort_order ASC, is_active);
   `);
 
   // Asegurar columnas de descuentos en bases de datos existentes
@@ -229,6 +250,43 @@ export function initDatabase() {
 
   // Sembrar catálogo de productos inicial si está vacío
   seedInitialProducts();
+
+  // Sembrar anuncios iniciales y configuración si no existen
+  seedInitialAnnouncements();
+}
+
+function seedInitialAnnouncements() {
+  try {
+    const settingStmt = db.prepare('SELECT value FROM store_settings WHERE key = ?');
+    if (!settingStmt.get('announcement_bar_enabled')) {
+      db.prepare('INSERT OR REPLACE INTO store_settings (key, value, updated_at) VALUES (?, ?, ?)')
+        .run('announcement_bar_enabled', 'true', new Date().toISOString());
+    }
+    if (!settingStmt.get('announcement_rotation_seconds')) {
+      db.prepare('INSERT OR REPLACE INTO store_settings (key, value, updated_at) VALUES (?, ?, ?)')
+        .run('announcement_rotation_seconds', '4', new Date().toISOString());
+    }
+
+    const count = db.prepare('SELECT count(*) as count FROM announcements').get();
+    if (count.count === 0) {
+      const insert = db.prepare(`
+        INSERT INTO announcements (id, text, link, is_active, sort_order, bg_color, text_color, start_date, end_date, created_at, updated_at)
+        VALUES (@id, @text, @link, @is_active, @sort_order, @bg_color, @text_color, @start_date, @end_date, @created_at, @updated_at)
+      `);
+      const now = new Date().toISOString();
+      const initial = [
+        { id: 'ann_1', text: '¡Envíos a todo Colombia!', link: '#beneficios', is_active: 1, sort_order: 1, bg_color: '', text_color: '', start_date: null, end_date: null, created_at: now, updated_at: now },
+        { id: 'ann_2', text: '¡Ofertas especiales por tiempo limitado!', link: '#ofertas', is_active: 1, sort_order: 2, bg_color: '', text_color: '', start_date: null, end_date: null, created_at: now, updated_at: now },
+        { id: 'ann_3', text: '¡Nuevas colecciones disponibles!', link: '#coleccion', is_active: 1, sort_order: 3, bg_color: '', text_color: '', start_date: null, end_date: null, created_at: now, updated_at: now },
+        { id: 'ann_4', text: '¡Descuentos especiales en productos seleccionados!', link: '#productos', is_active: 1, sort_order: 4, bg_color: '', text_color: '', start_date: null, end_date: null, created_at: now, updated_at: now }
+      ];
+      for (const item of initial) {
+        insert.run(item);
+      }
+    }
+  } catch (err) {
+    console.error('[seedInitialAnnouncements Error]', err.message);
+  }
 }
 
 function seedInitialProducts() {

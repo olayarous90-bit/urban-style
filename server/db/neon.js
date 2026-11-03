@@ -260,6 +260,27 @@ export async function initNeonTables() {
         attempted_at TIMESTAMPTZ DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS idx_admin_attempts_lookup ON admin_login_attempts(ip_address, username, attempted_at);
+
+      CREATE TABLE IF NOT EXISTS announcements (
+        id VARCHAR(64) PRIMARY KEY,
+        text TEXT NOT NULL,
+        link TEXT DEFAULT '',
+        is_active BOOLEAN DEFAULT TRUE,
+        sort_order INTEGER DEFAULT 0,
+        bg_color VARCHAR(30) DEFAULT '',
+        text_color VARCHAR(30) DEFAULT '',
+        start_date TIMESTAMPTZ,
+        end_date TIMESTAMPTZ,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_neon_announcements_order ON announcements(sort_order ASC, is_active);
+
+      CREATE TABLE IF NOT EXISTS store_settings (
+        key VARCHAR(64) PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
     `);
 
     return true;

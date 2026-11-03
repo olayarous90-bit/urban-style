@@ -101,6 +101,7 @@ export function AppContent() {
           <Navbar
             favoritesCount={favoriteIds.length}
             favoriteItems={favoriteItems}
+            onOpenAccount={() => navigateTo('/admin/login')}
           />
         </header>
 
