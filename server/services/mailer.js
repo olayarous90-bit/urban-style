@@ -25,47 +25,223 @@ if (!fs.existsSync(EMAIL_LOGS_DIR)) {
 let cachedEtherealAccount = null;
 
 /**
- * Obtiene el transportador configurado con detección inteligente de proveedor
+ * Recupera la configuración SMTP almacenada en base de datos (Neon / SQLite)
  */
-export async function getTransporterInfo() {
-  const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const port = Number(process.env.SMTP_PORT) || 587;
-  const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+export async function getStoredSmtpSettings() {
+  const map = {};
+  try {
+    const res = await query(
+      "SELECT key, value FROM store_settings WHERE key IN ('smtp_host', 'smtp_port', 'smtp_secure', 'smtp_user', 'smtp_pass', 'smtp_provider', 'mail_from', 'resend_api_key')"
+    );
+    if (res && res.rows) {
+      res.rows.forEach((r) => { map[r.key] = r.value; });
+    }
+  } catch (err) {
+    // Fallback si Neon no está disponible
+  }
 
-  // 1. Configuración SMTP explícita (Producción o staging)
-  if (host && user && pass) {
-    const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: { user, pass },
-      tls: {
-        rejectUnauthorized: process.env.NODE_ENV === 'production'
-      },
-      connectionTimeout: 7000,
+  // SQLite fallback
+  try {
+    const rows = db.prepare(
+      "SELECT key, value FROM store_settings WHERE key IN ('smtp_host', 'smtp_port', 'smtp_secure', 'smtp_user', 'smtp_pass', 'smtp_provider', 'mail_from', 'resend_api_key')"
+    ).all();
+    rows.forEach((r) => {
+      if (!map[r.key]) map[r.key] = r.value;
+    });
+  } catch (err) {}
+
+  return {
+    ...map,
+    host: map.smtp_host,
+    port: map.smtp_port ? Number(map.smtp_port) : undefined,
+    secure: map.smtp_secure !== undefined ? map.smtp_secure === 'true' || map.smtp_secure === '1' : undefined,
+    user: map.smtp_user,
+    pass: map.smtp_pass,
+    provider: map.smtp_provider,
+    mailFrom: map.mail_from,
+    resendKey: map.resend_api_key
+  };
+}
+
+/**
+ * Guarda la configuración SMTP en Neon PostgreSQL y SQLite (store_settings)
+ */
+export async function saveStoredSmtpSettings(settings = {}) {
+  const now = new Date().toISOString();
+  const normalized = {
+    smtp_host: settings.smtp_host || settings.host,
+    smtp_port: settings.smtp_port || settings.port,
+    smtp_secure: settings.smtp_secure !== undefined ? settings.smtp_secure : settings.secure,
+    smtp_user: settings.smtp_user || settings.user,
+    smtp_pass: settings.smtp_pass || settings.pass,
+    smtp_provider: settings.smtp_provider || settings.provider,
+    mail_from: settings.mail_from || settings.mailFrom,
+    resend_api_key: settings.resend_api_key || settings.resendKey
+  };
+
+  const keysToSave = Object.keys(normalized);
+
+  for (const k of keysToSave) {
+    if (normalized[k] !== undefined && normalized[k] !== null) {
+      const val = String(normalized[k]).trim();
+      // Si la contraseña viene enmascarada (ej. '••••••••') o vacía, no sobreescribir la existente
+      if (k === 'smtp_pass' && (val.includes('••••') || val === '')) continue;
+
+      // 1. Neon PostgreSQL
+      try {
+        await query(
+          `INSERT INTO store_settings (key, value, updated_at)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = EXCLUDED.updated_at`,
+          [k, val, now]
+        );
+      } catch (e) {
+        console.warn(`[saveStoredSmtpSettings Neon Warning for ${k}]`, e.message);
+      }
+
+      // 2. SQLite
+      try {
+        db.prepare(
+          `INSERT OR REPLACE INTO store_settings (key, value, updated_at) VALUES (?, ?, ?)`
+        ).run(k, val, now);
+      } catch (e) {
+        console.warn(`[saveStoredSmtpSettings SQLite Warning for ${k}]`, e.message);
+      }
+    }
+  }
+
+  return await getStoredSmtpSettings();
+}
+
+/**
+ * Prueba la conectividad SMTP en vivo y opcionalmente envía un correo de prueba
+ */
+export async function testSmtpConnection({ host, port, secure, user, pass, mailFrom, toEmail, resendKey }) {
+  const timeoutMs = 7000;
+  let testTransporter;
+  let resolvedHost = host;
+  let resolvedPort = Number(port) || 587;
+  let resolvedFrom = mailFrom || (user ? `"URBAN STYLE Test" <${user}>` : '"URBAN STYLE Test" <despachos@urbanstyle.com.co>');
+
+  if (resendKey) {
+    resolvedHost = 'smtp.resend.com';
+    resolvedPort = 465;
+    testTransporter = nodemailer.createTransport({
+      host: 'smtp.resend.com',
+      port: 465,
+      secure: true,
+      auth: { user: 'resend', pass: resendKey },
+      connectionTimeout: timeoutMs,
       greetingTimeout: 5000,
-      socketTimeout: 8000
+      socketTimeout: timeoutMs
+    });
+  } else {
+    if (!host || !user || !pass) {
+      throw new Error('Faltan parámetros obligatorios: Servidor Host, Usuario y Contraseña son requeridos.');
+    }
+    const isGmail = host.toLowerCase().includes('gmail');
+    testTransporter = nodemailer.createTransport({
+      host,
+      port: resolvedPort,
+      secure: secure === true || resolvedPort === 465,
+      auth: { user, pass },
+      tls: { rejectUnauthorized: !isGmail },
+      connectionTimeout: timeoutMs,
+      greetingTimeout: 5000,
+      socketTimeout: timeoutMs
+    });
+  }
+
+  // 1. Verificar handshake SMTP y credenciales
+  await testTransporter.verify();
+
+  // 2. Si se solicita enviar un correo de prueba real
+  let sendResult = null;
+  if (toEmail) {
+    const info = await testTransporter.sendMail({
+      from: resolvedFrom,
+      to: toEmail,
+      subject: '🧪 [URBAN STYLE] Verificación de Servidor de Correo SMTP',
+      html: `
+        <div style="font-family: Arial, sans-serif; background: #0A0A0A; color: #FFFFFF; padding: 28px; border-radius: 8px; max-width: 520px; border: 1px solid #222222;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h1 style="color: #FF5A1F; font-size: 22px; margin: 0; letter-spacing: 2px;">URBAN STYLE</h1>
+            <p style="font-size: 12px; color: #888888; margin: 4px 0 0 0;">PLATAFORMA DE CORREOS TRANSACCIONALES</p>
+          </div>
+          <div style="background: #141414; padding: 16px; border-radius: 6px; border-left: 4px solid #10B981; margin-bottom: 20px;">
+            <h3 style="color: #10B981; margin: 0 0 6px 0; font-size: 15px;">✓ Conexión SMTP Exitosa</h3>
+            <p style="font-size: 13px; color: #CCCCCC; margin: 0; line-height: 1.5;">
+              Este mensaje confirma que tu servidor de correo está <strong>100% operativo</strong> y listo para entregar notificaciones de compras y guías de envío a bandejas reales.
+            </p>
+          </div>
+          <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 20px;">
+            <tr><td style="color: #888888; padding: 6px 0;">Servidor SMTP:</td><td style="color: #FFFFFF; font-weight: 600; text-align: right;">${resolvedHost}:${resolvedPort}</td></tr>
+            <tr><td style="color: #888888; padding: 6px 0;">Remitente:</td><td style="color: #FFFFFF; text-align: right;">${resolvedFrom}</td></tr>
+            <tr><td style="color: #888888; padding: 6px 0;">Destinatario:</td><td style="color: #FFFFFF; font-weight: 600; text-align: right;">${toEmail}</td></tr>
+            <tr><td style="color: #888888; padding: 6px 0;">Fecha de Envío:</td><td style="color: #FFFFFF; text-align: right;">${new Date().toLocaleString('es-CO')}</td></tr>
+          </table>
+          <p style="font-size: 11px; color: #666666; text-align: center; margin: 0; border-top: 1px solid #1E1E1E; padding-top: 14px;">
+            URBAN STYLE S.A.S. • Bogotá, Colombia • Despachos Mi Paquete v2
+          </p>
+        </div>
+      `
     });
 
-    return {
-      transporter,
-      providerName: `SMTP (${host})`,
-      mode: 'PRODUCTION_SMTP',
-      isLive: true
+    sendResult = {
+      messageId: info.messageId,
+      response: info.response || '250 OK: queued for delivery',
+      accepted: info.accepted
     };
   }
 
-  // 2. Soporte nativo para Resend SMTP vía RESEND_API_KEY
-  if (process.env.RESEND_API_KEY) {
+  return {
+    success: true,
+    message: 'Conexión con el servidor SMTP establecida exitosamente.',
+    host: resolvedHost,
+    port: resolvedPort,
+    sendResult
+  };
+}
+
+/**
+ * Obtiene el transportador configurado con detección inteligente de proveedor
+ * Prioridad 1: Variables de entorno de Vercel (process.env)
+ * Prioridad 2: Configuración persistente guardada en Neon (store_settings)
+ */
+export async function getTransporterInfo() {
+  let host = process.env.SMTP_HOST;
+  let user = process.env.SMTP_USER;
+  let pass = process.env.SMTP_PASS;
+  let port = Number(process.env.SMTP_PORT) || 587;
+  let secure = process.env.SMTP_SECURE === 'true' || port === 465;
+  let fromAddress = process.env.MAIL_FROM;
+  let resendKey = process.env.RESEND_API_KEY;
+
+  // Si faltan credenciales en process.env, buscar en store_settings (Neon / SQLite)
+  if ((!host || !user || !pass) && !resendKey) {
+    try {
+      const stored = await getStoredSmtpSettings();
+      if (stored.smtp_host) host = stored.smtp_host;
+      if (stored.smtp_user) user = stored.smtp_user;
+      if (stored.smtp_pass) pass = stored.smtp_pass;
+      if (stored.smtp_port) port = Number(stored.smtp_port) || 587;
+      if (stored.smtp_secure !== undefined) secure = stored.smtp_secure === 'true' || port === 465;
+      if (stored.mail_from) fromAddress = stored.mail_from;
+      if (stored.resend_api_key) resendKey = stored.resend_api_key;
+    } catch (e) {
+      console.warn('[getTransporterInfo Stored Settings Fallback]', e.message);
+    }
+  }
+
+  // 1. Caso Resend SMTP
+  if (resendKey && (!host || host.includes('resend'))) {
     const transporter = nodemailer.createTransport({
       host: 'smtp.resend.com',
       port: 465,
       secure: true,
       auth: {
         user: 'resend',
-        pass: process.env.RESEND_API_KEY
+        pass: resendKey
       },
       connectionTimeout: 7000,
       greetingTimeout: 5000,
@@ -76,38 +252,24 @@ export async function getTransporterInfo() {
       transporter,
       providerName: 'Resend SMTP (smtp.resend.com)',
       mode: 'RESEND_SMTP',
-      isLive: true
+      isLive: true,
+      isConfigured: true,
+      fromAddress: fromAddress || 'onboarding@resend.dev',
+      host: 'smtp.resend.com',
+      port: 465
     };
   }
 
-  // 3. Si estamos en producción estricta en Vercel y no hay credenciales
-  if ((process.env.NODE_ENV === 'production' || process.env.VERCEL) && !process.env.ENABLE_ETHEREAL_TEST) {
-    return {
-      transporter: null,
-      providerName: 'Pendiente de Configuración en Vercel',
-      mode: 'UNCONFIGURED_PRODUCTION',
-      isLive: false,
-      reason: 'Variables SMTP_HOST, SMTP_USER y SMTP_PASS no definidas en el panel de Vercel.'
-    };
-  }
-
-  // 4. Modo Desarrollo / Pruebas Controladas: Ethereal SMTP (Servidor SMTP real con buzón web)
-  try {
-    if (!cachedEtherealAccount) {
-      cachedEtherealAccount = await Promise.race([
-        nodemailer.createTestAccount(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout de 5s creando cuenta de prueba Ethereal')), 5000))
-      ]);
-      console.log(`[Mailer] Buzón de pruebas Ethereal inicializado: ${cachedEtherealAccount.user}`);
-    }
-
+  // 2. Caso SMTP Estándar / Gmail / Hostinger / Brevo
+  if (host && user && pass) {
+    const isGmail = host.toLowerCase().includes('gmail');
     const transporter = nodemailer.createTransport({
-      host: cachedEtherealAccount.smtp.host,
-      port: cachedEtherealAccount.smtp.port,
-      secure: cachedEtherealAccount.smtp.secure,
-      auth: {
-        user: cachedEtherealAccount.user,
-        pass: cachedEtherealAccount.pass
+      host,
+      port,
+      secure: secure || (port === 465),
+      auth: { user, pass },
+      tls: {
+        rejectUnauthorized: process.env.NODE_ENV === 'production' && !isGmail
       },
       connectionTimeout: 7000,
       greetingTimeout: 5000,
@@ -116,21 +278,28 @@ export async function getTransporterInfo() {
 
     return {
       transporter,
-      providerName: `Ethereal Test SMTP (${cachedEtherealAccount.smtp.host})`,
-      mode: 'ETHEREAL_TEST',
+      providerName: isGmail ? 'Google Gmail SMTP' : `SMTP (${host})`,
+      mode: isGmail ? 'GMAIL_SMTP' : 'PRODUCTION_SMTP',
       isLive: true,
-      testUser: cachedEtherealAccount.user
-    };
-  } catch (err) {
-    console.warn('[Mailer Ethereal Warning] No se pudo crear cuenta de prueba Ethereal:', err.message);
-    return {
-      transporter: null,
-      providerName: 'Local Fallback (HTML Logs & Previews)',
-      mode: 'LOCAL_FALLBACK',
-      isLive: false,
-      reason: err.message
+      isConfigured: true,
+      fromAddress: fromAddress || (isGmail ? user : `"URBAN STYLE" <${user}>`),
+      host,
+      port
     };
   }
+
+  // 3. Servidor de Correo no configurado aún (modo borrador)
+  return {
+    transporter: null,
+    providerName: 'Servidor SMTP No Configurado',
+    mode: 'UNCONFIGURED',
+    isLive: false,
+    isConfigured: false,
+    fromAddress: fromAddress || '"URBAN STYLE Despachos" <despachos@urbanstyle.com.co>',
+    host: host || 'No definido',
+    port,
+    reason: 'Credenciales SMTP pendientes en Vercel o en Ajustes (SMTP_HOST, SMTP_USER, SMTP_PASS).'
+  };
 }
 
 /**
@@ -645,10 +814,10 @@ export async function sendOrderPlacedEmail({ order, items = [], force = false })
     });
 
     return {
-      success: true,
+      success: false,
       status: 'PENDING_CONFIG',
       simulated: true,
-      notice,
+      error: notice,
       emailType,
       previewUrl: `/api/orders/${order.order_number}/email-preview?type=placed`
     };
@@ -781,10 +950,10 @@ export async function sendShippingConfirmationEmail({ order, shipment, items = [
     });
 
     return {
-      success: true,
+      success: false,
       status: 'PENDING_CONFIG',
       simulated: true,
-      notice,
+      error: notice,
       emailType,
       previewUrl: `/api/orders/${order.order_number}/email-preview?type=shipping`
     };
@@ -864,8 +1033,10 @@ export async function retryOrderEmail(orderIdentifier, emailType = 'ALL', force 
     }
   }
 
+  const allSuccessful = results.length > 0 && results.every((r) => r && r.success);
+
   return {
-    success: true,
+    success: allSuccessful,
     orderNumber: order.order_number,
     recipient: order.customer_email,
     results

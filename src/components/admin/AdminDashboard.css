@@ -1912,3 +1912,71 @@
   padding: 1px 4px;
   border-radius: 3px;
 }
+
+/* ==========================================================================
+   CONFIGURADOR INTERACTIVO Y PROBADOR SMTP (URBAN STYLE)
+   ========================================================================== */
+.admin-input-dark {
+  width: 100%;
+  background: #1C1C1C;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+  border-radius: 4px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.2s, background-color 0.2s;
+  box-sizing: border-box;
+}
+
+.admin-input-dark:focus {
+  border-color: #FF5A1F;
+  background: #222222;
+}
+
+.admin-input-dark::placeholder {
+  color: #666666;
+}
+
+.btn-preset {
+  background: #1E1E1E;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #CCCCCC;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 0.4rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-preset:hover {
+  background: #282828;
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btn-preset.active {
+  background: rgba(255, 90, 31, 0.15);
+  border-color: #FF5A1F;
+  color: #FF5A1F;
+}
+
+.email-config-hint {
+  font-size: 0.7rem;
+  color: #ED8936;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  margin-top: 2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 500;
+  padding: 0;
+  text-decoration: underline;
+}
+
+.email-config-hint:hover {
+  color: #F6AD55;
+}

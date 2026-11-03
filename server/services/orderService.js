@@ -527,21 +527,29 @@ export async function getAdminOrdersList({ status, search }) {
         });
       });
 
-      // Cargar correos en masa
+      // Cargar correos en masa por order_id y order_number
       let emailsByOrderId = {};
+      let emailsByOrderNum = {};
       try {
+        const orderNumbers = orders.map((o) => o.order_number);
         const emailsRes = await query(
-          `SELECT * FROM email_logs WHERE order_id = ANY($1) ORDER BY id DESC`,
-          [orderIds]
+          `SELECT * FROM email_logs WHERE order_id = ANY($1) OR order_number = ANY($2) ORDER BY id DESC`,
+          [orderIds, orderNumbers]
         );
         emailsRes.rows.forEach((em) => {
-          if (!emailsByOrderId[em.order_id]) emailsByOrderId[em.order_id] = [];
-          emailsByOrderId[em.order_id].push(em);
+          if (em.order_id) {
+            if (!emailsByOrderId[em.order_id]) emailsByOrderId[em.order_id] = [];
+            emailsByOrderId[em.order_id].push(em);
+          }
+          if (em.order_number) {
+            if (!emailsByOrderNum[em.order_number]) emailsByOrderNum[em.order_number] = [];
+            emailsByOrderNum[em.order_number].push(em);
+          }
         });
       } catch (e) {}
 
       return orders.map((o) => {
-        const orderEmails = emailsByOrderId[o.id] || [];
+        const orderEmails = emailsByOrderId[o.id] || emailsByOrderNum[o.order_number] || [];
         const placedEmail = orderEmails.find((e) => e.email_type === 'ORDER_CONFIRMATION');
         const shippingEmail = orderEmails.find((e) => e.email_type === 'SHIPPING_NOTIFICATION');
 
@@ -623,10 +631,10 @@ export async function getAdminOrdersList({ status, search }) {
 
     const orders = db.prepare(sql).all(...params);
     const getItems = db.prepare('SELECT * FROM order_items WHERE order_id = ?');
-    const getEmails = db.prepare('SELECT * FROM email_logs WHERE order_id = ? ORDER BY id DESC');
+    const getEmails = db.prepare('SELECT * FROM email_logs WHERE order_id = ? OR order_number = ? ORDER BY id DESC');
 
     return orders.map((ord) => {
-      const orderEmails = getEmails.all(ord.id) || [];
+      const orderEmails = getEmails.all(ord.id, ord.order_number) || [];
       const placedEmail = orderEmails.find((e) => e.email_type === 'ORDER_CONFIRMATION');
       const shippingEmail = orderEmails.find((e) => e.email_type === 'SHIPPING_NOTIFICATION');
 

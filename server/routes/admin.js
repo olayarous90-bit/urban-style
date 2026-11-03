@@ -1,6 +1,12 @@
 import express from 'express';
 import { db } from '../db/database.js';
-import { retryOrderEmail } from '../services/mailer.js';
+import {
+  retryOrderEmail,
+  getStoredSmtpSettings,
+  saveStoredSmtpSettings,
+  testSmtpConnection,
+  getTransporterInfo
+} from '../services/mailer.js';
 import {
   getAdminStatsData,
   getAdminOrdersList,
@@ -381,13 +387,22 @@ router.post('/orders/:orderNumber/resend-email', requireAdmin, async (req, res) 
       force: true
     });
 
-    // Validar si el proveedor SMTP falló en todos los envíos
+    // Validar si el proveedor SMTP falló o no está configurado
     const failedResults = (result.results || []).filter((r) => r && !r.success);
     if (failedResults.length > 0 && failedResults.length === (result.results || []).length) {
+      const failure = failedResults[0];
+      if (failure?.status === 'PENDING_CONFIG') {
+        return res.status(422).json({
+          success: false,
+          code: 'SMTP_NOT_CONFIGURED',
+          message: 'No se puede enviar el correo a la bandeja del cliente: El servidor SMTP no tiene credenciales configuradas en Vercel ni en Ajustes. Configure sus credenciales en la pestaña «Configuración» para enviar correos reales.',
+          result
+        });
+      }
       return res.status(502).json({
         success: false,
         code: 'SMTP_FAILURE',
-        message: failedResults[0]?.error || 'El servidor SMTP no pudo entregar el correo.',
+        message: failure?.error || 'El servidor SMTP no pudo entregar el correo.',
         result
       });
     }
@@ -449,10 +464,132 @@ router.get('/shipments', requireAdmin, async (req, res) => {
 });
 
 /**
+ * GET /api/admin/smtp-config
+ * Consulta la configuración SMTP guardada (sin exponer contraseñas en claro)
+ */
+router.get('/smtp-config', requireAdmin, async (req, res) => {
+  try {
+    const stored = await getStoredSmtpSettings();
+    const envHost = process.env.SMTP_HOST;
+    const envUser = process.env.SMTP_USER;
+    const hasEnvPass = !!process.env.SMTP_PASS;
+    const hasEnvResend = !!process.env.RESEND_API_KEY;
+
+    res.json({
+      success: true,
+      config: {
+        provider: stored.smtp_provider || (envHost?.includes('gmail') ? 'gmail' : envHost ? 'custom' : hasEnvResend ? 'resend' : 'pending'),
+        host: envHost || stored.smtp_host || '',
+        port: Number(process.env.SMTP_PORT || stored.smtp_port) || 587,
+        secure: (process.env.SMTP_SECURE === 'true' || stored.smtp_secure === 'true'),
+        user: envUser || stored.smtp_user || '',
+        hasPassword: hasEnvPass || !!stored.smtp_pass,
+        mailFrom: process.env.MAIL_FROM || stored.mail_from || '',
+        hasResendKey: hasEnvResend || !!stored.resend_api_key,
+        source: (envHost || hasEnvResend) ? 'ENVIRONMENT_VARIABLES' : stored.smtp_host ? 'DATABASE_STORE' : 'NONE'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/smtp-config
+ * Guarda la configuración SMTP en Neon PostgreSQL y SQLite (store_settings)
+ */
+router.post('/smtp-config', requireAdmin, async (req, res) => {
+  try {
+    const { provider, host, port, secure, user, pass, mailFrom, resendKey } = req.body;
+
+    const updated = await saveStoredSmtpSettings({
+      smtp_provider: provider,
+      smtp_host: host,
+      smtp_port: port,
+      smtp_secure: secure ? 'true' : 'false',
+      smtp_user: user,
+      smtp_pass: pass,
+      mail_from: mailFrom,
+      resend_api_key: resendKey
+    });
+
+    res.json({
+      success: true,
+      message: 'Configuración de servidor SMTP guardada exitosamente en Neon PostgreSQL y SQLite.',
+      config: {
+        host: updated.smtp_host,
+        port: updated.smtp_port,
+        user: updated.smtp_user,
+        hasPassword: !!updated.smtp_pass,
+        mailFrom: updated.mail_from
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/smtp-test
+ * Prueba la conexión SMTP en vivo y opcionalmente envía un correo de prueba real
+ */
+router.post('/smtp-test', requireAdmin, async (req, res) => {
+  try {
+    const { toEmail, host, port, secure, user, pass, mailFrom, resendKey } = req.body;
+
+    // Si no se enviaron datos en el body, usar los configurados
+    let testHost = host;
+    let testPort = port;
+    let testSecure = secure;
+    let testUser = user;
+    let testPass = pass;
+    let testFrom = mailFrom;
+    let testResendKey = resendKey;
+
+    if (!testHost && !testResendKey) {
+      const stored = await getStoredSmtpSettings();
+      testHost = process.env.SMTP_HOST || stored.smtp_host;
+      testPort = process.env.SMTP_PORT || stored.smtp_port || 587;
+      testSecure = process.env.SMTP_SECURE === 'true' || stored.smtp_secure === 'true';
+      testUser = process.env.SMTP_USER || stored.smtp_user;
+      testPass = process.env.SMTP_PASS || stored.smtp_pass;
+      testFrom = process.env.MAIL_FROM || stored.mail_from;
+      testResendKey = process.env.RESEND_API_KEY || stored.resend_api_key;
+    }
+
+    const testResult = await testSmtpConnection({
+      host: testHost,
+      port: testPort,
+      secure: testSecure,
+      user: testUser,
+      pass: testPass,
+      mailFrom: testFrom,
+      toEmail,
+      resendKey: testResendKey
+    });
+
+    res.json({
+      success: true,
+      message: testResult.message,
+      result: testResult
+    });
+  } catch (error) {
+    console.error('[Admin SMTP Test Error]', error);
+    res.status(400).json({
+      success: false,
+      message: error.message || 'Fallo al conectar con el servidor SMTP.',
+      code: error.code || 'SMTP_TEST_FAILED'
+    });
+  }
+});
+
+/**
  * GET /api/admin/config-status
  * Diagnóstico de servicios externos sin exponer claves
  */
-router.get('/config-status', requireAdmin, (req, res) => {
+router.get('/config-status', requireAdmin, async (req, res) => {
+  const mailerInfo = await getTransporterInfo();
+
   res.json({
     success: true,
     services: {
@@ -465,16 +602,13 @@ router.get('/config-status', requireAdmin, (req, res) => {
         originCity: process.env.ORIGIN_CITY || 'BOGOTÁ D.C.'
       },
       mailer: {
-        provider: 'Nodemailer Transport (SMTP / Resend)',
-        isConfigured: !!(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) || !!process.env.RESEND_API_KEY,
-        smtpHostConfigured: !!process.env.SMTP_HOST,
-        smtpUserConfigured: !!process.env.SMTP_USER,
-        smtpPassConfigured: !!process.env.SMTP_PASS,
-        activeMode: process.env.SMTP_HOST ? 'SMTP Producción' : process.env.RESEND_API_KEY ? 'Resend API/SMTP' : 'Buzón de Pruebas Ethereal SMTP (Red Real)',
-        fromAddress: process.env.MAIL_FROM || 'despachos@urbanstyle.com.co',
-        host: process.env.SMTP_HOST || 'smtp.ethereal.email (pruebas)',
-        port: Number(process.env.SMTP_PORT) || 587,
-        secure: process.env.SMTP_SECURE === 'true',
+        provider: mailerInfo.providerName,
+        isConfigured: mailerInfo.isConfigured,
+        activeMode: mailerInfo.mode,
+        fromAddress: mailerInfo.fromAddress,
+        host: mailerInfo.host,
+        port: mailerInfo.port,
+        secure: mailerInfo.secure || false,
         requiredVercelVars: ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_SECURE', 'MAIL_FROM']
       },
       database: {

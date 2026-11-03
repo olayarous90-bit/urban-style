@@ -57,6 +57,26 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
   const [announcementDeleteTarget, setAnnouncementDeleteTarget] = useState(null);
   const [isSubmittingAnnouncement, setIsSubmittingAnnouncement] = useState(false);
 
+  // Configuración y Pruebas del Servidor SMTP (Correos Transaccionales)
+  const [smtpForm, setSmtpForm] = useState({
+    provider: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    user: '',
+    pass: '',
+    mailFrom: '',
+    resendKey: ''
+  });
+  const [hasStoredSmtpPass, setHasStoredSmtpPass] = useState(false);
+  const [hasStoredResendKey, setHasStoredResendKey] = useState(false);
+  const [smtpSource, setSmtpSource] = useState('NONE');
+  const [savingSmtp, setSavingSmtp] = useState(false);
+  const [testingSmtp, setTestingSmtp] = useState(false);
+  const [testEmailRecipient, setTestEmailRecipient] = useState('');
+  const [smtpFeedback, setSmtpFeedback] = useState(null);
+  const [showSmtpHelp, setShowSmtpHelp] = useState(false);
+
   // Verificar sesión administrativa activa al abrir el panel
   useEffect(() => {
     if (isOpen) {
@@ -178,6 +198,9 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
           const diagData = await diagRes.json();
           setConfigStatus(diagData.services);
         }
+        if (activeTab === 'settings') {
+          await loadSmtpConfig();
+        }
       }
 
       // 7. Barra de Anuncios
@@ -196,6 +219,163 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
       console.warn('Error cargando datos del panel admin:', err);
     } finally {
       setLoadingData(false);
+    }
+  };
+
+  // Cargar configuración de servidor SMTP persistida en Neon
+  const loadSmtpConfig = async () => {
+    try {
+      const res = await fetch('/api/admin/smtp-config', { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.config) {
+          setSmtpForm((prev) => ({
+            ...prev,
+            provider: data.config.provider || prev.provider,
+            host: data.config.host || prev.host,
+            port: data.config.port || prev.port,
+            secure: data.config.secure !== undefined ? data.config.secure : prev.secure,
+            user: data.config.user || prev.user,
+            pass: '',
+            mailFrom: data.config.mailFrom || prev.mailFrom,
+            resendKey: ''
+          }));
+          setHasStoredSmtpPass(Boolean(data.config.hasPass));
+          setHasStoredResendKey(Boolean(data.config.hasResendKey));
+          setSmtpSource(data.config.source || 'NONE');
+          if (data.config.mailFrom && !testEmailRecipient) {
+            setTestEmailRecipient(data.config.mailFrom);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Error cargando configuración SMTP:', err);
+    }
+  };
+
+  // Selector de plantillas predefinidas (Gmail, Resend, Brevo, Outlook, Personalizado)
+  const handleSelectPreset = (presetKey) => {
+    if (presetKey === 'gmail') {
+      setSmtpForm((prev) => ({
+        ...prev,
+        provider: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true
+      }));
+    } else if (presetKey === 'resend') {
+      setSmtpForm((prev) => ({
+        ...prev,
+        provider: 'resend',
+        host: 'smtp.resend.com',
+        port: 465,
+        secure: true,
+        user: 'resend'
+      }));
+    } else if (presetKey === 'brevo') {
+      setSmtpForm((prev) => ({
+        ...prev,
+        provider: 'brevo',
+        host: 'smtp-relay.brevo.com',
+        port: 587,
+        secure: false
+      }));
+    } else if (presetKey === 'outlook') {
+      setSmtpForm((prev) => ({
+        ...prev,
+        provider: 'outlook',
+        host: 'smtp.office365.com',
+        port: 587,
+        secure: false
+      }));
+    } else {
+      setSmtpForm((prev) => ({
+        ...prev,
+        provider: 'custom'
+      }));
+    }
+  };
+
+  // Guardar configuración de SMTP en Neon store_settings
+  const handleSaveSmtpConfig = async (e) => {
+    if (e) e.preventDefault();
+    setSavingSmtp(true);
+    setSmtpFeedback(null);
+    try {
+      const res = await fetch('/api/admin/smtp-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(smtpForm)
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSmtpFeedback({
+          type: 'success',
+          message: 'Configuración guardada exitosamente en Neon PostgreSQL. Vercel ya puede usar estas credenciales.'
+        });
+        if (data.config) {
+          setHasStoredSmtpPass(Boolean(data.config.hasPass));
+          setHasStoredResendKey(Boolean(data.config.hasResendKey));
+          setSmtpSource(data.config.source || 'DATABASE');
+        }
+        // Refrescar diagnóstico de servicios
+        const diagRes = await fetch('/api/admin/config-status', { credentials: 'include' });
+        if (diagRes.ok) {
+          const diagData = await diagRes.json();
+          setConfigStatus(diagData.services);
+        }
+        setTimeout(() => setSmtpFeedback(null), 5000);
+      } else {
+        setSmtpFeedback({
+          type: 'error',
+          message: data.message || 'Error guardando configuración SMTP.'
+        });
+      }
+    } catch {
+      setSmtpFeedback({
+        type: 'error',
+        message: 'Error de red al guardar la configuración.'
+      });
+    } finally {
+      setSavingSmtp(false);
+    }
+  };
+
+  // Probar conexión en vivo y enviar correo de prueba
+  const handleTestSmtpConnection = async () => {
+    setTestingSmtp(true);
+    setSmtpFeedback(null);
+    try {
+      const res = await fetch('/api/admin/smtp-test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          ...smtpForm,
+          toEmail: testEmailRecipient.trim() || undefined
+        })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSmtpFeedback({
+          type: 'success',
+          message: data.message || 'Conexión SMTP exitosa.'
+        });
+        await loadSmtpConfig();
+      } else {
+        setSmtpFeedback({
+          type: 'error',
+          message: `${data.message || 'Error en la prueba de conexión.'} ${data.tip ? `Sugerencia: ${data.tip}` : ''}`
+        });
+      }
+    } catch {
+      setSmtpFeedback({
+        type: 'error',
+        message: 'Error de red al conectar con el servidor de pruebas.'
+      });
+    } finally {
+      setTestingSmtp(false);
     }
   };
 
@@ -534,6 +714,8 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
           errorDetail = `El pedido #${orderNumber} no fue encontrado en la base de datos.`;
         } else if (res.status === 400) {
           errorDetail = data?.message || 'El pedido aún no tiene una guía generada para reenviar.';
+        } else if (res.status === 422 || data?.code === 'SMTP_NOT_CONFIGURED') {
+          errorDetail = data?.message || 'El servidor SMTP no está configurado. Ve a la pestaña "Configuración" en el panel para ingresar las credenciales de correo (Gmail, Resend o Brevo).';
         } else if (res.status === 502) {
           errorDetail = data?.message || 'El servidor SMTP rechazó la entrega del correo.';
         } else if (res.status === 504) {
@@ -679,7 +861,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
     { id: 'products', label: 'Productos', icon: '🏷️', badge: productsList.length },
     { id: 'categories', label: 'Categorías', icon: '📂', badge: categoriesStats.length },
     { id: 'discounts', label: 'Descuentos', icon: '🏷️', badge: discountedProducts.length || null },
-    { id: 'inventory', label: 'Inventario', icon: '📦', alert: lowStockProducts.length > 0 ? `⚠️ ${lowStockProducts.length}` : null },
+    { id: 'inventory', label: 'Inventario', icon: '📦', alert: lowStockProducts.length > 0 ? `${lowStockProducts.length} bajo stock` : null, alertTitle: `${lowStockProducts.length} productos con inventario bajo (10 unidades o menos)` },
     { id: 'orders', label: 'Pedidos', icon: '📑', badge: stats?.totalOrders || orders.length },
     { id: 'customers', label: 'Clientes', icon: '👥', badge: customersList.length || null },
     { id: 'shipments', label: 'Envíos', icon: '🚚', badge: shipments.length || null },
@@ -787,7 +969,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                       </span>
                     )}
                     {tab.alert && (
-                      <span className="tab-alert-badge" title="Atención requerida">
+                      <span className="tab-alert-badge" title={tab.alertTitle || "Alerta de inventario"}>
                         {tab.alert}
                       </span>
                     )}
@@ -874,7 +1056,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                         className="quick-pill-btn"
                         onClick={() => handleTabChange('inventory')}
                       >
-                        📦 Control de Stock {lowStockProducts.length > 0 && `(⚠️ ${lowStockProducts.length})`}
+                        📦 Control de Stock {lowStockProducts.length > 0 && `(${lowStockProducts.length} bajo stock)`}
                       </button>
                       <button
                         type="button"
@@ -952,7 +1134,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                     {/* ALERTAS DE STOCK */}
                     <div className="dashboard-widget-card">
                       <div className="widget-header">
-                        <h3 className="widget-title">⚠️ Alertas de Inventario</h3>
+                        <h3 className="widget-title">📦 Alertas de Inventario (Bajo Stock)</h3>
                         <button
                           type="button"
                           className="widget-action-link"
@@ -986,7 +1168,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                                     <td>{p.category}</td>
                                     <td>
                                       <span className={`stock-status-pill ${stock === 0 ? 'stock-out' : 'stock-low'}`}>
-                                        {stock === 0 ? '❌ Agotado' : `⚠️ ${stock} un.`}
+                                        {stock === 0 ? '❌ Agotado' : `🟡 ${stock} un. (bajo)`}
                                       </span>
                                     </td>
                                     <td>
@@ -1212,7 +1394,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                       >
                         <option value="ALL">Todos los Productos ({productsList.length})</option>
                         <option value="OUT">❌ Solo Agotados ({outOfStockProducts.length})</option>
-                        <option value="LOW">⚠️ Solo Stock Bajo &le; 10 ({lowStockProducts.length})</option>
+                        <option value="LOW">🟡 Solo Stock Bajo &le; 10 ({lowStockProducts.length})</option>
                         <option value="HEALTHY">✓ Stock Normal &gt; 10</option>
                       </select>
                     </div>
@@ -1284,7 +1466,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                                         : 'stock-high'
                                     }`}
                                   >
-                                    {stock === 0 ? '❌ Agotado' : stock <= 10 ? `⚠️ ${stock} un.` : `✓ ${stock} un.`}
+                                    {stock === 0 ? '❌ Agotado' : stock <= 10 ? `🟡 ${stock} un. (bajo)` : `✓ ${stock} un.`}
                                   </span>
                                 </td>
                                 <td>
@@ -1437,20 +1619,22 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                                   <div className="email-badge-row">
                                     <span className="email-label">✉️ Compra:</span>
                                     <span className={`email-badge ${order.order_placed_email_status?.toLowerCase() || 'pending_config'}`}>
-                                      {order.order_placed_email_status === 'ACCEPTED' ? 'Aceptado' :
-                                       order.order_placed_email_status === 'DELIVERED' ? 'Entregado' :
-                                       order.order_placed_email_status === 'SENT' ? 'Enviado' :
-                                       order.order_placed_email_status === 'FAILED' ? 'Falló' : 'Pendiente'}
+                                      {order.order_placed_email_status === 'ACCEPTED' ? '✓ Aceptado' :
+                                       order.order_placed_email_status === 'DELIVERED' ? '✓ Entregado' :
+                                       order.order_placed_email_status === 'SENT' ? '✓ Enviado' :
+                                       order.order_placed_email_status === 'PENDING_CONFIG' ? '⚪ Pendiente SMTP' :
+                                       order.order_placed_email_status === 'FAILED' ? '✕ Falló' : '⚪ Pendiente'}
                                     </span>
                                   </div>
                                   <div className="email-badge-row">
                                     <span className="email-label">🚚 Guía:</span>
                                     <span className={`email-badge ${order.shipping_email_status?.toLowerCase() || 'not_dispatched'}`}>
-                                      {order.shipping_email_status === 'ACCEPTED' ? 'Aceptada' :
-                                       order.shipping_email_status === 'DELIVERED' ? 'Entregada' :
-                                       order.shipping_email_status === 'SENT' ? 'Enviada' :
+                                      {order.shipping_email_status === 'ACCEPTED' ? '✓ Aceptada' :
+                                       order.shipping_email_status === 'DELIVERED' ? '✓ Entregada' :
+                                       order.shipping_email_status === 'SENT' ? '✓ Enviada' :
                                        order.shipping_email_status === 'NOT_DISPATCHED' ? 'Sin Despacho' :
-                                       order.shipping_email_status === 'FAILED' ? 'Falló' : 'Pendiente'}
+                                       order.shipping_email_status === 'PENDING_CONFIG' ? '⚪ Pendiente SMTP' :
+                                       order.shipping_email_status === 'FAILED' ? '✕ Falló' : '⚪ Pendiente'}
                                     </span>
                                   </div>
                                   {order.email_last_sent && (
@@ -1458,9 +1642,19 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                                       🕒 {new Date(order.email_last_sent).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
                                     </div>
                                   )}
-                                  {order.order_placed_email_error && (
+                                  {order.order_placed_email_status === 'PENDING_CONFIG' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleTabChange('settings')}
+                                      className="email-config-hint"
+                                      title="El servidor de correo no está configurado. Haz clic para configurar SMTP."
+                                    >
+                                      ⚙️ Requiere SMTP
+                                    </button>
+                                  )}
+                                  {order.order_placed_email_status === 'FAILED' && order.order_placed_email_error && (
                                     <div className="email-error-hint" title={order.order_placed_email_error}>
-                                      ⚠️ {order.order_placed_email_error.substring(0, 24)}...
+                                      ❌ Error de envío
                                     </div>
                                   )}
                                 </div>
@@ -1925,17 +2119,26 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                               </td>
                               <td>
                                 <span className={`email-badge ${log.status?.toLowerCase() || 'pending_config'}`}>
-                                  {log.status === 'ACCEPTED' ? 'Aceptado SMTP' :
-                                   log.status === 'DELIVERED' ? 'Entregado' :
-                                   log.status === 'SENT' ? 'Enviado' :
-                                   log.status === 'PENDING_CONFIG' ? 'Config Pendiente' :
-                                   log.status === 'IDEMPOTENT_SKIPPED' ? 'Omitido' : 'Falló'}
+                                  {log.status === 'ACCEPTED' ? '✓ Aceptado SMTP' :
+                                   log.status === 'DELIVERED' ? '✓ Entregado' :
+                                   log.status === 'SENT' ? '✓ Enviado' :
+                                   log.status === 'PENDING_CONFIG' ? '⚪ Pendiente SMTP' :
+                                   log.status === 'IDEMPOTENT_SKIPPED' ? 'Omitido' : '✕ Falló'}
                                 </span>
-                                {log.error_message && (
+                                {log.status === 'PENDING_CONFIG' ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleTabChange('settings')}
+                                    className="email-config-hint"
+                                    title="El servidor SMTP no está configurado. Haz clic para ir a Configuración."
+                                  >
+                                    ⚙️ Requiere SMTP
+                                  </button>
+                                ) : log.error_message ? (
                                   <div className="email-error-hint" title={log.error_message}>
-                                    ⚠️ {log.error_message.substring(0, 24)}...
+                                    ❌ {log.error_message.length > 25 ? `${log.error_message.substring(0, 25)}...` : log.error_message}
                                   </div>
-                                )}
+                                ) : null}
                               </td>
                               <td>{new Date(log.sent_at || log.created_at).toLocaleString('es-CO')}</td>
                               <td>
@@ -1995,45 +2198,232 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                     </div>
                   </div>
 
-                  <div className="diagnostic-card">
-                    <h4 className="diag-title">2. Servicio de Notificaciones por Correo</h4>
-                    <div className="diag-details">
-                      <p><strong>Proveedor:</strong> {configStatus.mailer.provider}</p>
-                      <p><strong>Modo de Ejecución:</strong> <span className="badge-ok">{configStatus.mailer.activeMode}</span></p>
-                      <p><strong>Remitente Oficial:</strong> <code>{configStatus.mailer.fromAddress}</code></p>
-                      <p>
-                        <strong>Servidor SMTP:</strong>{' '}
-                        {configStatus.mailer.smtpHostConfigured ? (
-                          <span className="badge-ok">Configurado ({configStatus.mailer.host}:{configStatus.mailer.port})</span>
-                        ) : (
-                          <span className="badge-pending">Modo Pruebas Real Activo ({configStatus.mailer.host})</span>
-                        )}
-                      </p>
-                      <p>
-                        <strong>Credenciales en Producción Vercel:</strong>{' '}
-                        {configStatus.mailer.isConfigured ? (
-                          <span className="badge-ok">Credenciales Detectadas</span>
-                        ) : (
-                          <span className="badge-pending">Pendientes en Vercel Dashboard</span>
-                        )}
-                      </p>
-                      <div style={{ marginTop: '0.75rem', background: '#111111', padding: '0.75rem', borderRadius: '4px', border: '1px solid #333' }}>
-                        <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.8rem', color: '#FF5A1F', fontWeight: 700 }}>
-                          Variables de Entorno para Vercel Producción:
-                        </p>
-                        <code style={{ fontSize: '0.75rem', color: '#AAAAAA', display: 'block', lineHeight: 1.6 }}>
-                          SMTP_HOST=smtp.resend.com (o proveedor SMTP preferido)<br/>
-                          SMTP_PORT=465 (o 587)<br/>
-                          SMTP_SECURE=true (o false si port 587)<br/>
-                          SMTP_USER=resend (o usuario SMTP)<br/>
-                          SMTP_PASS=re_tu_clave_secreta<br/>
-                          MAIL_FROM="URBAN STYLE" &lt;pedidos@tudominio.com&gt;
-                        </code>
+                  <div className="diagnostic-card" style={{ gridColumn: '1 / -1' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <h4 className="diag-title" style={{ margin: 0 }}>
+                        2. Servidor de Correos Electrónicos (SMTP & Transaccional)
+                      </h4>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <span className={`badge-${configStatus.mailer.isConfigured ? 'ok' : 'pending'}`}>
+                          {configStatus.mailer.isConfigured
+                            ? `✓ Conectado (${smtpSource === 'DATABASE' ? 'Neon DB' : 'Vercel Env'})`
+                            : '⚪ Sin Configurar'}
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-secondary btn-xs"
+                          onClick={() => setShowSmtpHelp(!showSmtpHelp)}
+                          title="Ver ayuda paso a paso para configurar tu correo"
+                        >
+                          {showSmtpHelp ? 'Ocultar Guía' : '📖 Guía Paso a Paso'}
+                        </button>
                       </div>
-                      <p className="diag-note">
-                        * Todas las compras envían automáticamente correo de confirmación y correo de guía de despacho con archivo adjunto.
-                      </p>
                     </div>
+
+                    {showSmtpHelp && (
+                      <div style={{ background: '#181818', border: '1px solid #333', borderRadius: '6px', padding: '1rem', marginBottom: '1.25rem', fontSize: '0.8rem', lineHeight: 1.6 }}>
+                        <h5 style={{ margin: '0 0 0.5rem 0', color: '#FF5A1F', fontSize: '0.85rem' }}>
+                          💡 ¿Cómo configurar el envío de correos reales en 2 minutos?
+                        </h5>
+                        <p style={{ margin: '0 0 0.5rem 0' }}>
+                          Tienes 3 opciones sencillas y gratuitas:
+                        </p>
+                        <ol style={{ paddingLeft: '1.2rem', margin: '0 0 0.75rem 0' }}>
+                          <li style={{ marginBottom: '0.4rem' }}>
+                            <strong>Opción A - Tu Gmail actual (Recomendada):</strong> Activa la verificación en 2 pasos en tu cuenta de Google &rarr; ve a <em>Seguridad &rarr; Contraseñas de aplicaciones</em> &rarr; genera una para &ldquo;Urban Style&rdquo; (16 letras) &rarr; pégala en el campo <strong>Contraseña</strong> abajo &rarr; haz clic en Guardar y Probar.
+                          </li>
+                          <li style={{ marginBottom: '0.4rem' }}>
+                            <strong>Opción B - Resend (Alta entregabilidad):</strong> Crea una cuenta gratis en <code>resend.com</code> &rarr; obtén tu API Key (<code>re_...</code>) &rarr; selecciona la plantilla <em>Resend</em> abajo &rarr; pega tu API Key &rarr; Guardar y Probar.
+                          </li>
+                          <li style={{ marginBottom: '0.4rem' }}>
+                            <strong>Opción C - Brevo / Sendinblue o tu propio hosting:</strong> Selecciona <em>Brevo</em> o <em>Personalizado</em> con tus datos SMTP corporativos.
+                          </li>
+                        </ol>
+                        <p style={{ margin: 0, color: '#aaa', fontSize: '0.75rem' }}>
+                          * Los datos guardados aquí se almacenan de forma segura en tu base de datos <strong>Neon PostgreSQL</strong> y son utilizados automáticamente por todas las funciones de Vercel en la nube.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* SELECTOR DE PLANTILLAS PREDEFINIDAS */}
+                    <div style={{ marginBottom: '1.25rem' }}>
+                      <span style={{ fontSize: '0.78rem', color: '#888', display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+                        SELECCIONA TU PROVEEDOR DE CORREO:
+                      </span>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          className={`btn-preset ${smtpForm.provider === 'gmail' ? 'active' : ''}`}
+                          onClick={() => handleSelectPreset('gmail')}
+                        >
+                          📧 Gmail (smtp.gmail.com)
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn-preset ${smtpForm.provider === 'resend' ? 'active' : ''}`}
+                          onClick={() => handleSelectPreset('resend')}
+                        >
+                          ⚡ Resend (smtp.resend.com)
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn-preset ${smtpForm.provider === 'brevo' ? 'active' : ''}`}
+                          onClick={() => handleSelectPreset('brevo')}
+                        >
+                          🚀 Brevo / Sendinblue
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn-preset ${smtpForm.provider === 'outlook' ? 'active' : ''}`}
+                          onClick={() => handleSelectPreset('outlook')}
+                        >
+                          💼 Outlook / Office 365
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn-preset ${smtpForm.provider === 'custom' ? 'active' : ''}`}
+                          onClick={() => handleSelectPreset('custom')}
+                        >
+                          🛠️ Servidor Personalizado
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* FORMULARIO DE CONFIGURACIÓN SMTP */}
+                    <form onSubmit={handleSaveSmtpConfig} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', background: '#141414', padding: '1.25rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#aaa', marginBottom: '0.35rem', fontWeight: 600 }}>
+                          Servidor SMTP (Host):
+                        </label>
+                        <input
+                          type="text"
+                          className="admin-input-dark"
+                          value={smtpForm.host}
+                          onChange={(e) => setSmtpForm({ ...smtpForm, host: e.target.value })}
+                          placeholder="smtp.gmail.com"
+                          required
+                        />
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', color: '#aaa', marginBottom: '0.35rem', fontWeight: 600 }}>
+                            Puerto:
+                          </label>
+                          <input
+                            type="number"
+                            className="admin-input-dark"
+                            value={smtpForm.port}
+                            onChange={(e) => setSmtpForm({ ...smtpForm, port: parseInt(e.target.value) || 465 })}
+                            placeholder="465"
+                            required
+                          />
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: '0.6rem' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.75rem', color: '#ccc', cursor: 'pointer' }}>
+                            <input
+                              type="checkbox"
+                              checked={smtpForm.secure}
+                              onChange={(e) => setSmtpForm({ ...smtpForm, secure: e.target.checked })}
+                            />
+                            SSL / TLS (465)
+                          </label>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#aaa', marginBottom: '0.35rem', fontWeight: 600 }}>
+                          Usuario o Correo Remitente:
+                        </label>
+                        <input
+                          type="text"
+                          className="admin-input-dark"
+                          value={smtpForm.user}
+                          onChange={(e) => setSmtpForm({ ...smtpForm, user: e.target.value })}
+                          placeholder="urbanstyle@gmail.com o resend"
+                          required
+                        />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#aaa', marginBottom: '0.35rem', fontWeight: 600 }}>
+                          Contraseña o Clave de App: {hasStoredSmtpPass && <span style={{ color: '#48bb78', fontWeight: 400 }}>(✓ Guardada)</span>}
+                        </label>
+                        <input
+                          type="password"
+                          className="admin-input-dark"
+                          value={smtpForm.pass}
+                          onChange={(e) => setSmtpForm({ ...smtpForm, pass: e.target.value })}
+                          placeholder={hasStoredSmtpPass ? '•••••••••••• (dejar vacío para mantener)' : 'Clave de aplicación o SMTP'}
+                        />
+                      </div>
+
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <label style={{ display: 'block', fontSize: '0.75rem', color: '#aaa', marginBottom: '0.35rem', fontWeight: 600 }}>
+                          Dirección Remitente Oficial (MAIL_FROM):
+                        </label>
+                        <input
+                          type="text"
+                          className="admin-input-dark"
+                          value={smtpForm.mailFrom}
+                          onChange={(e) => setSmtpForm({ ...smtpForm, mailFrom: e.target.value })}
+                          placeholder='"URBAN STYLE" <pedidos@tudominio.com>'
+                        />
+                        <span style={{ fontSize: '0.7rem', color: '#777', display: 'block', marginTop: '0.25rem' }}>
+                          * Si usas Gmail personal, ingresa tu correo exacto de Gmail (ej: &ldquo;URBAN STYLE&rdquo; &lt;micorreo@gmail.com&gt;).
+                        </span>
+                      </div>
+
+                      {/* FEEDBACK DEL SERVIDOR */}
+                      {smtpFeedback && (
+                        <div style={{
+                          gridColumn: '1 / -1',
+                          padding: '0.75rem 1rem',
+                          borderRadius: '4px',
+                          fontSize: '0.8rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          background: smtpFeedback.type === 'success' ? 'rgba(72, 187, 120, 0.15)' : 'rgba(245, 101, 101, 0.15)',
+                          border: `1px solid ${smtpFeedback.type === 'success' ? '#48bb78' : '#f56565'}`,
+                          color: smtpFeedback.type === 'success' ? '#48bb78' : '#fc8181'
+                        }}>
+                          <span>{smtpFeedback.type === 'success' ? '✓' : '⚠️'}</span>
+                          <span>{smtpFeedback.message}</span>
+                        </div>
+                      )}
+
+                      {/* BOTONES DE ACCIÓN: GUARDAR Y PROBAR */}
+                      <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                        <button
+                          type="submit"
+                          className="btn-primary-action"
+                          disabled={savingSmtp || testingSmtp}
+                          style={{ minWidth: '180px' }}
+                        >
+                          {savingSmtp ? '⏳ Guardando en Neon...' : '💾 Guardar Configuración'}
+                        </button>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <input
+                            type="email"
+                            className="admin-input-dark"
+                            style={{ width: '220px' }}
+                            placeholder="correo-destino@ejemplo.com"
+                            value={testEmailRecipient}
+                            onChange={(e) => setTestEmailRecipient(e.target.value)}
+                          />
+                          <button
+                            type="button"
+                            className="btn btn-secondary"
+                            onClick={handleTestSmtpConnection}
+                            disabled={testingSmtp || savingSmtp}
+                          >
+                            {testingSmtp ? '⏳ Probando Enlace...' : '🧪 Probar y Enviar Correo'}
+                          </button>
+                        </div>
+                      </div>
+                    </form>
                   </div>
 
                   <div className="diagnostic-card">
