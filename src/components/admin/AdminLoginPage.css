@@ -8,7 +8,7 @@
   padding: 2rem 1.5rem;
   box-sizing: border-box;
   color: #ffffff;
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-sans, 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif);
 }
 
 .admin-login-wrapper {
@@ -38,7 +38,7 @@
 }
 
 .brand-title {
-  font-family: 'Syne', sans-serif;
+  font-family: var(--font-display, 'Inter', 'Roboto', sans-serif);
   font-size: 2.25rem;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -234,7 +234,7 @@
   border-radius: 8px;
   font-size: 0.95rem;
   font-weight: 800;
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: var(--font-sans, 'Inter', 'Roboto', sans-serif);
   letter-spacing: 0.03em;
   text-transform: uppercase;
   cursor: pointer;

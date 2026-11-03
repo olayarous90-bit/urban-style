@@ -189,21 +189,14 @@ h4 {
 .stagger-3 { transition-delay: 0.12s; }
 .stagger-4 { transition-delay: 0.16s; }
 
-/* Seguridad absoluta para tarjetas de productos en el catálogo público:
-   Si se montan dinámicamente o se filtran en tiempo real, aseguran visibilidad inmediata */
-.products-grid .product-card {
-  animation: productCardFadeIn 0.4s ease-out forwards;
-}
-
-@keyframes productCardFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Seguridad absoluta para tarjetas de productos en catálogo, ofertas y festivos:
+   Visibilidad permanente inmediata al 100% sin depender de scroll o interacción */
+.products-grid .product-card,
+.offers-grid .offer-card,
+.christmas-deals-grid .christmas-card {
+  opacity: 1 !important;
+  transform: none !important;
+  visibility: visible !important;
 }
 
 /* Desplazamiento suave y márgenes de anclaje homogéneos */
@@ -333,5 +326,103 @@ select:-webkit-autofill {
 
 .btn-outline {
   color: var(--color-white) !important;
+}
+
+/* ==========================================================================
+   VISIBILIDAD PERMANENTE DE TODA LA INFORMACIÓN DE PRODUCTOS (SIN HOVER)
+   Garantiza que nombre, precio, descripción, tallas, badges y botones
+   sean 100% visibles de manera permanente sin requerir interacción o cursor
+   ========================================================================== */
+
+/* 1. Tarjetas de producto siempre visibles */
+.product-card,
+.offer-card,
+.christmas-card {
+  opacity: 1 !important;
+  transform: none !important;
+  visibility: visible !important;
+}
+
+/* 2. Contenedor de información siempre visible */
+.product-info,
+.offer-content,
+.christmas-card-info,
+.product-meta,
+.offer-brand-row,
+.product-brand-row {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* 3. Nombre del producto permanente y legible */
+.product-name,
+.offer-product-name,
+.christmas-product-title {
+  opacity: 1 !important;
+  visibility: visible !important;
+  color: #FFFFFF !important;
+}
+
+/* 4. Precios oficiales y anteriores visibles permanentemente */
+.product-price-wrapper,
+.offer-pricing-row,
+.christmas-pricing-block,
+.product-price,
+.offer-price-promo,
+.current-price-gold,
+.product-original-price,
+.offer-price-original,
+.original-price-strike {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* 5. Descripción del producto legible permanentemente */
+.product-desc-snippet,
+.offer-product-desc {
+  opacity: 1 !important;
+  visibility: visible !important;
+  color: #B0B0B0 !important;
+}
+
+/* 6. Modelo, color, marca y categorías visibles */
+.product-model-badge,
+.offer-model-badge,
+.product-color-line,
+.offer-color-row,
+.product-brand-tag,
+.offer-brand-tag {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* 7. Selector rápido de tallas en tarjetas visible */
+.product-quick-sizes,
+.offer-sizes-box,
+.christmas-sizes-row,
+.sizes-pills-row,
+.sizes-chip-list,
+.size-chip-btn,
+.size-chip,
+.size-mini-btn {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* 8. Botones de acción duales («Ver Producto» y «Agregar al Carrito») siempre visibles */
+.product-card-actions,
+.offer-card-actions,
+.product-view-btn,
+.product-quick-add-btn,
+.offer-btn-view,
+.offer-btn-add {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* 9. Desactivar overlays de hover para eliminar la percepción de contenido oculto */
+.product-hover-hint,
+.offer-hover-hint {
+  display: none !important;
 }
 
