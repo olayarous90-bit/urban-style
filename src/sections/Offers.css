@@ -357,6 +357,9 @@
 }
 
 .size-chip {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   padding: 2px 7px;
   font-size: 0.68rem;
   font-weight: var(--font-weight-bold, 700);
@@ -410,6 +413,9 @@
 }
 
 .offer-price-original {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: 0.8rem;
   font-weight: var(--font-weight-medium, 500);
   color: var(--color-gray-muted, #8E8E8E);
@@ -418,7 +424,9 @@
 }
 
 .offer-price-promo {
-  font-family: var(--font-display, 'Syne', sans-serif);
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: 1.15rem;
   font-weight: var(--font-weight-extrabold, 800);
   color: var(--color-accent, #FF5A1F);
@@ -764,19 +772,25 @@
 }
 
 .offer-modal-pricing-box .pricing-before {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: 0.95rem;
   color: var(--color-gray-muted, #8E8E8E);
   text-decoration: line-through;
 }
 
 .offer-modal-pricing-box .pricing-now {
-  font-family: var(--font-display, 'Syne', sans-serif);
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: 1.4rem;
   font-weight: var(--font-weight-extrabold, 800);
   color: var(--color-accent, #FF5A1F);
 }
 
 .modal-savings-highlight {
+  font-family: var(--font-numeric);
   font-size: 0.8rem;
   color: #4ade80;
   font-weight: var(--font-weight-bold, 700);
@@ -822,6 +836,9 @@
 }
 
 .modal-size-btn {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   padding: 0.45rem 0.9rem;
   font-size: var(--font-size-xs, 0.75rem);
   font-weight: var(--font-weight-bold, 700);

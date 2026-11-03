@@ -217,9 +217,13 @@
 }
 
 .metric-value {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: 1.4rem;
   font-weight: 900;
   color: #fff;
+  letter-spacing: -0.01em;
 }
 
 .text-accent {
@@ -356,7 +360,11 @@
 .order-number-link {
   color: var(--color-accent, #FF5A1F);
   cursor: pointer;
-  font-family: monospace;
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-weight: 700;
+  letter-spacing: 0.03em;
 }
 
 .order-number-link:hover {
@@ -367,7 +375,10 @@
   color: #48bb78;
   text-decoration: none;
   font-weight: 700;
-  font-family: monospace;
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
+  letter-spacing: 0.03em;
 }
 
 .guide-link:hover {

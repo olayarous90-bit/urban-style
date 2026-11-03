@@ -479,7 +479,10 @@
 }
 
 .summary-item-price {
-  font-size: 0.8rem;
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 0.85rem;
   font-weight: 700;
   color: var(--color-white, #ffffff);
 }
@@ -496,6 +499,9 @@
 .summary-row {
   display: flex;
   justify-content: space-between;
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: 0.85rem;
   color: var(--color-text-secondary, #aaaaaa);
 }
@@ -509,6 +515,9 @@
 }
 
 .summary-total-amount {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: 1.35rem;
   color: var(--color-accent, #FF5A1F);
   font-weight: 900;

@@ -68,6 +68,8 @@
   justify-content: center;
   background-color: var(--color-accent, #FF5A1F);
   color: var(--color-white, #ffffff);
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
   font-size: 0.75rem;
   font-weight: 700;
   min-width: 22px;
@@ -269,7 +271,10 @@
 }
 
 .cart-qty-number {
-  font-size: 0.82rem;
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 0.85rem;
   font-weight: 700;
   color: var(--color-white, #ffffff);
   min-width: 24px;
@@ -282,7 +287,10 @@
 }
 
 .cart-item-price {
-  font-size: 0.92rem;
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 0.95rem;
   font-weight: 800;
   color: var(--color-white, #ffffff);
 }
@@ -327,6 +335,9 @@
 }
 
 .cart-subtotal-amount {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: 1.35rem;
   font-weight: 900;
   color: var(--color-accent, #FF5A1F);

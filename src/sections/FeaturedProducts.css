@@ -557,6 +557,9 @@
 }
 
 .size-chip-btn {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   padding: 2px 7px;
   font-size: 0.68rem;
   font-weight: var(--font-weight-bold);
@@ -598,6 +601,9 @@
 }
 
 .product-original-price {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: 0.78rem;
   color: var(--color-gray-muted);
   text-decoration: line-through;
@@ -605,7 +611,9 @@
 }
 
 .product-price {
-  font-family: var(--font-display);
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: 1.15rem;
   font-weight: var(--font-weight-extrabold);
   color: var(--color-accent);
@@ -1001,19 +1009,26 @@
 }
 
 .modal-price {
-  font-family: var(--font-display);
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: 1.5rem;
   font-weight: var(--font-weight-extrabold);
   color: var(--color-accent);
 }
 
 .modal-original-price {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: 0.95rem;
   color: var(--color-gray-muted);
   text-decoration: line-through;
 }
 
 .modal-discount-badge {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
   font-size: 0.75rem;
   font-weight: var(--font-weight-extrabold);
   color: #fff;
@@ -1023,6 +1038,7 @@
 }
 
 .modal-savings-text {
+  font-family: var(--font-numeric);
   font-size: 0.8rem;
   color: #4ade80;
   font-weight: var(--font-weight-bold);
@@ -1077,6 +1093,9 @@
 }
 
 .modal-size-pill {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   padding: 0.45rem 0.9rem;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-bold);

@@ -263,19 +263,25 @@
 }
 
 .current-price-gold {
-  font-family: var(--font-display);
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: 1.25rem;
   font-weight: 900;
   color: #f5c518;
 }
 
 .original-price-strike {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: 0.85rem;
   color: #888;
   text-decoration: line-through;
 }
 
 .savings-badge-pill {
+  font-family: var(--font-numeric);
   font-size: 0.75rem;
   font-weight: 800;
   color: #10b981;
@@ -301,6 +307,9 @@
 }
 
 .size-mini-btn {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   background: #1e2421;
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #ccc;

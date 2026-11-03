@@ -23,18 +23,22 @@ body.theme-christmas {
   }
 }
 
-/* 1. DETALLES NAVIDEÑOS EN BOTONES */
+/* 1. DETALLES NAVIDEÑOS EN BOTONES (ALTO CONTRASTE PERMANENTE - NUNCA BLANCO SOBRE BLANCO) */
 body.theme-christmas .btn-primary {
-  background: linear-gradient(135deg, var(--color-white) 0%, #F5F5F5 100%);
+  background: linear-gradient(135deg, #D42B2B 0%, #A31818 100%) !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(245, 197, 24, 0.5) !important;
+  box-shadow: 0 4px 14px rgba(212, 43, 43, 0.45);
   position: relative;
   overflow: hidden;
   transition: all var(--transition-normal);
 }
 
 body.theme-christmas .btn-primary:hover {
-  background: linear-gradient(135deg, var(--xmas-gold-bright) 0%, #E5B409 100%);
-  color: #000000;
-  box-shadow: 0 0 20px rgba(245, 197, 24, 0.45);
+  background: linear-gradient(135deg, #E23737 0%, #BA1D1D 100%) !important;
+  color: #FFFFFF !important;
+  border-color: var(--xmas-gold-bright) !important;
+  box-shadow: 0 6px 20px rgba(212, 43, 43, 0.6), 0 0 12px rgba(245, 197, 24, 0.4) !important;
   transform: translateY(-2px);
 }
 
@@ -49,7 +53,7 @@ body.theme-christmas .btn-primary::after {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 255, 255, 0.5),
+    rgba(255, 255, 255, 0.4),
     transparent
   );
   transform: rotate(25deg);
@@ -68,11 +72,18 @@ body.theme-christmas .btn-primary:hover::after {
   100% { left: 140%; }
 }
 
-/* Botones secundarios con acento dorado festivo */
+/* Botones secundarios con texto oscuro sobre fondo blanco y acento dorado festivo */
+body.theme-christmas .btn-secondary {
+  background-color: #FFFFFF !important;
+  color: #111111 !important;
+  border: 1px solid #FFFFFF !important;
+}
+
 body.theme-christmas .btn-secondary:hover {
-  border-color: var(--xmas-gold-bright);
-  color: var(--xmas-gold-bright);
-  box-shadow: 0 0 15px rgba(245, 197, 24, 0.25);
+  background-color: #F2F2F2 !important;
+  color: #111111 !important;
+  border-color: var(--xmas-gold-bright) !important;
+  box-shadow: 0 4px 16px rgba(245, 197, 24, 0.35) !important;
 }
 
 /* 2. DETALLES NAVIDEÑOS EN TARJETAS DE PRODUCTOS */
@@ -84,7 +95,7 @@ body.theme-christmas .product-card {
 }
 
 body.theme-christmas .product-card:hover {
-  border-color: rgba(212, 175, 55, 0.4);
+  border-color: rgba(212, 175, 55, 0.45);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7),
               0 0 18px rgba(212, 43, 43, 0.25),
               0 0 10px rgba(245, 197, 24, 0.15);
@@ -93,20 +104,33 @@ body.theme-christmas .product-card:hover {
 /* Indicador festivo navideño en insignias de descuento de tarjetas */
 body.theme-christmas .product-card .card-discount-badge,
 body.theme-christmas .discount-tag,
-body.theme-christmas .product-badge-discount {
+body.theme-christmas .product-tag.tag-discount,
+body.theme-christmas .product-badge-discount,
+body.theme-christmas .offer-discount-badge,
+body.theme-christmas .modal-discount-badge {
   background: linear-gradient(135deg, var(--xmas-red) 0%, var(--xmas-red-dark) 100%) !important;
   color: #FFFFFF !important;
   border: 1px solid rgba(245, 197, 24, 0.6) !important;
   box-shadow: 0 2px 8px rgba(212, 43, 43, 0.45) !important;
   font-weight: 800 !important;
   letter-spacing: 0.05em !important;
+  font-family: var(--font-numeric) !important;
 }
 
-/* Toque festivo en botones de añadir a la bolsa dentro de las tarjetas */
+/* Botones de añadir a la bolsa en tarjetas con texto blanco y alto contraste permanente */
+body.theme-christmas .product-card .product-quick-add-btn,
+body.theme-christmas .product-card .card-add-btn {
+  background-color: #D42B2B !important;
+  color: #FFFFFF !important;
+  border: 1px solid rgba(245, 197, 24, 0.4) !important;
+}
+
+body.theme-christmas .product-card .product-quick-add-btn:hover,
 body.theme-christmas .product-card .card-add-btn:hover {
-  background-color: var(--xmas-gold-bright) !important;
-  color: #000000 !important;
+  background-color: #E03535 !important;
+  color: #FFFFFF !important;
   border-color: var(--xmas-gold-bright) !important;
+  box-shadow: 0 0 12px rgba(245, 197, 24, 0.4) !important;
 }
 
 /* 3. DETALLES FESTIVOS EN EL ENCABEZADO Y ANUNCIOS */

@@ -94,8 +94,11 @@
 
 .success-order-num strong {
   color: var(--color-white, #ffffff);
-  font-family: monospace;
-  font-size: 1.05rem;
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-size: 1.1rem;
+  letter-spacing: 0.04em;
 }
 
 /* CAJA DE GUÍA DE TRANSPORTE */

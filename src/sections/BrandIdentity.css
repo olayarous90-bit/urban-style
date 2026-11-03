@@ -31,8 +31,8 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  background-color: var(--color-bg-light);
-  border: 1px solid var(--color-gray-border);
+  background-color: #111111;
+  border: 1px solid #222222;
   padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-full);
   margin-bottom: var(--space-4);
@@ -51,7 +51,7 @@
   font-weight: var(--font-weight-extrabold);
   letter-spacing: var(--letter-spacing-widest);
   text-transform: uppercase;
-  color: var(--color-black-main);
+  color: #FFFFFF;
 }
 
 .identity-title {
@@ -73,7 +73,7 @@
 .identity-description {
   font-size: var(--font-size-base);
   line-height: var(--line-height-relaxed);
-  color: var(--color-text-secondary);
+  color: #2D3748;
   margin: 0 0 var(--space-8) 0;
   max-width: 540px;
 }
@@ -111,7 +111,7 @@
 
 .pillar-subtext {
   font-size: var(--font-size-xs);
-  color: var(--color-text-muted);
+  color: #4A5568;
   line-height: var(--line-height-base);
   margin: 0;
 }
@@ -128,6 +128,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
+  color: #FFFFFF !important;
 }
 
 .identity-btn-icon {

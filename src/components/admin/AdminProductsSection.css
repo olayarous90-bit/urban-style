@@ -137,9 +137,13 @@
 }
 
 .price-text-cop {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-weight: 800;
   color: #52c41a;
   font-size: 0.88rem;
+  letter-spacing: -0.01em;
 }
 
 .sizes-badge-container {
@@ -150,6 +154,9 @@
 }
 
 .size-chip {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   background: #222;
   border: 1px solid #333;
   color: #ccc;
@@ -164,6 +171,9 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: 0.8rem;
   font-weight: 700;
   padding: 0.2rem 0.6rem;
@@ -848,13 +858,14 @@
   padding: 3px 8px;
   border-radius: 4px;
   cursor: pointer;
-  opacity: 0;
+  opacity: 0.92;
   transition: all 0.2s ease;
   z-index: 2;
 }
 
 .image-card-item:hover .btn-mark-primary {
   opacity: 1;
+  transform: scale(1.02);
 }
 
 .btn-mark-primary:hover {
@@ -878,13 +889,14 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  opacity: 0;
+  opacity: 0.92;
   transition: all 0.2s ease;
   z-index: 2;
 }
 
 .image-card-item:hover .btn-preview-zoom {
   opacity: 1;
+  transform: scale(1.05);
 }
 
 .btn-preview-zoom:hover {
@@ -1284,7 +1296,9 @@
 }
 
 .preview-metric .metric-val {
-  font-family: var(--font-display, sans-serif);
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: 1rem;
   font-weight: 700;
   color: #fff;
@@ -1299,6 +1313,9 @@
 }
 
 .preview-metric.final-metric .highlight-final {
+  font-family: var(--font-numeric);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums lining-nums;
   font-size: 1.15rem;
   color: var(--color-accent, #FF5A1F);
   font-weight: 900;
