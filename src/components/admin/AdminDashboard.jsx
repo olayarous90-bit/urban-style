@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { CloseIcon } from '../common/icons';
 import { Button } from '../common/Button';
 import { AdminLoginPage } from './AdminLoginPage';
@@ -9,20 +9,35 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
   const [adminUser, setAdminUser] = useState(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
+  // Navegación principal persistente
+  // Secciones soportadas: 'dashboard', 'products', 'categories', 'discounts', 'inventory', 'orders', 'customers', 'shipments', 'announcements', 'emails', 'settings'
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('ALL');
+  const [selectedDiscountFilter, setSelectedDiscountFilter] = useState('ALL');
+  const workspaceRef = useRef(null);
+
   // Datos del Dashboard
-  const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'shipments', 'emails', 'diagnostic'
   const [stats, setStats] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [productsList, setProductsList] = useState([]);
   const [shipments, setShipments] = useState([]);
   const [emailLogs, setEmailLogs] = useState([]);
   const [configStatus, setConfigStatus] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
 
-  // Filtros
+  // Filtros de Pedidos
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [actionFeedback, setActionFeedback] = useState(null);
   const [loadingData, setLoadingData] = useState(false);
+
+  // Filtros de Inventario
+  const [inventorySearch, setInventorySearch] = useState('');
+  const [inventoryStatusFilter, setInventoryStatusFilter] = useState('ALL');
+  const [savingStockId, setSavingStockId] = useState(null);
+
+  // Filtros de Clientes
+  const [customerSearch, setCustomerSearch] = useState('');
 
   // Gestión de Barra de Anuncios
   const [announcements, setAnnouncements] = useState([]);
@@ -74,7 +89,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
   // Cerrar con Escape
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isOpen && !selectedOrder) {
+      if (e.key === 'Escape' && isOpen && !selectedOrder && !isAnnouncementModalOpen && !announcementDeleteTarget) {
         onClose();
       }
     };
@@ -88,9 +103,9 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
       document.body.style.overflow = '';
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, onClose, selectedOrder]);
+  }, [isOpen, onClose, selectedOrder, isAnnouncementModalOpen, announcementDeleteTarget]);
 
-  // Cargar datos administrativos si hay sesión activa
+  // Cargar datos administrativos al montar o al cambiar de pestaña
   useEffect(() => {
     if (isOpen && adminUser) {
       loadDashboardData();
@@ -114,16 +129,31 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
       }
 
       // 2. Pedidos
-      if (activeTab === 'orders') {
-        const ordersRes = await fetch(`/api/admin/orders?status=${statusFilter}&search=${encodeURIComponent(searchTerm)}`, fetchOpts);
-        if (ordersRes.ok) {
-          const ordersData = await ordersRes.json();
-          setOrders(ordersData.orders || []);
-        }
+      const ordersRes = await fetch(`/api/admin/orders?status=${statusFilter}&search=${encodeURIComponent(searchTerm)}`, fetchOpts);
+      if (ordersRes.ok) {
+        const ordersData = await ordersRes.json();
+        setOrders(ordersData.orders || []);
       }
 
-      // 3. Despachos y Guías
-      if (activeTab === 'shipments') {
+      // 3. Catálogo de productos para inventario, categorías y badges
+      try {
+        const prodRes = await fetch('/api/admin/products', fetchOpts);
+        if (prodRes.ok) {
+          const prodData = await prodRes.json();
+          setProductsList(prodData.products || []);
+        } else {
+          const pubRes = await fetch('/api/products');
+          if (pubRes.ok) {
+            const pubData = await pubRes.json();
+            setProductsList(pubData.data || []);
+          }
+        }
+      } catch {
+        // Fallback no crítico
+      }
+
+      // 4. Despachos y Guías
+      if (activeTab === 'shipments' || activeTab === 'dashboard') {
         const shipRes = await fetch('/api/admin/shipments', fetchOpts);
         if (shipRes.ok) {
           const shipData = await shipRes.json();
@@ -131,7 +161,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
         }
       }
 
-      // 4. Registros de Correo
+      // 5. Registros de Correo
       if (activeTab === 'emails') {
         const emailRes = await fetch('/api/admin/emails', fetchOpts);
         if (emailRes.ok) {
@@ -140,8 +170,8 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
         }
       }
 
-      // 5. Diagnóstico de Configuración
-      if (activeTab === 'diagnostic') {
+      // 6. Diagnóstico de Configuración
+      if (activeTab === 'settings' || activeTab === 'diagnostic' || activeTab === 'dashboard') {
         const diagRes = await fetch('/api/admin/config-status', fetchOpts);
         if (diagRes.ok) {
           const diagData = await diagRes.json();
@@ -149,8 +179,8 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
         }
       }
 
-      // 6. Barra de Anuncios
-      if (activeTab === 'announcements') {
+      // 7. Barra de Anuncios
+      if (activeTab === 'announcements' || announcements.length === 0) {
         const annRes = await fetch('/api/admin/announcements', fetchOpts);
         if (annRes.ok) {
           const annData = await annRes.json();
@@ -180,52 +210,98 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
         }
       }
     } catch (err) {
-      console.warn('Error cargando anuncios:', err);
+      console.warn('Error refrescando anuncios:', err);
     }
   };
 
-  const handleToggleBarEnabled = async (enabled) => {
+  // Cambio de pestaña suave con scroll al inicio
+  const handleTabChange = (tabId, categoryParam = 'ALL', discountParam = 'ALL') => {
+    setActiveTab(tabId);
+    setSelectedOrder(null);
+    if (categoryParam) setSelectedCategoryFilter(categoryParam);
+    if (discountParam) setSelectedDiscountFilter(discountParam);
+    if (workspaceRef.current) {
+      workspaceRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Actualización rápida de stock (Inventario)
+  const handleQuickStockUpdate = async (product, newStock) => {
+    const validStock = Math.max(0, parseInt(newStock, 10) || 0);
+    setSavingStockId(product.id);
+    // Actualización optimista local
+    setProductsList((prev) =>
+      prev.map((p) => (p.id === product.id ? { ...p, stock: validStock } : p))
+    );
+
+    try {
+      const res = await fetch(`/api/admin/products/${product.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ stock: validStock })
+      });
+      if (res.ok) {
+        setActionFeedback(`Stock de «${product.name}» actualizado a ${validStock} unidades.`);
+        setTimeout(() => setActionFeedback(null), 3000);
+      } else {
+        const errJson = await res.json();
+        alert(errJson.message || 'Error actualizando stock.');
+        loadDashboardData();
+      }
+    } catch {
+      alert('Error de red al actualizar stock.');
+      loadDashboardData();
+    } finally {
+      setSavingStockId(null);
+    }
+  };
+
+  // Alternar barra de anuncios
+  const handleToggleBarEnabled = async (nextState) => {
+    setIsBarEnabled(nextState);
     try {
       const res = await fetch('/api/admin/announcements/toggle-bar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ enabled })
+        body: JSON.stringify({ enabled: nextState })
       });
       const data = await res.json();
       if (data.success) {
-        setIsBarEnabled(enabled);
-        setActionFeedback(enabled ? '✅ Barra de anuncios activada en la tienda' : '⚪ Barra de anuncios desactivada');
+        setActionFeedback(data.message);
+        setTimeout(() => setActionFeedback(null), 3000);
         window.dispatchEvent(new Event('announcements-updated'));
-        setTimeout(() => setActionFeedback(null), 3500);
       }
     } catch {
-      setActionFeedback('❌ Error al actualizar estado de la barra');
-      setTimeout(() => setActionFeedback(null), 3500);
+      alert('Error al alternar la visibilidad de la barra de anuncios.');
+      loadAnnouncementsData();
     }
   };
 
+  // Cambiar velocidad de rotación
   const handleChangeRotation = async (seconds) => {
+    setRotationSeconds(seconds);
     try {
-      const res = await fetch('/api/admin/announcements/rotation-interval', {
+      const res = await fetch('/api/admin/announcements/rotation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ rotationSeconds: seconds })
+        body: JSON.stringify({ seconds })
       });
       const data = await res.json();
       if (data.success) {
-        setRotationSeconds(seconds);
-        setActionFeedback(`⏱️ Velocidad actualizada a ${seconds}s`);
+        setActionFeedback(data.message);
+        setTimeout(() => setActionFeedback(null), 3000);
         window.dispatchEvent(new Event('announcements-updated'));
-        setTimeout(() => setActionFeedback(null), 3500);
       }
     } catch {
-      setActionFeedback('❌ Error al actualizar velocidad de rotación');
-      setTimeout(() => setActionFeedback(null), 3500);
+      alert('Error al cambiar la velocidad de rotación.');
+      loadAnnouncementsData();
     }
   };
 
+  // Abrir modal de creación de anuncio
   const handleOpenCreateAnnouncement = (presetText = '', presetLink = '') => {
     setEditingAnnouncement(null);
     setAnnouncementForm({
@@ -239,24 +315,25 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
     setIsAnnouncementModalOpen(true);
   };
 
+  // Abrir modal de edición de anuncio
   const handleOpenEditAnnouncement = (ann) => {
     setEditingAnnouncement(ann);
     setAnnouncementForm({
       text: ann.text || '',
       link: ann.link || '',
-      is_active: ann.is_active,
+      is_active: Boolean(ann.is_active),
       sort_order: ann.sort_order || 1,
-      start_date: ann.start_date ? ann.start_date.substring(0, 10) : '',
-      end_date: ann.end_date ? ann.end_date.substring(0, 10) : ''
+      start_date: ann.start_date ? ann.start_date.split('T')[0] : '',
+      end_date: ann.end_date ? ann.end_date.split('T')[0] : ''
     });
     setIsAnnouncementModalOpen(true);
   };
 
+  // Guardar anuncio
   const handleSaveAnnouncement = async (e) => {
     e.preventDefault();
-    const trimmed = (announcementForm.text || '').trim();
-    if (!trimmed) {
-      alert('Por favor ingresa el texto del anuncio');
+    if (!announcementForm.text.trim()) {
+      alert('El texto del anuncio es obligatorio.');
       return;
     }
 
@@ -271,78 +348,70 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
         method,
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({
-          text: trimmed,
-          link: (announcementForm.link || '').trim(),
-          is_active: announcementForm.is_active,
-          sort_order: Number(announcementForm.sort_order) || 1,
-          start_date: announcementForm.start_date || null,
-          end_date: announcementForm.end_date || null
-        })
+        body: JSON.stringify(announcementForm)
       });
 
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
+        setActionFeedback(data.message);
         setIsAnnouncementModalOpen(false);
-        setActionFeedback(editingAnnouncement ? '✅ Anuncio actualizado correctamente' : '✅ Anuncio creado y publicado');
         loadAnnouncementsData();
         window.dispatchEvent(new Event('announcements-updated'));
         setTimeout(() => setActionFeedback(null), 3500);
       } else {
-        alert(data.message || 'Error guardando el anuncio');
+        alert(data.message || 'Error guardando anuncio.');
       }
     } catch {
-      alert('Error de conexión al guardar el anuncio');
+      alert('Error de red al guardar anuncio.');
     } finally {
       setIsSubmittingAnnouncement(false);
     }
   };
 
-  const handleToggleAnnouncementActive = async (ann) => {
-    try {
-      const newActive = !ann.is_active;
-      const res = await fetch(`/api/admin/announcements/${ann.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ is_active: newActive })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setAnnouncements((prev) =>
-          prev.map((item) => (item.id === ann.id ? { ...item, is_active: newActive } : item))
-        );
-        setActionFeedback(newActive ? '🟢 Anuncio activado' : '⚪ Anuncio desactivado');
-        window.dispatchEvent(new Event('announcements-updated'));
-        setTimeout(() => setActionFeedback(null), 3000);
-      }
-    } catch {
-      setActionFeedback('❌ Error al cambiar estado del anuncio');
-      setTimeout(() => setActionFeedback(null), 3000);
-    }
-  };
-
+  // Eliminar anuncio
   const handleConfirmDeleteAnnouncement = async () => {
     if (!announcementDeleteTarget) return;
+
     try {
       const res = await fetch(`/api/admin/announcements/${announcementDeleteTarget.id}`, {
         method: 'DELETE',
         credentials: 'include'
       });
       const data = await res.json();
-      if (data.success) {
-        setAnnouncements((prev) => prev.filter((item) => item.id !== announcementDeleteTarget.id));
+      if (res.ok && data.success) {
+        setActionFeedback(data.message);
         setAnnouncementDeleteTarget(null);
-        setActionFeedback('🗑️ Anuncio eliminado permanentemente');
+        loadAnnouncementsData();
         window.dispatchEvent(new Event('announcements-updated'));
         setTimeout(() => setActionFeedback(null), 3500);
+      } else {
+        alert(data.message || 'Error eliminando anuncio.');
       }
     } catch {
-      setActionFeedback('❌ Error al eliminar anuncio');
-      setTimeout(() => setActionFeedback(null), 3500);
+      alert('Error de red al eliminar anuncio.');
     }
   };
 
+  // Alternar estado de un anuncio
+  const handleToggleAnnouncementStatus = async (ann) => {
+    const nextState = !ann.is_active;
+    try {
+      const res = await fetch(`/api/admin/announcements/${ann.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ is_active: nextState })
+      });
+      if (res.ok) {
+        loadAnnouncementsData();
+        window.dispatchEvent(new Event('announcements-updated'));
+      }
+    } catch {
+      alert('Error alternando estado del anuncio.');
+    }
+  };
+
+  // Reordenar anuncio (subir / bajar)
   const handleMoveAnnouncement = async (index, direction) => {
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= announcements.length) return;
@@ -407,7 +476,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
       } else {
         alert(data.message || 'Error actualizando estado.');
       }
-    } catch (err) {
+    } catch {
       alert('Error de red al actualizar estado.');
     }
   };
@@ -426,7 +495,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
       } else {
         alert(data.message || 'Error reenviando correo.');
       }
-    } catch (err) {
+    } catch {
       alert('Error de red al reenviar correo.');
     }
   };
@@ -446,14 +515,133 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
     }
   };
 
+  // Directorio de Clientes consolidado a partir de pedidos
+  const customersList = useMemo(() => {
+    const map = new Map();
+    orders.forEach((o) => {
+      const email = (o.customer_email || '').toLowerCase().trim();
+      if (!email) return;
+      if (!map.has(email)) {
+        map.set(email, {
+          email,
+          name: `${o.customer_name || ''} ${o.customer_surname || ''}`.trim() || 'Cliente',
+          phone: o.customer_phone || '—',
+          doc: o.customer_doc || '—',
+          city: o.delivery_city || '—',
+          department: o.delivery_department || '—',
+          totalSpent: 0,
+          ordersCount: 0,
+          lastOrderDate: o.created_at,
+          orders: []
+        });
+      }
+      const c = map.get(email);
+      c.totalSpent += Number(o.total || 0);
+      c.ordersCount += 1;
+      c.orders.push(o.order_number);
+      if (new Date(o.created_at) > new Date(c.lastOrderDate)) {
+        c.lastOrderDate = o.created_at;
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => b.totalSpent - a.totalSpent);
+  }, [orders]);
+
+  // Filtrado de clientes
+  const filteredCustomers = useMemo(() => {
+    if (!customerSearch.trim()) return customersList;
+    const term = customerSearch.toLowerCase();
+    return customersList.filter(
+      (c) =>
+        c.name.toLowerCase().includes(term) ||
+        c.email.toLowerCase().includes(term) ||
+        c.city.toLowerCase().includes(term) ||
+        c.phone.includes(term)
+    );
+  }, [customersList, customerSearch]);
+
+  // Categorías calculadas
+  const categoriesStats = useMemo(() => {
+    const map = {
+      'Camisetas': { count: 0, stock: 0, icon: '👕', desc: 'Prendas Heavyweight y Oversized' },
+      'Hoodies': { count: 0, stock: 0, icon: '🧥', desc: 'Sudaderas y sacos pesados con capucha' },
+      'Pantalones & Joggers': { count: 0, stock: 0, icon: '👖', desc: 'Cargos tácticos, joggers y utility' },
+      'Chaquetas': { count: 0, stock: 0, icon: '🧥', desc: 'Bombers tech, rompevientos y outerwear' },
+      'Zapatillas': { count: 0, stock: 0, icon: '👟', desc: 'Sneakers urbanos, Air Force y kicks' },
+      'Accesorios': { count: 0, stock: 0, icon: '🧢', desc: 'Gorras, cadenas de acero y bolsos tácticos' }
+    };
+
+    productsList.forEach((p) => {
+      const cat = p.category || 'Accesorios';
+      if (!map[cat]) {
+        map[cat] = { count: 0, stock: 0, icon: '🏷️', desc: 'Artículos de colección urbana' };
+      }
+      map[cat].count += 1;
+      map[cat].stock += Number(p.stock || 0);
+    });
+
+    return Object.entries(map).map(([name, data]) => ({ name, ...data }));
+  }, [productsList]);
+
+  // Alertas de inventario
+  const lowStockProducts = useMemo(() => {
+    return productsList.filter((p) => Number(p.stock || 0) <= 10);
+  }, [productsList]);
+
+  const outOfStockProducts = useMemo(() => {
+    return productsList.filter((p) => Number(p.stock || 0) === 0);
+  }, [productsList]);
+
+  // Filtrado de inventario
+  const filteredInventory = useMemo(() => {
+    return productsList.filter((p) => {
+      const stock = Number(p.stock || 0);
+      if (inventoryStatusFilter === 'OUT' && stock > 0) return false;
+      if (inventoryStatusFilter === 'LOW' && (stock === 0 || stock > 10)) return false;
+      if (inventoryStatusFilter === 'HEALTHY' && stock <= 10) return false;
+
+      if (inventorySearch.trim()) {
+        const term = inventorySearch.toLowerCase();
+        return (
+          p.name.toLowerCase().includes(term) ||
+          p.id.toLowerCase().includes(term) ||
+          (p.category && p.category.toLowerCase().includes(term)) ||
+          (p.color && p.color.toLowerCase().includes(term))
+        );
+      }
+      return true;
+    });
+  }, [productsList, inventoryStatusFilter, inventorySearch]);
+
+  // Productos con descuento
+  const discountedProducts = useMemo(() => {
+    return productsList.filter((p) => Number(p.discountPercent || p.discount_percent || 0) > 0);
+  }, [productsList]);
+
+  // Definición completa de Pestañas de Navegación Persistente
+  const navTabs = [
+    { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+    { id: 'products', label: 'Productos', icon: '🏷️', badge: productsList.length },
+    { id: 'categories', label: 'Categorías', icon: '📂', badge: categoriesStats.length },
+    { id: 'discounts', label: 'Descuentos', icon: '🏷️', badge: discountedProducts.length || null },
+    { id: 'inventory', label: 'Inventario', icon: '📦', alert: lowStockProducts.length > 0 ? `⚠️ ${lowStockProducts.length}` : null },
+    { id: 'orders', label: 'Pedidos', icon: '📑', badge: stats?.totalOrders || orders.length },
+    { id: 'customers', label: 'Clientes', icon: '👥', badge: customersList.length || null },
+    { id: 'shipments', label: 'Envíos', icon: '🚚', badge: shipments.length || null },
+    { id: 'announcements', label: 'Anuncios', icon: '📢', badge: announcements.filter(a => a.is_active).length || null },
+    { id: 'emails', label: 'Correos', icon: '✉️' },
+    { id: 'settings', label: 'Configuración', icon: '⚙️' }
+  ];
+
   if (!isOpen) return null;
 
   return (
     <div className="admin-backdrop" role="dialog" aria-modal="true" aria-labelledby="admin-title">
       <div className="admin-container">
         
-        {/* CABECERA DEL PANEL */}
-        <div className="admin-header">
+        {/* =====================================================================
+           1. CABECERA ADMINISTRATIVA FIJA Y VISIBLE
+           ===================================================================== */}
+        <header className="admin-header">
           <div className="admin-brand-box">
             <span className="admin-badge">URBAN STYLE BACKOFFICE</span>
             <h2 className="admin-title" id="admin-title">
@@ -462,626 +650,1255 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
           </div>
 
           <div className="admin-header-actions">
+            <a
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="admin-store-link"
+              title="Abrir tienda pública en una pestaña nueva"
+            >
+              🏪 Ver Tienda ↗
+            </a>
+            {adminUser && (
+              <span className="admin-user-chip" title="Usuario administrador autenticado">
+                👤 {adminUser.username}
+              </span>
+            )}
             {adminUser && (
               <button type="button" className="admin-logout-btn" onClick={handleLogout}>
-                Cerrar Sesión ({adminUser.username})
+                Cerrar Sesión
               </button>
             )}
-            <button type="button" className="admin-close-btn" onClick={onClose} aria-label="Cerrar panel">
+            <button
+              type="button"
+              className="admin-close-btn"
+              onClick={onClose}
+              aria-label="Cerrar panel administrativo"
+              title="Volver a la tienda"
+            >
               <CloseIcon size={20} />
             </button>
           </div>
-        </div>
+        </header>
 
-        {/* FEEDBACK DE ACCIÓN */}
+        {/* FEEDBACK TOAST DE ACCIONES EXITOSAS */}
         {actionFeedback && (
           <div className="admin-feedback-toast" role="status">
             <span>✓ {actionFeedback}</span>
           </div>
         )}
 
-        {/* VERIFICANDO SESIÓN */}
-        {isCheckingAuth ? (
-          <div style={{ textAlign: 'center', padding: '4rem 1rem', color: '#a0a0a0' }}>
-            <p>Verificando credenciales de sesión...</p>
-          </div>
-        ) : !adminUser ? (
-          /* PANTALLA DE INICIO DE SESIÓN INTEGRADA */
-          <AdminLoginPage
-            onLoginSuccess={(user) => {
-              setAdminUser(user);
-              loadDashboardData();
-            }}
-            onReturnToStore={onClose}
-          />
-        ) : (
-          /* 2. DASHBOARD ADMINISTRATIVO COMPLETO */
-          <div className="admin-content-layout">
+        {/* =====================================================================
+           2. BARRA DE NAVEGACIÓN PERSISTENTE (NUNCA DESAPARECE, NUNCA SE OCULTA)
+           ===================================================================== */}
+        {adminUser && (
+          <nav className="admin-persistent-nav" aria-label="Navegación del Panel Administrativo">
             
-            {/* TARJETAS DE MÉTRICAS */}
-            {stats && (
-              <div className="admin-metrics-grid">
-                <div className="metric-card">
-                  <span className="metric-label">Ventas Totales</span>
-                  <strong className="metric-value">{stats.formattedRevenue}</strong>
-                </div>
-                <div className="metric-card">
-                  <span className="metric-label">Total Pedidos</span>
-                  <strong className="metric-value">{stats.totalOrders}</strong>
-                </div>
-                <div className="metric-card">
-                  <span className="metric-label">En Preparación</span>
-                  <strong className="metric-value text-accent">{stats.pendingOrders}</strong>
-                </div>
-                <div className="metric-card">
-                  <span className="metric-label">Despachados</span>
-                  <strong className="metric-value text-green">{stats.shippedOrders}</strong>
-                </div>
-              </div>
-            )}
-
-            {/* PESTAÑAS DE NAVEGACIÓN */}
-            <div className="admin-nav-tabs">
-              <button
-                type="button"
-                className={`tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
-                onClick={() => { setActiveTab('orders'); setSelectedOrder(null); }}
+            {/* SELECTOR DESPLEGABLE EN PANTALLAS PEQUEÑAS / MÓVILES */}
+            <div className="admin-nav-mobile-wrapper">
+              <span className="mobile-nav-label">Módulo activo:</span>
+              <select
+                className="admin-nav-mobile-select"
+                value={activeTab}
+                onChange={(e) => handleTabChange(e.target.value)}
+                aria-label="Seleccionar módulo del panel"
               >
-                📦 Pedidos ({stats?.totalOrders || orders.length})
-              </button>
-              <button
-                type="button"
-                className={`tab-btn ${activeTab === 'products' ? 'active' : ''}`}
-                onClick={() => { setActiveTab('products'); setSelectedOrder(null); }}
-              >
-                🏷️ Productos
-              </button>
-              <button
-                type="button"
-                className={`tab-btn ${activeTab === 'shipments' ? 'active' : ''}`}
-                onClick={() => { setActiveTab('shipments'); setSelectedOrder(null); }}
-              >
-                🚚 Guías y Envíos Mi Paquete
-              </button>
-              <button
-                type="button"
-                className={`tab-btn ${activeTab === 'emails' ? 'active' : ''}`}
-                onClick={() => { setActiveTab('emails'); setSelectedOrder(null); }}
-              >
-                ✉️ Registro de Correos
-              </button>
-              <button
-                type="button"
-                className={`tab-btn ${activeTab === 'announcements' ? 'active' : ''}`}
-                onClick={() => { setActiveTab('announcements'); setSelectedOrder(null); }}
-              >
-                📢 Barra de Anuncios {announcements.length > 0 && `(${announcements.filter(a => a.is_active).length})`}
-              </button>
-              <button
-                type="button"
-                className={`tab-btn ${activeTab === 'diagnostic' ? 'active' : ''}`}
-                onClick={() => { setActiveTab('diagnostic'); setSelectedOrder(null); }}
-              >
-                ⚙️ Diagnóstico del Sistema
-              </button>
+                {navTabs.map((tab) => (
+                  <option key={tab.id} value={tab.id}>
+                    {tab.icon} {tab.label} {tab.badge ? `(${tab.badge})` : ''} {tab.alert ? tab.alert : ''}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* PESTAÑA: GESTIÓN DE PRODUCTOS */}
-            {activeTab === 'products' && (
-              <div className="tab-pane">
-                <AdminProductsSection
-                  onNotification={(msg) => {
-                    setActionFeedback(msg);
-                    setTimeout(() => setActionFeedback(null), 4000);
-                  }}
-                />
-              </div>
-            )}
-
-            {/* PESTAÑA 1: PEDIDOS */}
-            {activeTab === 'orders' && (
-              <div className="tab-pane">
-                <div className="filters-bar">
-                  <div className="filter-group">
-                    <label htmlFor="status-filter">Filtrar Estado:</label>
-                    <select
-                      id="status-filter"
-                      className="filter-select"
-                      value={statusFilter}
-                      onChange={(e) => setStatusFilter(e.target.value)}
-                    >
-                      <option value="ALL">Todos los Estados</option>
-                      <option value="PROCESSING">En Proceso / Contraentrega</option>
-                      <option value="PENDING_PAYMENT">Pendiente de Pago</option>
-                      <option value="PAYMENT_CONFIRMED">Pago Confirmado</option>
-                      <option value="SHIPPED">Despachado</option>
-                      <option value="CANCELLED">Cancelado</option>
-                    </select>
-                  </div>
-
-                  <div className="filter-group">
-                    <input
-                      type="search"
-                      className="filter-search"
-                      placeholder="Buscar por orden, cliente, guía..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && loadDashboardData()}
-                    />
-                    <button type="button" className="btn-search" onClick={loadDashboardData}>
-                      Filtrar
-                    </button>
-                  </div>
-                </div>
-
-                <div className="table-responsive">
-                  <table className="admin-table admin-orders-table">
-                    <thead>
-                      <tr>
-                        <th>N° Orden</th>
-                        <th>Fecha</th>
-                        <th>Cliente</th>
-                        <th>Destino</th>
-                        <th>Total</th>
-                        <th>Método</th>
-                        <th>Guía Mi Paquete</th>
-                        <th>Estado</th>
-                        <th>Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {orders.length === 0 ? (
-                        <tr>
-                          <td colSpan="9" className="text-center py-4 text-muted">
-                            No se encontraron pedidos con el criterio seleccionado.
-                          </td>
-                        </tr>
-                      ) : (
-                        orders.map((order) => (
-                          <tr key={order.order_number}>
-                            <td>
-                              <strong className="order-number-link" onClick={() => handleViewOrderDetail(order.order_number)}>
-                                #{order.order_number}
-                              </strong>
-                            </td>
-                            <td>{new Date(order.created_at).toLocaleDateString('es-CO')}</td>
-                            <td>
-                              <div><strong>{order.customer_name} {order.customer_surname}</strong></div>
-                              <div className="text-muted text-xs">{order.customer_email}</div>
-                            </td>
-                            <td>{order.delivery_city} ({order.delivery_department})</td>
-                            <td><strong>${order.total.toLocaleString('es-CO')} COP</strong></td>
-                            <td>
-                              <span className={`badge-payment ${order.payment_method === 'COD' ? 'cod' : 'prepaid'}`}>
-                                {order.payment_method === 'COD' ? 'Contraentrega' : 'Anticipado'}
-                              </span>
-                            </td>
-                            <td>
-                              {order.guide_number ? (
-                                <a
-                                  href={`/api/shipping/guide/${order.guide_number}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="guide-link"
-                                >
-                                  {order.carrier_name}: {order.guide_number} 📄
-                                </a>
-                              ) : (
-                                <span className="text-muted">Pendiente</span>
-                              )}
-                            </td>
-                            <td>
-                              <span className={`status-pill status-${order.status.toLowerCase()}`}>
-                                {order.status}
-                              </span>
-                            </td>
-                            <td>
-                              <div className="actions-cell">
-                                <button
-                                  type="button"
-                                  className="action-link"
-                                  onClick={() => handleViewOrderDetail(order.order_number)}
-                                  title="Ver trazabilidad completa"
-                                >
-                                  👁️ Detalle
-                                </button>
-                                {order.status !== 'SHIPPED' && order.status !== 'CANCELLED' && (
-                                  <button
-                                    type="button"
-                                    className="action-btn-status ship"
-                                    onClick={() => handleUpdateStatus(order.order_number, 'SHIPPED')}
-                                    title="Marcar como Despachado"
-                                  >
-                                    🚚 Despachar
-                                  </button>
-                                )}
-                                {order.status === 'PENDING_PAYMENT' && (
-                                  <button
-                                    type="button"
-                                    className="action-btn-status confirm"
-                                    onClick={() => handleUpdateStatus(order.order_number, 'PAYMENT_CONFIRMED')}
-                                    title="Confirmar Pago"
-                                  >
-                                    💰 Confirmar
-                                  </button>
-                                )}
-                                <button
-                                  type="button"
-                                  className="action-btn-status email"
-                                  onClick={() => handleResendEmail(order.order_number)}
-                                  title="Reenviar correo con guía"
-                                >
-                                  ✉️ Reenviar
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* PESTAÑA 2: GUÍAS Y ENVÍOS MI PAQUETE */}
-            {activeTab === 'shipments' && (
-              <div className="tab-pane">
-                <div className="table-responsive">
-                  <table className="admin-table admin-shipments-table">
-                    <thead>
-                      <tr>
-                        <th>N° Guía</th>
-                        <th>Transportadora</th>
-                        <th>N° Orden</th>
-                        <th>Destinatario</th>
-                        <th>Ciudad / DANE</th>
-                        <th>Flete</th>
-                        <th>Estado de Tracking</th>
-                        <th>Acción Guía</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {shipments.map((s) => (
-                        <tr key={s.guide_number}>
-                          <td><strong className="guide-number-val">{s.guide_number}</strong></td>
-                          <td><span className="carrier-badge">{s.carrier_name}</span></td>
-                          <td>#{s.order_number}</td>
-                          <td>{s.customer_name} ({s.customer_email})</td>
-                          <td>{s.delivery_city} ({s.destiny_dane_code})</td>
-                          <td>${s.shipping_cost.toLocaleString('es-CO')} COP</td>
-                          <td>
-                            <span className="tracking-status-text">
-                              🟢 {s.tracking_status}
-                            </span>
-                          </td>
-                          <td>
-                            <a
-                              href={`/api/shipping/guide/${s.guide_number}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="btn-table-action download"
-                            >
-                              📄 Descargar PDF
-                            </a>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* PESTAÑA 3: REGISTROS DE CORREO */}
-            {activeTab === 'emails' && (
-              <div className="tab-pane">
-                <div className="table-responsive">
-                  <table className="admin-table admin-emails-table">
-                    <thead>
-                      <tr>
-                        <th>ID</th>
-                        <th>N° Orden</th>
-                        <th>Destinatario</th>
-                        <th>Asunto</th>
-                        <th>Estado</th>
-                        <th>Fecha y Hora</th>
-                        <th>Detalle / Archivo</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {emailLogs.length === 0 ? (
-                        <tr>
-                          <td colSpan="7" className="text-center py-4 text-muted">
-                            No hay registros de correo aún.
-                          </td>
-                        </tr>
-                      ) : (
-                        emailLogs.map((log) => (
-                          <tr key={log.id}>
-                            <td>{log.id}</td>
-                            <td>#{log.order_number}</td>
-                            <td><strong>{log.recipient_email}</strong></td>
-                            <td>{log.subject}</td>
-                            <td>
-                              <span className={`email-status-pill status-${log.status.toLowerCase()}`}>
-                                {log.status}
-                              </span>
-                            </td>
-                            <td>{new Date(log.sent_at).toLocaleString('es-CO')}</td>
-                            <td>
-                              <a
-                                href={`/api/orders/${log.order_number}/email-preview`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="btn-table-action preview"
-                              >
-                                🔍 Ver Correo
-                              </a>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* PESTAÑA 4: DIAGNÓSTICO DEL SISTEMA */}
-            {activeTab === 'diagnostic' && configStatus && (
-              <div className="tab-pane diagnostic-pane">
-                <div className="diagnostic-card">
-                  <h4 className="diag-title">1. Integración Logística Mi Paquete v2</h4>
-                  <div className="diag-details">
-                    <p><strong>Proveedor:</strong> {configStatus.mipaquete.provider}</p>
-                    <p><strong>Endpoint Base:</strong> <code>{configStatus.mipaquete.baseUrl}</code></p>
-                    <p>
-                      <strong>API Key Configurada:</strong>{' '}
-                      {configStatus.mipaquete.apiKeyConfigured ? (
-                        <span className="badge-ok">Configurada en .env</span>
-                      ) : (
-                        <span className="badge-pending">Pendiente en .env (MIPAQUETE_APIKEY)</span>
-                      )}
-                    </p>
-                    <p><strong>Origen de Despachos:</strong> {configStatus.mipaquete.originCity} (DANE {configStatus.mipaquete.originDaneCode})</p>
-                    <p className="diag-note">
-                      * El sistema incluye cotizador inteligente con transportadoras nacionales (Coordinadora, Servientrega, TCC, Envía) y generador de guías estándar.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="diagnostic-card">
-                  <h4 className="diag-title">2. Servicio de Notificaciones por Correo</h4>
-                  <div className="diag-details">
-                    <p><strong>Proveedor:</strong> {configStatus.mailer.provider}</p>
-                    <p><strong>Remitente Oficial:</strong> {configStatus.mailer.fromAddress}</p>
-                    <p>
-                      <strong>Servidor SMTP:</strong>{' '}
-                      {configStatus.mailer.smtpHostConfigured ? (
-                        <span className="badge-ok">Configurado en .env</span>
-                      ) : (
-                        <span className="badge-pending">Modo Local Activo (SMTP_HOST pendiente en .env)</span>
-                      )}
-                    </p>
-                    <p><strong>Respaldo en Disco:</strong> Todos los correos se renderizan con la guía adjunta y se respaldan en <code>server/logs/emails/</code>.</p>
-                  </div>
-                </div>
-
-                <div className="diagnostic-card">
-                  <h4 className="diag-title">3. Base de Datos Transaccional</h4>
-                  <div className="diag-details">
-                    <p><strong>Motor:</strong> SQLite3 con WAL activado (ACID transactions)</p>
-                    <p><strong>Archivo:</strong> <code>{configStatus.database.file}</code></p>
-                    <p><strong>Estado:</strong> <span className="badge-ok">Operacional</span></p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* PESTAÑA 5: GESTIÓN DE BARRA DE ANUNCIOS */}
-            {activeTab === 'announcements' && (
-              <div className="tab-pane">
-                {/* BARRA SUPERIOR DE CONTROL GLOBAL */}
-                <div className="announcements-control-bar">
-                  <div className="announcements-global-toggle-box">
-                    <label className="toggle-switch-label">
-                      <input
-                        type="checkbox"
-                        className="toggle-switch-input"
-                        checked={isBarEnabled}
-                        onChange={(e) => handleToggleBarEnabled(e.target.checked)}
-                      />
-                      <span className="toggle-switch-slider" />
-                    </label>
-                    <div className="toggle-info">
-                      <span className="toggle-title">
-                        Estado de la Barra de Anuncios:
-                        <strong className={isBarEnabled ? 'text-green' : 'text-muted'}>
-                          {isBarEnabled ? ' 🟢 ACTIVA EN LA TIENDA' : ' ⚪ DESACTIVADA'}
-                        </strong>
+            {/* BARRA HORIZONTAL COMPLETA DE PESTAÑAS (ESCRITORIO Y TABLETS) */}
+            <div className="admin-nav-tabs-scrollable">
+              {navTabs.map((tab) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={`tab-btn ${isActive ? 'active' : ''}`}
+                    onClick={() => handleTabChange(tab.id)}
+                    title={`Abrir sección ${tab.label}`}
+                  >
+                    <span className="tab-icon">{tab.icon}</span>
+                    <span className="tab-label-text">{tab.label}</span>
+                    {tab.badge !== undefined && tab.badge !== null && (
+                      <span className={`tab-counter-badge ${isActive ? 'active-badge' : ''}`}>
+                        {tab.badge}
                       </span>
-                      <span className="toggle-subtitle">
-                        {isBarEnabled
-                          ? 'Los anuncios activos se muestran rotando en la parte superior de la tienda.'
-                          : 'La barra está oculta en la tienda pública.'}
+                    )}
+                    {tab.alert && (
+                      <span className="tab-alert-badge" title="Atención requerida">
+                        {tab.alert}
                       </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </nav>
+        )}
+
+        {/* =====================================================================
+           3. ÁREA DE TRABAJO INDEPENDIENTE CON DESPLAZAMIENTO VERTICAL EXCLUSIVO
+           ===================================================================== */}
+        <main className="admin-workspace" ref={workspaceRef} id="admin-workspace-scroll">
+          
+          {/* VERIFICANDO SESIÓN */}
+          {isCheckingAuth ? (
+            <div className="auth-loading-card">
+              <div className="spinner-icon">⏳</div>
+              <p>Verificando credenciales de sesión en Urban Style...</p>
+            </div>
+          ) : !adminUser ? (
+            /* PANTALLA DE INICIO DE SESIÓN INTEGRADA */
+            <AdminLoginPage
+              onLoginSuccess={(user) => {
+                setAdminUser(user);
+                loadDashboardData();
+              }}
+              onReturnToStore={onClose}
+            />
+          ) : (
+            <>
+              {/* ===============================================================
+                 SECCIÓN 1: DASHBOARD / INICIO GENERAL
+                 =============================================================== */}
+              {activeTab === 'dashboard' && (
+                <div className="tab-pane dashboard-home-pane">
+                  {/* RESUMEN DE VENTAS Y PEDIDOS */}
+                  {stats && (
+                    <div className="admin-metrics-grid">
+                      <div className="metric-card">
+                        <span className="metric-label">Ventas Totales</span>
+                        <strong className="metric-value">{stats.formattedRevenue}</strong>
+                        <span className="metric-subtext">Ingresos netos consolidados</span>
+                      </div>
+                      <div className="metric-card">
+                        <span className="metric-label">Total Pedidos</span>
+                        <strong className="metric-value">{stats.totalOrders}</strong>
+                        <span className="metric-subtext">Histórico en tienda</span>
+                      </div>
+                      <div className="metric-card">
+                        <span className="metric-label">En Preparación</span>
+                        <strong className="metric-value text-accent">{stats.pendingOrders}</strong>
+                        <span className="metric-subtext">Listos para despachar</span>
+                      </div>
+                      <div className="metric-card">
+                        <span className="metric-label">Despachados</span>
+                        <strong className="metric-value text-green">{stats.shippedOrders}</strong>
+                        <span className="metric-subtext">Con guía Mi Paquete</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* BARRA DE ACCESOS DIRECTOS RÁPIDOS */}
+                  <div className="quick-access-bar">
+                    <span className="quick-label">⚡ Accesos Directos:</span>
+                    <div className="quick-actions-pills">
+                      <button
+                        type="button"
+                        className="quick-pill-btn"
+                        onClick={() => handleTabChange('products')}
+                      >
+                        🏷️ Ver Catálogo de Productos ({productsList.length})
+                      </button>
+                      <button
+                        type="button"
+                        className="quick-pill-btn"
+                        onClick={() => handleTabChange('discounts')}
+                      >
+                        🏷️ Administrar Descuentos ({discountedProducts.length})
+                      </button>
+                      <button
+                        type="button"
+                        className="quick-pill-btn"
+                        onClick={() => handleTabChange('inventory')}
+                      >
+                        📦 Control de Stock {lowStockProducts.length > 0 && `(⚠️ ${lowStockProducts.length})`}
+                      </button>
+                      <button
+                        type="button"
+                        className="quick-pill-btn"
+                        onClick={() => handleTabChange('orders')}
+                      >
+                        📑 Gestión de Pedidos ({orders.length})
+                      </button>
+                      <button
+                        type="button"
+                        className="quick-pill-btn"
+                        onClick={() => handleTabChange('announcements')}
+                      >
+                        📢 Configurar Anuncios
+                      </button>
                     </div>
                   </div>
 
-                  <div className="announcements-speed-box">
-                    <label htmlFor="rotation-select">Velocidad:</label>
-                    <select
-                      id="rotation-select"
-                      className="filter-select"
-                      value={rotationSeconds}
-                      onChange={(e) => handleChangeRotation(Number(e.target.value))}
-                    >
-                      <option value={3}>3s (Rápido)</option>
-                      <option value={4}>4s (Recomendado)</option>
-                      <option value={5}>5s (Normal)</option>
-                      <option value={6}>6s (Pausado)</option>
-                      <option value={8}>8s (Lento)</option>
-                    </select>
-                    <button
-                      type="button"
-                      className="btn-search"
-                      onClick={() => handleOpenCreateAnnouncement()}
-                    >
-                      ➕ Nuevo Anuncio
-                    </button>
-                  </div>
-                </div>
-
-                {/* PRESETS RÁPIDOS */}
-                <div className="announcement-presets-card">
-                  <span className="presets-label">⚡ Mensajes promocionales sugeridos (clic para añadir):</span>
-                  <div className="presets-buttons-group">
-                    <button
-                      type="button"
-                      className="btn-preset-chip"
-                      onClick={() => handleOpenCreateAnnouncement('¡Envíos a todo Colombia!', '#beneficios')}
-                    >
-                      + ¡Envíos a todo Colombia!
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-preset-chip"
-                      onClick={() => handleOpenCreateAnnouncement('¡Ofertas especiales por tiempo limitado!', '#ofertas')}
-                    >
-                      + ¡Ofertas especiales por tiempo limitado!
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-preset-chip"
-                      onClick={() => handleOpenCreateAnnouncement('¡Nuevas colecciones disponibles!', '#coleccion')}
-                    >
-                      + ¡Nuevas colecciones disponibles!
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-preset-chip"
-                      onClick={() => handleOpenCreateAnnouncement('¡Descuentos especiales en productos seleccionados!', '#productos')}
-                    >
-                      + ¡Descuentos especiales en productos seleccionados!
-                    </button>
-                  </div>
-                </div>
-
-                {/* TABLA DE ANUNCIOS */}
-                <div className="table-responsive">
-                  <table className="admin-table admin-announcements-table">
-                    <thead>
-                      <tr>
-                        <th style={{ width: '80px', textAlign: 'center' }}>Orden</th>
-                        <th>Mensaje del Anuncio</th>
-                        <th style={{ width: '180px' }}>Enlace de Destino</th>
-                        <th style={{ width: '170px' }}>Programación Fechas</th>
-                        <th style={{ width: '110px', textAlign: 'center' }}>Estado</th>
-                        <th style={{ width: '180px', textAlign: 'center' }}>Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {announcements.length === 0 ? (
-                        <tr>
-                          <td colSpan="6" style={{ textAlign: 'center', padding: '2.5rem', color: '#888' }}>
-                            No hay anuncios registrados. Haz clic en «➕ Nuevo Anuncio» o selecciona un mensaje sugerido.
-                          </td>
-                        </tr>
+                  {/* DISTRIBUCIÓN EN 2 COLUMNAS: PEDIDOS RECIENTES + ALERTAS DE STOCK */}
+                  <div className="dashboard-two-columns">
+                    {/* PEDIDOS RECIENTES */}
+                    <div className="dashboard-widget-card">
+                      <div className="widget-header">
+                        <h3 className="widget-title">📑 Últimos Pedidos Registrados</h3>
+                        <button
+                          type="button"
+                          className="widget-action-link"
+                          onClick={() => handleTabChange('orders')}
+                        >
+                          Ver todos ({orders.length}) →
+                        </button>
+                      </div>
+                      {orders.length === 0 ? (
+                        <p className="widget-empty-msg">No hay pedidos registrados en la tienda.</p>
                       ) : (
-                        announcements.map((ann, idx) => (
-                          <tr key={ann.id}>
-                            <td style={{ textAlign: 'center' }}>
-                              <div className="order-stepper-btns">
-                                <button
-                                  type="button"
-                                  className="btn-order-step"
-                                  disabled={idx === 0}
-                                  onClick={() => handleMoveAnnouncement(idx, 'up')}
-                                  title="Subir orden"
-                                >
-                                  ▲
-                                </button>
-                                <span className="order-number-badge">{ann.sort_order || idx + 1}</span>
-                                <button
-                                  type="button"
-                                  className="btn-order-step"
-                                  disabled={idx === announcements.length - 1}
-                                  onClick={() => handleMoveAnnouncement(idx, 'down')}
-                                  title="Bajar orden"
-                                >
-                                  ▼
-                                </button>
-                              </div>
-                            </td>
-                            <td>
-                              <div className="announcement-row-content">
-                                <span className="announcement-row-text">{ann.text}</span>
-                              </div>
-                            </td>
-                            <td>
-                              {ann.link ? (
-                                <code className="announcement-link-badge">{ann.link}</code>
-                              ) : (
-                                <span style={{ color: '#666', fontSize: '0.75rem' }}>Sin enlace</span>
-                              )}
-                            </td>
-                            <td>
-                              {ann.start_date || ann.end_date ? (
-                                <div className="date-schedule-cell">
-                                  {ann.start_date && (
-                                    <span>Desde: {new Date(ann.start_date).toLocaleDateString('es-CO')}</span>
-                                  )}
-                                  {ann.end_date && (
-                                    <span>Hasta: {new Date(ann.end_date).toLocaleDateString('es-CO')}</span>
-                                  )}
-                                </div>
-                              ) : (
-                                <span style={{ color: '#777', fontSize: '0.75rem' }}>Permanente</span>
-                              )}
-                            </td>
-                            <td style={{ textAlign: 'center' }}>
-                              <button
-                                type="button"
-                                className={`status-toggle-btn ${ann.is_active ? 'active' : 'inactive'}`}
-                                onClick={() => handleToggleAnnouncementActive(ann)}
-                                title={ann.is_active ? 'Desactivar anuncio' : 'Activar anuncio'}
-                              >
-                                {ann.is_active ? '🟢 Activo' : '⚪ Inactivo'}
-                              </button>
-                            </td>
-                            <td style={{ textAlign: 'center' }}>
-                              <div className="actions-cell" style={{ justifyContent: 'center' }}>
-                                <button
-                                  type="button"
-                                  className="action-link"
-                                  onClick={() => handleOpenEditAnnouncement(ann)}
-                                  title="Editar mensaje y configuración"
-                                >
-                                  ✏️ Editar
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn-action-delete"
-                                  onClick={() => setAnnouncementDeleteTarget(ann)}
-                                  title="Eliminar anuncio permanentemente"
-                                >
-                                  🗑️ Borrar
-                                </button>
-                              </div>
+                        <div className="table-responsive">
+                          <table className="admin-table mini-table">
+                            <thead>
+                              <tr>
+                                <th>Orden</th>
+                                <th>Cliente</th>
+                                <th>Total COP</th>
+                                <th>Estado</th>
+                                <th>Acción</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {orders.slice(0, 5).map((ord) => (
+                                <tr key={ord.order_number}>
+                                  <td><strong>#{ord.order_number}</strong></td>
+                                  <td>{ord.customer_name} {ord.customer_surname}</td>
+                                  <td>${ord.total.toLocaleString('es-CO')}</td>
+                                  <td>
+                                    <span className={`status-pill status-${ord.status.toLowerCase()}`}>
+                                      {ord.status}
+                                    </span>
+                                  </td>
+                                  <td>
+                                    <button
+                                      type="button"
+                                      className="action-link"
+                                      onClick={() => handleViewOrderDetail(ord.order_number)}
+                                    >
+                                      👁️ Ver
+                                    </button>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* ALERTAS DE STOCK */}
+                    <div className="dashboard-widget-card">
+                      <div className="widget-header">
+                        <h3 className="widget-title">⚠️ Alertas de Inventario</h3>
+                        <button
+                          type="button"
+                          className="widget-action-link"
+                          onClick={() => handleTabChange('inventory')}
+                        >
+                          Gestionar Stock →
+                        </button>
+                      </div>
+                      {lowStockProducts.length === 0 ? (
+                        <div className="stock-all-good-box">
+                          <span className="all-good-icon">✓</span>
+                          <p>¡Todo en orden! No hay productos con stock crítico o agotado.</p>
+                        </div>
+                      ) : (
+                        <div className="table-responsive">
+                          <table className="admin-table mini-table">
+                            <thead>
+                              <tr>
+                                <th>Prenda</th>
+                                <th>Categoría</th>
+                                <th>Stock Actual</th>
+                                <th>Acción Rápida</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {lowStockProducts.slice(0, 5).map((p) => {
+                                const stock = Number(p.stock || 0);
+                                return (
+                                  <tr key={p.id}>
+                                    <td><strong>{p.name}</strong></td>
+                                    <td>{p.category}</td>
+                                    <td>
+                                      <span className={`stock-status-pill ${stock === 0 ? 'stock-out' : 'stock-low'}`}>
+                                        {stock === 0 ? '❌ Agotado' : `⚠️ ${stock} un.`}
+                                      </span>
+                                    </td>
+                                    <td>
+                                      <button
+                                        type="button"
+                                        className="btn-stock-quick-add"
+                                        onClick={() => handleQuickStockUpdate(p, stock + 10)}
+                                        title="Agregar 10 unidades al stock"
+                                      >
+                                        ＋10 un.
+                                      </button>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ESTADO RÁPIDO DE SERVICIOS */}
+                  <div className="system-health-banner">
+                    <div className="health-item">
+                      <span className="health-dot dot-green" />
+                      <span><strong>Tienda Online:</strong> Operacional</span>
+                    </div>
+                    <div className="health-item">
+                      <span className="health-dot dot-green" />
+                      <span><strong>Base de Datos:</strong> PostgreSQL Neon & SQLite WAL</span>
+                    </div>
+                    <div className="health-item">
+                      <span className="health-dot dot-green" />
+                      <span><strong>Logística:</strong> Mi Paquete Colombia</span>
+                    </div>
+                    <div className="health-item">
+                      <span className="health-dot dot-green" />
+                      <span><strong>Correos:</strong> Notificaciones Activas</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* ===============================================================
+                 SECCIÓN 2: PRODUCTOS (CATÁLOGO REESTRUCTURADO EN 9 COLUMNAS)
+                 =============================================================== */}
+              {activeTab === 'products' && (
+                <div className="tab-pane">
+                  <AdminProductsSection
+                    initialCategory={selectedCategoryFilter}
+                    initialDiscountFilter={selectedDiscountFilter}
+                    onNotification={(msg) => {
+                      setActionFeedback(msg);
+                      loadDashboardData();
+                      setTimeout(() => setActionFeedback(null), 4000);
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* ===============================================================
+                 SECCIÓN 3: CATEGORÍAS (EXPLORADOR Y FILTRADO DIRECTO)
+                 =============================================================== */}
+              {activeTab === 'categories' && (
+                <div className="tab-pane categories-pane">
+                  <div className="section-intro-card">
+                    <div>
+                      <h3 className="section-title">📂 Explorador de Categorías de URBAN STYLE</h3>
+                      <p className="section-subtitle">
+                        Consulta y gestiona el volumen de productos, stock disponible y precios promedio organizados por categoría.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-primary-action"
+                      onClick={() => handleTabChange('products')}
+                    >
+                      🏷️ Ver Todo el Catálogo
+                    </button>
+                  </div>
+
+                  <div className="categories-cards-grid">
+                    {categoriesStats.map((cat) => (
+                      <div key={cat.name} className="category-explorer-card">
+                        <div className="category-icon-box">{cat.icon}</div>
+                        <h4 className="category-card-title">{cat.name}</h4>
+                        <p className="category-card-desc">{cat.desc}</p>
+                        
+                        <div className="category-stats-row">
+                          <div className="stat-col">
+                            <span className="stat-label">Prendas:</span>
+                            <strong className="stat-val">{cat.count}</strong>
+                          </div>
+                          <div className="stat-col">
+                            <span className="stat-label">Stock Total:</span>
+                            <strong className="stat-val">{cat.stock} un.</strong>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="btn-category-action"
+                          onClick={() => handleTabChange('products', cat.name, 'ALL')}
+                        >
+                          Ver Productos de {cat.name} →
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ===============================================================
+                 SECCIÓN 4: DESCUENTOS Y PROMOCIONES
+                 =============================================================== */}
+              {activeTab === 'discounts' && (
+                <div className="tab-pane discounts-pane">
+                  <div className="section-intro-card">
+                    <div>
+                      <h3 className="section-title">🏷️ Centro de Descuentos y Promociones</h3>
+                      <p className="section-subtitle">
+                        Configura porcentajes de rebaja, fechas de vigencia y promociones para temporadas especiales.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* MÉTRICAS DE DESCUENTOS */}
+                  <div className="admin-metrics-grid">
+                    <div className="metric-card">
+                      <span className="metric-label">Productos con Descuento</span>
+                      <strong className="metric-value text-accent">{discountedProducts.length}</strong>
+                      <span className="metric-subtext">Con oferta activa o programada</span>
+                    </div>
+                    <div className="metric-card">
+                      <span className="metric-label">Descuento Promedio</span>
+                      <strong className="metric-value">
+                        {discountedProducts.length > 0
+                          ? `${Math.round(
+                              discountedProducts.reduce((acc, p) => acc + (p.discountPercent || p.discount_percent || 0), 0) /
+                                discountedProducts.length
+                            )}%`
+                          : '0%'}
+                      </strong>
+                      <span className="metric-subtext">Sobre precio oficial</span>
+                    </div>
+                    <div className="metric-card">
+                      <span className="metric-label">Productos sin Descuento</span>
+                      <strong className="metric-value">{productsList.length - discountedProducts.length}</strong>
+                      <span className="metric-subtext">A precio estándar regular</span>
+                    </div>
+                    <div className="metric-card">
+                      <span className="metric-label">Total en Catálogo</span>
+                      <strong className="metric-value">{productsList.length}</strong>
+                      <span className="metric-subtext">Prendas registradas</span>
+                    </div>
+                  </div>
+
+                  {/* TABLA DE PRODUCTOS EN MODO DESCUENTOS */}
+                  <AdminProductsSection
+                    initialCategory="ALL"
+                    initialDiscountFilter="WITH_DISCOUNT"
+                    onNotification={(msg) => {
+                      setActionFeedback(msg);
+                      loadDashboardData();
+                      setTimeout(() => setActionFeedback(null), 4000);
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* ===============================================================
+                 SECCIÓN 5: INVENTARIO Y STOCK
+                 =============================================================== */}
+              {activeTab === 'inventory' && (
+                <div className="tab-pane inventory-pane">
+                  <div className="section-intro-card">
+                    <div>
+                      <h3 className="section-title">📦 Control de Inventario y Existencias</h3>
+                      <p className="section-subtitle">
+                        Modifica en tiempo real el stock de cada producto, atiende alertas de prendas agotadas y mantén la bodega sincronizada.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* MÉTRICAS DE INVENTARIO */}
+                  <div className="admin-metrics-grid">
+                    <div className="metric-card">
+                      <span className="metric-label">Unidades en Bodega</span>
+                      <strong className="metric-value text-green">
+                        {productsList.reduce((acc, p) => acc + Number(p.stock || 0), 0)} un.
+                      </strong>
+                      <span className="metric-subtext">Inventario físico total</span>
+                    </div>
+                    <div className="metric-card">
+                      <span className="metric-label">Prendas Agotadas</span>
+                      <strong className="metric-value text-danger">{outOfStockProducts.length}</strong>
+                      <span className="metric-subtext">Stock en 0 unidades</span>
+                    </div>
+                    <div className="metric-card">
+                      <span className="metric-label">Stock Bajo (&le; 10)</span>
+                      <strong className="metric-value text-accent">{lowStockProducts.length}</strong>
+                      <span className="metric-subtext">Requieren reabastecimiento</span>
+                    </div>
+                    <div className="metric-card">
+                      <span className="metric-label">Stock Saludable</span>
+                      <strong className="metric-value">
+                        {productsList.length - lowStockProducts.length}
+                      </strong>
+                      <span className="metric-subtext">Mayor a 10 unidades</span>
+                    </div>
+                  </div>
+
+                  {/* BARRA DE FILTROS DE INVENTARIO */}
+                  <div className="filters-bar">
+                    <div className="filter-group">
+                      <label htmlFor="inv-status-filter">Filtrar por Stock:</label>
+                      <select
+                        id="inv-status-filter"
+                        className="filter-select"
+                        value={inventoryStatusFilter}
+                        onChange={(e) => setInventoryStatusFilter(e.target.value)}
+                      >
+                        <option value="ALL">Todos los Productos ({productsList.length})</option>
+                        <option value="OUT">❌ Solo Agotados ({outOfStockProducts.length})</option>
+                        <option value="LOW">⚠️ Solo Stock Bajo &le; 10 ({lowStockProducts.length})</option>
+                        <option value="HEALTHY">✓ Stock Normal &gt; 10</option>
+                      </select>
+                    </div>
+
+                    <div className="filter-group">
+                      <input
+                        type="search"
+                        className="filter-search"
+                        placeholder="Buscar por prenda, ID, categoría..."
+                        value={inventorySearch}
+                        onChange={(e) => setInventorySearch(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* TABLA INTERACTIVA DE INVENTARIO */}
+                  <div className="table-responsive">
+                    <table className="admin-table admin-inventory-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '130px' }}>ID</th>
+                          <th>Producto</th>
+                          <th style={{ width: '140px' }}>Categoría</th>
+                          <th style={{ width: '130px' }}>Color</th>
+                          <th style={{ width: '120px' }}>Precio COP</th>
+                          <th style={{ width: '150px' }}>Estado Stock</th>
+                          <th style={{ width: '240px', textAlign: 'center' }}>Ajuste Rápido de Stock</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredInventory.length === 0 ? (
+                          <tr>
+                            <td colSpan="7" className="text-center py-4 text-muted">
+                              No se encontraron productos con el filtro aplicado.
                             </td>
                           </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
+                        ) : (
+                          filteredInventory.map((p) => {
+                            const stock = Number(p.stock || 0);
+                            const isSaving = savingStockId === p.id;
+                            return (
+                              <tr key={p.id}>
+                                <td>
+                                  <code className="id-code-badge">{p.id}</code>
+                                </td>
+                                <td>
+                                  <div className="inventory-prod-cell">
+                                    <img
+                                      src={p.image || '/images/products/prod-tshirt.jpg'}
+                                      alt={p.name}
+                                      className="inventory-thumb"
+                                    />
+                                    <div>
+                                      <strong>{p.name}</strong>
+                                      <div className="text-xs text-muted">{p.brand || 'URBAN STYLE'}</div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>{p.category}</td>
+                                <td>{p.color || 'Negro'}</td>
+                                <td><strong>${Number(p.price || 0).toLocaleString('es-CO')}</strong></td>
+                                <td>
+                                  <span
+                                    className={`stock-status-pill ${
+                                      stock === 0
+                                        ? 'stock-out'
+                                        : stock <= 10
+                                        ? 'stock-low'
+                                        : 'stock-high'
+                                    }`}
+                                  >
+                                    {stock === 0 ? '❌ Agotado' : stock <= 10 ? `⚠️ ${stock} un.` : `✓ ${stock} un.`}
+                                  </span>
+                                </td>
+                                <td>
+                                  <div className="stock-stepper-cell">
+                                    <button
+                                      type="button"
+                                      className="btn-stepper step-sub"
+                                      disabled={stock <= 0 || isSaving}
+                                      onClick={() => handleQuickStockUpdate(p, stock - 1)}
+                                      title="Restar 1 unidad"
+                                    >
+                                      -1
+                                    </button>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      className="stock-direct-input"
+                                      value={stock}
+                                      onChange={(e) => handleQuickStockUpdate(p, e.target.value)}
+                                      disabled={isSaving}
+                                      title="Escribe directamente el número de existencias"
+                                    />
+                                    <button
+                                      type="button"
+                                      className="btn-stepper step-add"
+                                      disabled={isSaving}
+                                      onClick={() => handleQuickStockUpdate(p, stock + 1)}
+                                      title="Sumar 1 unidad"
+                                    >
+                                      +1
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="btn-stepper-batch"
+                                      disabled={isSaving}
+                                      onClick={() => handleQuickStockUpdate(p, stock + 10)}
+                                      title="Sumar lote de +10 unidades"
+                                    >
+                                      +10
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
 
-        {/* MODAL DETALLE DE ORDEN CON TRAZABILIDAD */}
+              {/* ===============================================================
+                 SECCIÓN 6: PEDIDOS Y COMPRAS
+                 =============================================================== */}
+              {activeTab === 'orders' && (
+                <div className="tab-pane">
+                  <div className="filters-bar">
+                    <div className="filter-group">
+                      <label htmlFor="status-filter">Filtrar Estado:</label>
+                      <select
+                        id="status-filter"
+                        className="filter-select"
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                      >
+                        <option value="ALL">Todos los Estados</option>
+                        <option value="PROCESSING">En Proceso / Contraentrega</option>
+                        <option value="PENDING_PAYMENT">Pendiente de Pago</option>
+                        <option value="PAYMENT_CONFIRMED">Pago Confirmado</option>
+                        <option value="SHIPPED">Despachado</option>
+                        <option value="CANCELLED">Cancelado</option>
+                      </select>
+                    </div>
+
+                    <div className="filter-group">
+                      <input
+                        type="search"
+                        className="filter-search"
+                        placeholder="Buscar por orden, cliente, guía..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && loadDashboardData()}
+                      />
+                      <button type="button" className="btn-search" onClick={loadDashboardData}>
+                        Filtrar
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="table-responsive">
+                    <table className="admin-table admin-orders-table">
+                      <thead>
+                        <tr>
+                          <th>N° Orden</th>
+                          <th>Fecha</th>
+                          <th>Cliente</th>
+                          <th>Destino</th>
+                          <th>Total</th>
+                          <th>Método</th>
+                          <th>Guía Mi Paquete</th>
+                          <th>Estado</th>
+                          <th>Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {orders.length === 0 ? (
+                          <tr>
+                            <td colSpan="9" className="text-center py-4 text-muted">
+                              No se encontraron pedidos con el criterio seleccionado.
+                            </td>
+                          </tr>
+                        ) : (
+                          orders.map((order) => (
+                            <tr key={order.order_number}>
+                              <td>
+                                <strong className="order-number-link" onClick={() => handleViewOrderDetail(order.order_number)}>
+                                  #{order.order_number}
+                                </strong>
+                              </td>
+                              <td>{new Date(order.created_at).toLocaleDateString('es-CO')}</td>
+                              <td>
+                                <div><strong>{order.customer_name} {order.customer_surname}</strong></div>
+                                <div className="text-muted text-xs">{order.customer_email}</div>
+                              </td>
+                              <td>{order.delivery_city} ({order.delivery_department})</td>
+                              <td><strong>${order.total.toLocaleString('es-CO')} COP</strong></td>
+                              <td>
+                                <span className={`badge-payment ${order.payment_method === 'COD' ? 'cod' : 'prepaid'}`}>
+                                  {order.payment_method === 'COD' ? 'Contraentrega' : 'Anticipado'}
+                                </span>
+                              </td>
+                              <td>
+                                {order.guide_number ? (
+                                  <a
+                                    href={`/api/shipping/guide/${order.guide_number}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="guide-link"
+                                  >
+                                    {order.carrier_name}: {order.guide_number} 📄
+                                  </a>
+                                ) : (
+                                  <span className="text-muted">Pendiente</span>
+                                )}
+                              </td>
+                              <td>
+                                <span className={`status-pill status-${order.status.toLowerCase()}`}>
+                                  {order.status}
+                                </span>
+                              </td>
+                              <td>
+                                <div className="actions-cell">
+                                  <button
+                                    type="button"
+                                    className="action-link"
+                                    onClick={() => handleViewOrderDetail(order.order_number)}
+                                    title="Ver trazabilidad completa"
+                                  >
+                                    👁️ Detalle
+                                  </button>
+                                  {order.status !== 'SHIPPED' && order.status !== 'CANCELLED' && (
+                                    <button
+                                      type="button"
+                                      className="action-btn-status ship"
+                                      onClick={() => handleUpdateStatus(order.order_number, 'SHIPPED')}
+                                      title="Marcar como Despachado"
+                                    >
+                                      🚚 Despachar
+                                    </button>
+                                  )}
+                                  {order.status === 'PENDING_PAYMENT' && (
+                                    <button
+                                      type="button"
+                                      className="action-btn-status confirm"
+                                      onClick={() => handleUpdateStatus(order.order_number, 'PAYMENT_CONFIRMED')}
+                                      title="Confirmar Pago"
+                                    >
+                                      💰 Confirmar
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    className="action-btn-status email"
+                                    onClick={() => handleResendEmail(order.order_number)}
+                                    title="Reenviar correo con guía"
+                                  >
+                                    ✉️ Reenviar
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ===============================================================
+                 SECCIÓN 7: CLIENTES (DIRECTORIO CONSOLIDADO)
+                 =============================================================== */}
+              {activeTab === 'customers' && (
+                <div className="tab-pane customers-pane">
+                  <div className="section-intro-card">
+                    <div>
+                      <h3 className="section-title">👥 Directorio de Clientes de URBAN STYLE</h3>
+                      <p className="section-subtitle">
+                        Base de compradores frecuentes, contacto directo, ciudad de destino y volumen histórico de compras.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* MÉTRICAS DE CLIENTES */}
+                  <div className="admin-metrics-grid">
+                    <div className="metric-card">
+                      <span className="metric-label">Clientes Registrados</span>
+                      <strong className="metric-value">{customersList.length}</strong>
+                      <span className="metric-subtext">Usuarios únicos con órdenes</span>
+                    </div>
+                    <div className="metric-card">
+                      <span className="metric-label">Clientes Recurrentes</span>
+                      <strong className="metric-value text-accent">
+                        {customersList.filter((c) => c.ordersCount > 1).length}
+                      </strong>
+                      <span className="metric-subtext">Más de 1 compra realizada</span>
+                    </div>
+                    <div className="metric-card">
+                      <span className="metric-label">Ticket Promedio por Cliente</span>
+                      <strong className="metric-value text-green">
+                        ${customersList.length > 0
+                          ? Math.round(
+                              customersList.reduce((acc, c) => acc + c.totalSpent, 0) / customersList.length
+                            ).toLocaleString('es-CO')
+                          : 0}{' '}
+                        COP
+                      </strong>
+                      <span className="metric-subtext">Gasto acumulado por cliente</span>
+                    </div>
+                    <div className="metric-card">
+                      <span className="metric-label">Ciudades de Cobertura</span>
+                      <strong className="metric-value">
+                        {new Set(customersList.map((c) => c.city).filter((c) => c && c !== '—')).size}
+                      </strong>
+                      <span className="metric-subtext">Destinos a nivel nacional</span>
+                    </div>
+                  </div>
+
+                  {/* BUSCADOR DE CLIENTES */}
+                  <div className="filters-bar">
+                    <div className="filter-group">
+                      <input
+                        type="search"
+                        className="filter-search"
+                        placeholder="Buscar cliente por nombre, email, ciudad o teléfono..."
+                        value={customerSearch}
+                        onChange={(e) => setCustomerSearch(e.target.value)}
+                        style={{ minWidth: '320px' }}
+                      />
+                    </div>
+                    <span className="text-muted text-sm">
+                      Mostrando {filteredCustomers.length} de {customersList.length} clientes
+                    </span>
+                  </div>
+
+                  {/* TABLA DE CLIENTES */}
+                  <div className="table-responsive">
+                    <table className="admin-table admin-customers-table">
+                      <thead>
+                        <tr>
+                          <th>Nombre del Cliente</th>
+                          <th>Cédula / Documento</th>
+                          <th>Correo Electrónico</th>
+                          <th>Teléfono</th>
+                          <th>Ciudad y Depto</th>
+                          <th style={{ textAlign: 'center' }}>N° Pedidos</th>
+                          <th>Total Comprado COP</th>
+                          <th>Última Compra</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredCustomers.length === 0 ? (
+                          <tr>
+                            <td colSpan="8" className="text-center py-4 text-muted">
+                              No se encontraron clientes con el criterio de búsqueda.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredCustomers.map((cust) => (
+                            <tr key={cust.email}>
+                              <td><strong>{cust.name}</strong></td>
+                              <td><code>{cust.doc}</code></td>
+                              <td><a href={`mailto:${cust.email}`} className="guide-link">{cust.email}</a></td>
+                              <td>{cust.phone}</td>
+                              <td>{cust.city} ({cust.department})</td>
+                              <td style={{ textAlign: 'center' }}>
+                                <span className="tab-counter-badge active-badge">{cust.ordersCount}</span>
+                              </td>
+                              <td><strong>${cust.totalSpent.toLocaleString('es-CO')} COP</strong></td>
+                              <td>{new Date(cust.lastOrderDate).toLocaleDateString('es-CO')}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ===============================================================
+                 SECCIÓN 8: GUÍAS Y ENVÍOS MI PAQUETE
+                 =============================================================== */}
+              {activeTab === 'shipments' && (
+                <div className="tab-pane">
+                  <div className="table-responsive">
+                    <table className="admin-table admin-shipments-table">
+                      <thead>
+                        <tr>
+                          <th>N° Guía</th>
+                          <th>Transportadora</th>
+                          <th>N° Orden</th>
+                          <th>Destinatario</th>
+                          <th>Ciudad / DANE</th>
+                          <th>Flete</th>
+                          <th>Estado de Tracking</th>
+                          <th>Acción Guía</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {shipments.map((s) => (
+                          <tr key={s.guide_number}>
+                            <td><strong className="guide-number-val">{s.guide_number}</strong></td>
+                            <td><span className="carrier-badge">{s.carrier_name}</span></td>
+                            <td>#{s.order_number}</td>
+                            <td>{s.customer_name} ({s.customer_email})</td>
+                            <td>{s.delivery_city} ({s.destiny_dane_code})</td>
+                            <td>${s.shipping_cost.toLocaleString('es-CO')} COP</td>
+                            <td>
+                              <span className="tracking-status-text">
+                                🟢 {s.tracking_status}
+                              </span>
+                            </td>
+                            <td>
+                              <a
+                                href={`/api/shipping/guide/${s.guide_number}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn-table-action download"
+                              >
+                                📄 Descargar PDF
+                              </a>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ===============================================================
+                 SECCIÓN 9: BARRA DE ANUNCIOS
+                 =============================================================== */}
+              {activeTab === 'announcements' && (
+                <div className="tab-pane">
+                  {/* BARRA SUPERIOR DE CONTROL GLOBAL */}
+                  <div className="announcements-control-bar">
+                    <div className="announcements-global-toggle-box">
+                      <label className="toggle-switch-label">
+                        <input
+                          type="checkbox"
+                          className="toggle-switch-input"
+                          checked={isBarEnabled}
+                          onChange={(e) => handleToggleBarEnabled(e.target.checked)}
+                        />
+                        <span className="toggle-switch-slider" />
+                      </label>
+                      <div className="toggle-info">
+                        <span className="toggle-title">
+                          Estado de la Barra de Anuncios:
+                          <strong className={isBarEnabled ? 'text-green' : 'text-muted'}>
+                            {isBarEnabled ? ' 🟢 ACTIVA EN LA TIENDA' : ' ⚪ DESACTIVADA'}
+                          </strong>
+                        </span>
+                        <span className="toggle-subtitle">
+                          {isBarEnabled
+                            ? 'Los anuncios activos se muestran rotando en la parte superior de la tienda.'
+                            : 'La barra está oculta en la tienda pública.'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="announcements-speed-box">
+                      <label htmlFor="rotation-select">Velocidad:</label>
+                      <select
+                        id="rotation-select"
+                        className="filter-select"
+                        value={rotationSeconds}
+                        onChange={(e) => handleChangeRotation(Number(e.target.value))}
+                      >
+                        <option value={3}>3s (Rápido)</option>
+                        <option value={4}>4s (Recomendado)</option>
+                        <option value={5}>5s (Normal)</option>
+                        <option value={6}>6s (Pausado)</option>
+                        <option value={8}>8s (Lento)</option>
+                      </select>
+                      <button
+                        type="button"
+                        className="btn-search"
+                        onClick={() => handleOpenCreateAnnouncement()}
+                      >
+                        ➕ Nuevo Anuncio
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* PRESETS RÁPIDOS */}
+                  <div className="announcement-presets-card">
+                    <span className="presets-label">⚡ Mensajes promocionales sugeridos (clic para añadir):</span>
+                    <div className="presets-buttons-group">
+                      <button
+                        type="button"
+                        className="btn-preset-chip"
+                        onClick={() => handleOpenCreateAnnouncement('¡Envíos a todo Colombia!', '#beneficios')}
+                      >
+                        + ¡Envíos a todo Colombia!
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-preset-chip"
+                        onClick={() => handleOpenCreateAnnouncement('¡Ofertas especiales por tiempo limitado!', '#ofertas')}
+                      >
+                        + ¡Ofertas especiales por tiempo limitado!
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-preset-chip"
+                        onClick={() => handleOpenCreateAnnouncement('¡Nuevas colecciones disponibles!', '#coleccion')}
+                      >
+                        + ¡Nuevas colecciones disponibles!
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-preset-chip"
+                        onClick={() => handleOpenCreateAnnouncement('¡Descuentos especiales en productos seleccionados!', '#productos')}
+                      >
+                        + ¡Descuentos especiales en productos seleccionados!
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* TABLA DE ANUNCIOS */}
+                  <div className="table-responsive">
+                    <table className="admin-table admin-announcements-table">
+                      <thead>
+                        <tr>
+                          <th style={{ width: '80px', textAlign: 'center' }}>Orden</th>
+                          <th>Mensaje del Anuncio</th>
+                          <th style={{ width: '180px' }}>Enlace de Destino</th>
+                          <th style={{ width: '170px' }}>Programación Fechas</th>
+                          <th style={{ width: '110px', textAlign: 'center' }}>Estado</th>
+                          <th style={{ width: '180px', textAlign: 'center' }}>Acciones</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {announcements.length === 0 ? (
+                          <tr>
+                            <td colSpan="6" style={{ textAlign: 'center', padding: '2.5rem', color: '#888' }}>
+                              No hay anuncios registrados. Haz clic en «➕ Nuevo Anuncio» o selecciona un mensaje sugerido.
+                            </td>
+                          </tr>
+                        ) : (
+                          announcements.map((ann, idx) => (
+                            <tr key={ann.id}>
+                              <td style={{ textAlign: 'center' }}>
+                                <div className="order-stepper-btns">
+                                  <button
+                                    type="button"
+                                    className="btn-order-step"
+                                    disabled={idx === 0}
+                                    onClick={() => handleMoveAnnouncement(idx, 'up')}
+                                    title="Subir prioridad"
+                                  >
+                                    ▲
+                                  </button>
+                                  <span className="order-num-text">{idx + 1}</span>
+                                  <button
+                                    type="button"
+                                    className="btn-order-step"
+                                    disabled={idx === announcements.length - 1}
+                                    onClick={() => handleMoveAnnouncement(idx, 'down')}
+                                    title="Bajar prioridad"
+                                  >
+                                    ▼
+                                  </button>
+                                </div>
+                              </td>
+                              <td>
+                                <strong className="ann-text-preview">{ann.text}</strong>
+                              </td>
+                              <td>
+                                {ann.link ? (
+                                  <span className="ann-link-badge">{ann.link}</span>
+                                ) : (
+                                  <span className="text-muted text-xs">Sin enlace</span>
+                                )}
+                              </td>
+                              <td>
+                                <div className="ann-dates-box">
+                                  <span>{ann.start_date ? `Desde: ${ann.start_date.split('T')[0]}` : 'Inmediato'}</span>
+                                  <span>{ann.end_date ? `Hasta: ${ann.end_date.split('T')[0]}` : 'Indefinido'}</span>
+                                </div>
+                              </td>
+                              <td style={{ textAlign: 'center' }}>
+                                <button
+                                  type="button"
+                                  className={`status-toggle-btn ${ann.is_active ? 'active' : 'inactive'}`}
+                                  onClick={() => handleToggleAnnouncementStatus(ann)}
+                                  title="Clic para activar/desactivar"
+                                >
+                                  {ann.is_active ? '🟢 Activo' : '⚪ Inactivo'}
+                                </button>
+                              </td>
+                              <td style={{ textAlign: 'center' }}>
+                                <div className="actions-cell" style={{ justifyContent: 'center' }}>
+                                  <button
+                                    type="button"
+                                    className="action-link"
+                                    onClick={() => handleOpenEditAnnouncement(ann)}
+                                    title="Editar mensaje y configuración"
+                                  >
+                                    ✏️ Editar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn-action-delete"
+                                    onClick={() => setAnnouncementDeleteTarget(ann)}
+                                    title="Eliminar anuncio permanentemente"
+                                  >
+                                    🗑️ Borrar
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ===============================================================
+                 SECCIÓN 10: REGISTRO DE CORREOS
+                 =============================================================== */}
+              {activeTab === 'emails' && (
+                <div className="tab-pane">
+                  <div className="table-responsive">
+                    <table className="admin-table admin-emails-table">
+                      <thead>
+                        <tr>
+                          <th>ID</th>
+                          <th>N° Orden</th>
+                          <th>Destinatario</th>
+                          <th>Asunto</th>
+                          <th>Estado</th>
+                          <th>Fecha y Hora</th>
+                          <th>Detalle / Archivo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {emailLogs.length === 0 ? (
+                          <tr>
+                            <td colSpan="7" className="text-center py-4 text-muted">
+                              No hay registros de correo aún.
+                            </td>
+                          </tr>
+                        ) : (
+                          emailLogs.map((log) => (
+                            <tr key={log.id}>
+                              <td>{log.id}</td>
+                              <td>#{log.order_number}</td>
+                              <td><strong>{log.recipient_email}</strong></td>
+                              <td>{log.subject}</td>
+                              <td>
+                                <span className={`email-status-pill status-${log.status.toLowerCase()}`}>
+                                  {log.status}
+                                </span>
+                              </td>
+                              <td>{new Date(log.sent_at).toLocaleString('es-CO')}</td>
+                              <td>
+                                <a
+                                  href={`/api/orders/${log.order_number}/email-preview`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="btn-table-action preview"
+                                >
+                                  🔍 Ver Correo
+                                </a>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ===============================================================
+                 SECCIÓN 11: CONFIGURACIÓN Y DIAGNÓSTICO DEL SISTEMA
+                 =============================================================== */}
+              {(activeTab === 'settings' || activeTab === 'diagnostic') && configStatus && (
+                <div className="tab-pane diagnostic-pane">
+                  <div className="diagnostic-card">
+                    <h4 className="diag-title">1. Integración Logística Mi Paquete v2</h4>
+                    <div className="diag-details">
+                      <p><strong>Proveedor:</strong> {configStatus.mipaquete.provider}</p>
+                      <p><strong>Endpoint Base:</strong> <code>{configStatus.mipaquete.baseUrl}</code></p>
+                      <p>
+                        <strong>API Key Configurada:</strong>{' '}
+                        {configStatus.mipaquete.apiKeyConfigured ? (
+                          <span className="badge-ok">Configurada en .env</span>
+                        ) : (
+                          <span className="badge-pending">Pendiente en .env (MIPAQUETE_APIKEY)</span>
+                        )}
+                      </p>
+                      <p><strong>Origen de Despachos:</strong> {configStatus.mipaquete.originCity} (DANE {configStatus.mipaquete.originDaneCode})</p>
+                      <p className="diag-note">
+                        * El sistema incluye cotizador inteligente con transportadoras nacionales (Coordinadora, Servientrega, TCC, Envía) y generador de guías estándar.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="diagnostic-card">
+                    <h4 className="diag-title">2. Servicio de Notificaciones por Correo</h4>
+                    <div className="diag-details">
+                      <p><strong>Proveedor:</strong> {configStatus.mailer.provider}</p>
+                      <p><strong>Remitente Oficial:</strong> {configStatus.mailer.fromAddress}</p>
+                      <p>
+                        <strong>Servidor SMTP:</strong>{' '}
+                        {configStatus.mailer.smtpHostConfigured ? (
+                          <span className="badge-ok">Configurado en .env</span>
+                        ) : (
+                          <span className="badge-pending">Modo Local Activo (SMTP_HOST pendiente en .env)</span>
+                        )}
+                      </p>
+                      <p><strong>Respaldo en Disco:</strong> Todos los correos se renderizan con la guía adjunta y se respaldan en <code>server/logs/emails/</code>.</p>
+                    </div>
+                  </div>
+
+                  <div className="diagnostic-card">
+                    <h4 className="diag-title">3. Base de Datos Transaccional y Nube</h4>
+                    <div className="diag-details">
+                      <p><strong>Motor Local:</strong> SQLite3 con WAL activado (ACID transactions)</p>
+                      <p><strong>Motor Cloud:</strong> Neon PostgreSQL Serverless (Pooler US-East-2)</p>
+                      <p><strong>Archivo SQLite:</strong> <code>{configStatus.database.file}</code></p>
+                      <p><strong>Estado:</strong> <span className="badge-ok">Operacional con failover automático</span></p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </main>
+
+        {/* =====================================================================
+           MODAL DETALLE DE ORDEN CON TRAZABILIDAD
+           ===================================================================== */}
         {selectedOrder && (
           <div className="order-detail-overlay" onClick={() => setSelectedOrder(null)}>
             <div className="order-detail-card" onClick={(e) => e.stopPropagation()}>
@@ -1154,7 +1971,9 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
           </div>
         )}
 
-        {/* MODAL CREAR / EDITAR ANUNCIO */}
+        {/* =====================================================================
+           MODAL CREAR / EDITAR ANUNCIO
+           ===================================================================== */}
         {isAnnouncementModalOpen && (
           <div className="product-modal-backdrop" onClick={() => setIsAnnouncementModalOpen(false)}>
             <div className="product-modal-card announcement-modal-card" onClick={(e) => e.stopPropagation()}>
@@ -1273,7 +2092,9 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
           </div>
         )}
 
-        {/* MODAL DE CONFIRMACIÓN PARA ELIMINAR ANUNCIO */}
+        {/* =====================================================================
+           MODAL DE CONFIRMACIÓN PARA ELIMINAR ANUNCIO
+           ===================================================================== */}
         {announcementDeleteTarget && (
           <div className="product-modal-backdrop" onClick={() => setAnnouncementDeleteTarget(null)}>
             <div className="product-modal-card" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>

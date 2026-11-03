@@ -132,13 +132,26 @@ function ProductNameCell({ product, mainImage, imageCount, onPreviewImage }) {
   );
 }
 
-export const AdminProductsSection = ({ onNotification = () => {} }) => {
+export const AdminProductsSection = ({
+  onNotification = () => {},
+  initialCategory = 'ALL',
+  initialDiscountFilter = 'ALL'
+}) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('ALL');
+  const [categoryFilter, setCategoryFilter] = useState(initialCategory);
   const [statusFilter, setStatusFilter] = useState('ALL');
-  const [discountFilter, setDiscountFilter] = useState('ALL');
+  const [discountFilter, setDiscountFilter] = useState(initialDiscountFilter);
+
+  // Sincronizar filtros si cambian desde la barra de navegación persistente
+  useEffect(() => {
+    if (initialCategory) setCategoryFilter(initialCategory);
+  }, [initialCategory]);
+
+  useEffect(() => {
+    if (initialDiscountFilter) setDiscountFilter(initialDiscountFilter);
+  }, [initialDiscountFilter]);
 
   // Modal de Creación / Edición
   const [isModalOpen, setIsModalOpen] = useState(false);
