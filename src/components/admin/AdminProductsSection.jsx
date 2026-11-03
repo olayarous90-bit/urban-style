@@ -928,7 +928,7 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                             </span>
                           )}
                         </div>
-                        <div className="product-cell-name">
+                        <div className="product-cell-name" title={p.name}>
                           <span className="product-title-bold" title={p.name}>
                             {p.name}
                           </span>
