@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { parseCOP, formatCOP } from '../../utils/currency.js';
 import './AdminProductsSection.css';
 
 const DEFAULT_CATEGORIES = [
@@ -40,8 +41,8 @@ function fromLocalDatetimeInput(localStr) {
 }
 
 function calculateLiveDiscountPreview(normalPrice, percent, startAt, endAt, isActive) {
-  const price = Math.round(Number(normalPrice) || 0);
-  const rawPercent = Math.round(Number(percent) || 0);
+  const price = parseCOP(normalPrice) || 0;
+  const rawPercent = Math.round(Number(String(percent).replace('%', '').trim()) || 0);
   const safePercent = Math.max(0, Math.min(99, rawPercent));
   const active = Boolean(isActive);
 
@@ -273,7 +274,7 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
 
   // Ajuste rápido con chips de porcentaje
   const handlePresetPercent = (pct) => {
-    const normalPrice = Number(discountFormData.price) || 0;
+    const normalPrice = parseCOP(discountFormData.price) || 0;
     setDiscountFormData((prev) => ({
       ...prev,
       discount_percent: pct,
@@ -284,13 +285,13 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
 
   // Cambio directo de ahorro en pesos COP (calcula el porcentaje equivalente)
   const handleSavingsCOPChange = (valStr) => {
-    const savingsVal = Number(valStr);
-    const normalPrice = Number(discountFormData.price) || 0;
+    const savingsVal = parseCOP(valStr);
+    const normalPrice = parseCOP(discountFormData.price) || 0;
     if (isNaN(savingsVal) || savingsVal <= 0 || normalPrice <= 0) {
       setDiscountFormData((prev) => ({
         ...prev,
         discount_percent: 0,
-        discount_savings_cop: 0
+        discount_savings_cop: valStr
       }));
       return;
     }
@@ -298,20 +299,20 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
     setDiscountFormData((prev) => ({
       ...prev,
       discount_percent: computedPercent,
-      discount_savings_cop: savingsVal,
+      discount_savings_cop: valStr,
       discount_active: true
     }));
   };
 
   // Cambio en el porcentaje (calcula el ahorro en COP)
   const handlePercentChange = (valStr) => {
-    const pct = Number(valStr);
-    const normalPrice = Number(discountFormData.price) || 0;
+    const pct = Number(String(valStr).replace('%', '').trim());
+    const normalPrice = parseCOP(discountFormData.price) || 0;
     setDiscountFormData((prev) => ({
       ...prev,
-      discount_percent: pct,
-      discount_savings_cop: pct > 0 ? Math.round((normalPrice * pct) / 100) : 0,
-      discount_active: pct > 0 ? true : prev.discount_active
+      discount_percent: valStr,
+      discount_savings_cop: (!isNaN(pct) && pct > 0 && normalPrice > 0) ? Math.round((normalPrice * pct) / 100) : 0,
+      discount_active: (!isNaN(pct) && pct > 0) ? true : prev.discount_active
     }));
   };
 
@@ -320,14 +321,14 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
     e.preventDefault();
     if (!discountTargetProduct) return;
 
-    const numPrice = Number(discountFormData.price);
+    const numPrice = parseCOP(discountFormData.price);
     if (isNaN(numPrice) || numPrice < 1000) {
-      setDiscountModalError('El precio normal del producto debe ser mayor o igual a $1.000 COP.');
+      setDiscountModalError('El precio normal del producto debe ser mayor o igual a $1.000 COP (ej: 120.000 o 120000).');
       return;
     }
 
     const isActive = Boolean(discountFormData.discount_active);
-    const numPercent = Number(discountFormData.discount_percent);
+    const numPercent = Number(String(discountFormData.discount_percent).replace('%', '').trim());
     if (isActive && (isNaN(numPercent) || numPercent < 1 || numPercent > 99)) {
       setDiscountModalError('Para activar el descuento, debes especificar un porcentaje entre 1% y 99%.');
       return;
@@ -613,12 +614,12 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
       setFormError('El nombre del producto debe tener al menos 3 caracteres.');
       return;
     }
-    const numPrice = Number(formData.price);
+    const numPrice = parseCOP(formData.price);
     if (isNaN(numPrice) || numPrice < 1000) {
-      setFormError('El precio debe ser un número válido en COP mayor o igual a $1.000.');
+      setFormError('El precio debe ser un número válido en COP mayor o igual a $1.000 (ej: 120.000 o 120000).');
       return;
     }
-    const numStock = Number(formData.stock);
+    const numStock = typeof formData.stock === 'string' ? parseCOP(formData.stock) : Number(formData.stock);
     if (isNaN(numStock) || numStock < 0) {
       setFormError('El inventario no puede ser negativo.');
       return;
@@ -759,8 +760,7 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
   };
 
   const formatCOPPreview = (price) => {
-    const num = Math.round(Number(price) || 0);
-    return `$${num.toLocaleString('es-CO')} COP`;
+    return formatCOP(price);
   };
 
   const formatFileSize = (bytes) => {
@@ -1165,14 +1165,17 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                       </strong>
                     </label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       className="modal-input"
-                      min="1000"
-                      step="500"
+                      placeholder="Ej: 120.000 o 120000"
                       value={formData.price}
                       onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                       required
                     />
+                    <small className="field-hint" style={{ marginTop: '4px', display: 'block', color: 'var(--color-gray-muted, #888)', fontSize: '0.72rem' }}>
+                      Admite valores con punto o continuos (ej: 120.000 o 120000). Mínimo $1.000 COP.
+                    </small>
                   </div>
 
                   {/* INVENTARIO */}
@@ -1681,22 +1684,26 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                       </strong>
                     </label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="numeric"
                       className="modal-input"
-                      min="1000"
-                      step="500"
+                      placeholder="Ej: 120.000 o 120000"
                       value={discountFormData.price}
                       onChange={(e) => {
-                        const newPrice = e.target.value;
-                        const pct = Number(discountFormData.discount_percent) || 0;
+                        const newPriceStr = e.target.value;
+                        const parsedPrice = parseCOP(newPriceStr);
+                        const pct = Number(String(discountFormData.discount_percent).replace('%', '').trim()) || 0;
                         setDiscountFormData({
                           ...discountFormData,
-                          price: newPrice,
-                          discount_savings_cop: pct > 0 ? Math.round((Number(newPrice) * pct) / 100) : 0
+                          price: newPriceStr,
+                          discount_savings_cop: (!isNaN(parsedPrice) && pct > 0) ? Math.round((parsedPrice * pct) / 100) : 0
                         });
                       }}
                       required
                     />
+                    <small className="field-hint" style={{ marginTop: '4px', display: 'block', color: 'var(--color-gray-muted, #888)', fontSize: '0.72rem' }}>
+                      Precio base oficial del producto (mínimo $1.000 COP).
+                    </small>
                   </div>
 
                   {/* ACTIVACIÓN DE DESCUENTO */}
@@ -1758,11 +1765,10 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                         <label className="sub-field-label">Rebaja en Pesos COP</label>
                         <div className="percent-input-wrapper">
                           <input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
                             className="modal-input"
-                            min="500"
-                            step="500"
-                            placeholder="Ej: 25000"
+                            placeholder="Ej: 25.000 o 25000"
                             value={discountFormData.discount_savings_cop || ''}
                             onChange={(e) => handleSavingsCOPChange(e.target.value)}
                             disabled={!discountFormData.discount_active}

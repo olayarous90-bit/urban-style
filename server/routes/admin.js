@@ -25,7 +25,8 @@ import {
   toggleProductStatus,
   deleteProduct,
   updateProductDiscount,
-  toggleProductDiscount
+  toggleProductDiscount,
+  parseCOP
 } from '../services/productService.js';
 import {
   uploadProductImage,
@@ -553,12 +554,12 @@ router.post('/products', requireAdmin, async (req, res) => {
       return res.status(400).json({ success: false, message: 'La categoría es obligatoria.' });
     }
 
-    const numPrice = Number(price);
+    const numPrice = parseCOP(price);
     if (isNaN(numPrice) || numPrice < 1000) {
       return res.status(400).json({ success: false, message: 'El precio debe ser un número válido mayor o igual a $1.000 COP.' });
     }
 
-    const numStock = stock !== undefined ? Number(stock) : 50;
+    const numStock = stock !== undefined ? (typeof stock === 'string' ? parseCOP(stock) : Number(stock)) : 50;
     if (isNaN(numStock) || numStock < 0) {
       return res.status(400).json({ success: false, message: 'El inventario debe ser un número entero mayor o igual a cero.' });
     }
@@ -606,14 +607,14 @@ router.put('/products/:id', requireAdmin, async (req, res) => {
     }
 
     if (price !== undefined) {
-      const numPrice = Number(price);
+      const numPrice = parseCOP(price);
       if (isNaN(numPrice) || numPrice < 1000) {
         return res.status(400).json({ success: false, message: 'El precio debe ser mayor o igual a $1.000 COP.' });
       }
     }
 
     if (stock !== undefined) {
-      const numStock = Number(stock);
+      const numStock = typeof stock === 'string' ? parseCOP(stock) : Number(stock);
       if (isNaN(numStock) || numStock < 0) {
         return res.status(400).json({ success: false, message: 'El inventario no puede ser negativo.' });
       }

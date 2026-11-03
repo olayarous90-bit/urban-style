@@ -3,10 +3,98 @@ import { db as sqliteDb } from '../db/database.js';
 import { getProductImages, seedProductImagesIfEmpty } from './imageStorageService.js';
 
 /**
+ * Convierte y normaliza de forma segura cualquier entrada numérica en pesos colombianos (COP).
+ * Soporta entradas como:
+ * - "100.000" (separador de miles con punto) -> 100000
+ * - "1.000" (mil pesos con punto) -> 1000
+ * - "100,000" (separador de miles con coma) -> 100000
+ * - "$ 120.000" o "$120.000 COP" -> 120000
+ * - "1.000.000" -> 1000000
+ * - "100.000,00" o "100,000.00" -> 100000
+ * - 120000 (number) -> 120000
+ */
+export function parseCOP(val) {
+  if (val === null || val === undefined) return NaN;
+  if (typeof val === 'number') return isNaN(val) ? NaN : Math.round(val);
+
+  let s = String(val).trim();
+  if (!s) return NaN;
+
+  // Limpiar signos de moneda, texto ("COP"), espacios y caracteres iniciales no numéricos
+  s = s.replace(/[\$\sCOPcop]/gi, '').replace(/^[^\d\-]+/, '');
+  if (!s) return NaN;
+
+  // Si tiene tanto punto como coma:
+  if (s.includes('.') && s.includes(',')) {
+    const lastDot = s.lastIndexOf('.');
+    const lastComma = s.lastIndexOf(',');
+    if (lastComma > lastDot) {
+      const integerPart = s.slice(0, lastComma).replace(/\./g, '');
+      const decimalPart = s.slice(lastComma + 1);
+      s = `${integerPart}.${decimalPart}`;
+    } else {
+      const integerPart = s.slice(0, lastDot).replace(/,/g, '');
+      const decimalPart = s.slice(lastDot + 1);
+      s = `${integerPart}.${decimalPart}`;
+    }
+    const num = parseFloat(s);
+    return isNaN(num) ? NaN : Math.round(num);
+  }
+
+  // Múltiples puntos o comas
+  const dotCount = (s.match(/\./g) || []).length;
+  const commaCount = (s.match(/,/g) || []).length;
+
+  if (dotCount > 1) {
+    s = s.replace(/\./g, '');
+    const num = parseFloat(s);
+    return isNaN(num) ? NaN : Math.round(num);
+  }
+  if (commaCount > 1) {
+    s = s.replace(/,/g, '');
+    const num = parseFloat(s);
+    return isNaN(num) ? NaN : Math.round(num);
+  }
+
+  // Exactamente un punto o una coma
+  if (dotCount === 1) {
+    const parts = s.split('.');
+    if (parts[1].length === 3) {
+      s = parts[0] + parts[1];
+    } else if (parts[1].length === 1 || parts[1].length === 2) {
+      if (Number(parts[0]) >= 1000) {
+        s = parts[0];
+      } else {
+        s = s.replace('.', '');
+      }
+    } else {
+      s = s.replace('.', '');
+    }
+  } else if (commaCount === 1) {
+    const parts = s.split(',');
+    if (parts[1].length === 3) {
+      s = parts[0] + parts[1];
+    } else if (parts[1].length === 1 || parts[1].length === 2) {
+      if (Number(parts[0]) >= 1000) {
+        s = parts[0];
+      } else {
+        s = s.replace(',', '');
+      }
+    } else {
+      s = s.replace(',', '');
+    }
+  }
+
+  const result = Math.round(Number(s));
+  return isNaN(result) ? NaN : result;
+}
+
+/**
  * Formatea un valor numérico a moneda oficial colombiana ($ COP)
  */
 export function formatCOP(price) {
-  const num = Math.round(Number(price) || 0);
+  const num = typeof price === 'number' ? Math.round(price) : parseCOP(price);
+  if (isNaN(num) || num === 0) return '$0 COP';
   return `$${num.toLocaleString('es-CO')} COP`;
 }
 
@@ -414,7 +502,7 @@ export async function getProductById(id) {
  */
 export function validateDiscountInput({ price, discount_active, discount_percent, discount_start_at, discount_end_at }) {
   if (price !== undefined) {
-    const numPrice = Number(price);
+    const numPrice = parseCOP(price);
     if (isNaN(numPrice) || numPrice < 1000) {
       throw new Error('El precio normal del producto debe ser un número válido mayor o igual a $1.000 COP.');
     }
@@ -423,7 +511,7 @@ export function validateDiscountInput({ price, discount_active, discount_percent
   const isActive = Boolean(discount_active);
   let percent = 0;
   if (discount_percent !== undefined && discount_percent !== null && discount_percent !== '') {
-    percent = Number(discount_percent);
+    percent = Number(String(discount_percent).replace('%', '').trim());
     if (isNaN(percent) || percent < 0 || percent > 99) {
       throw new Error('El porcentaje de descuento debe ser un número entero entre 1% y 99%.');
     }
@@ -457,6 +545,7 @@ export function validateDiscountInput({ price, discount_active, discount_percent
   }
 
   return {
+    price: price !== undefined ? parseCOP(price) : undefined,
     discount_active: isActive,
     discount_percent: Math.round(percent),
     discount_start_at: startDate ? startDate.toISOString() : null,
@@ -485,8 +574,11 @@ export async function createProduct({
   discount_start_at = null,
   discount_end_at = null
 }) {
-  const numPrice = Math.round(Number(price));
-  const numStock = Math.max(0, Math.round(Number(stock) || 0));
+  const numPrice = parseCOP(price);
+  if (isNaN(numPrice) || numPrice < 1000) {
+    throw new Error('El precio del producto debe ser un número válido mayor o igual a $1.000 COP.');
+  }
+  const numStock = typeof stock === 'string' ? parseCOP(stock) : Math.max(0, Math.round(Number(stock) || 0));
   const formattedPrice = formatCOP(numPrice);
   const cleanSizes = parseSizes(sizes);
   const sizesJson = JSON.stringify(cleanSizes);
@@ -616,7 +708,7 @@ export async function updateProduct(id, fields) {
   const model = fields.model !== undefined ? fields.model.trim() : (existing.model || '');
   const department = fields.department !== undefined ? fields.department.trim() : (existing.department || '');
   const category = fields.category !== undefined ? fields.category.trim() : existing.category;
-  const price = fields.price !== undefined ? Math.round(Number(fields.price)) : existing.originalPrice || existing.price;
+  const price = fields.price !== undefined ? parseCOP(fields.price) : existing.originalPrice || existing.price;
   if (isNaN(price) || price < 1000) {
     throw new Error('El precio del producto debe ser un número válido mayor o igual a $1.000 COP.');
   }
@@ -626,7 +718,7 @@ export async function updateProduct(id, fields) {
   const sizesJson = JSON.stringify(cleanSizes);
   const composition = fields.composition !== undefined ? fields.composition.trim() : existing.composition;
   const color = fields.color !== undefined ? fields.color.trim() : existing.color;
-  const stock = fields.stock !== undefined ? Math.max(0, Math.round(Number(fields.stock))) : existing.stock;
+  const stock = fields.stock !== undefined ? (typeof fields.stock === 'string' ? parseCOP(fields.stock) : Math.max(0, Math.round(Number(fields.stock) || 0))) : existing.stock;
   const isActive = fields.is_active !== undefined ? Boolean(fields.is_active) : existing.isActive;
 
   // Promociones y Descuentos
@@ -731,7 +823,10 @@ export async function updateProductDiscount(id, {
     throw new Error(`Producto con ID ${id} no encontrado.`);
   }
 
-  const normalPrice = price !== undefined ? Math.round(Number(price)) : existing.originalPrice || existing.price;
+  const normalPrice = price !== undefined ? parseCOP(price) : existing.originalPrice || existing.price;
+  if (isNaN(normalPrice) || normalPrice < 1000) {
+    throw new Error('El precio normal del producto debe ser un número válido mayor o igual a $1.000 COP.');
+  }
   const formattedPrice = formatCOP(normalPrice);
 
   const discountValidation = validateDiscountInput({
