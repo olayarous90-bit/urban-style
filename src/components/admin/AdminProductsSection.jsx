@@ -92,6 +92,43 @@ function calculateLiveDiscountPreview(normalPrice, percent, startAt, endAt, isAc
   };
 }
 
+// Componente dedicado para renderizar el nombre del producto de forma horizontal, limpia y estable
+function ProductNameCell({ product, mainImage, imageCount, onPreviewImage }) {
+  const brand = product.brand || 'URBAN STYLE';
+  const model = product.model;
+  const department = product.department;
+
+  return (
+    <div className="admin-product-item">
+      <div
+        className="admin-product-thumb"
+        onClick={() => onPreviewImage(mainImage)}
+        title="Clic para ampliar imagen"
+      >
+        <img src={mainImage} alt={product.name} />
+        {imageCount > 1 && (
+          <span className="thumb-gallery-count" title={`${imageCount} fotos disponibles`}>
+            📷 {imageCount}
+          </span>
+        )}
+      </div>
+      <div className="admin-product-details">
+        <span className="admin-product-name" title={product.name}>
+          {product.name}
+        </span>
+        <div className="admin-product-meta">
+          <span className="admin-product-brand">{brand}</span>
+          {model && <span className="admin-product-model">• Mod: {model}</span>}
+          {department && <span className="admin-product-dept">({department})</span>}
+        </div>
+        {product.composition && (
+          <span className="admin-product-composition">{product.composition}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export const AdminProductsSection = ({ onNotification = () => {} }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -874,6 +911,19 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
       {/* TABLA DE PRODUCTOS */}
       <div className="table-responsive">
         <table className="admin-table admin-products-table">
+          <colgroup>
+            <col style={{ width: '65px' }} />
+            <col style={{ width: '360px' }} />
+            <col style={{ width: '115px' }} />
+            <col style={{ width: '120px' }} />
+            <col style={{ width: '135px' }} />
+            <col style={{ width: '120px' }} />
+            <col style={{ width: '130px' }} />
+            <col style={{ width: '100px' }} />
+            <col style={{ width: '105px' }} />
+            <col style={{ width: '110px' }} />
+            <col style={{ width: '320px' }} />
+          </colgroup>
           <thead>
             <tr>
               <th className="th-id">ID</th>
@@ -915,33 +965,12 @@ export const AdminProductsSection = ({ onNotification = () => {} }) => {
                       <code className="id-code-badge">{p.id}</code>
                     </td>
                     <td className="col-product">
-                      <div className="product-cell-with-thumb">
-                        <div
-                          className="table-product-thumb"
-                          onClick={() => setPreviewModalUrl(mainImage)}
-                          title="Clic para ampliar imagen"
-                        >
-                          <img src={mainImage} alt={p.name} />
-                          {imageCount > 1 && (
-                            <span className="thumb-gallery-count" title={`${imageCount} fotos disponibles`}>
-                              📷 {imageCount}
-                            </span>
-                          )}
-                        </div>
-                        <div className="product-cell-name" title={p.name}>
-                          <span className="product-title-bold" title={p.name}>
-                            {p.name}
-                          </span>
-                          <div className="product-meta-row">
-                            <span className="product-meta-brand">{p.brand || 'URBAN STYLE'}</span>
-                            {p.model && <span className="product-meta-model">• Mod: {p.model}</span>}
-                            {p.department && <span className="product-meta-dept">({p.department})</span>}
-                          </div>
-                          {p.composition && (
-                            <span className="product-sub-meta">{p.composition}</span>
-                          )}
-                        </div>
-                      </div>
+                      <ProductNameCell
+                        product={p}
+                        mainImage={mainImage}
+                        imageCount={imageCount}
+                        onPreviewImage={setPreviewModalUrl}
+                      />
                     </td>
                     <td className="col-category">
                       <span className="category-tag">{p.category}</span>

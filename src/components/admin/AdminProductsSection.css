@@ -167,12 +167,12 @@
 }
 
 .admin-products-table {
+  width: 1580px;
   min-width: 1580px;
-  width: 100%;
   border-collapse: collapse;
   font-size: 0.82rem;
   text-align: left;
-  table-layout: auto;
+  table-layout: fixed;
 }
 
 .admin-products-table th {
@@ -184,6 +184,7 @@
   padding: 0.85rem 0.95rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   white-space: nowrap;
+  vertical-align: middle;
 }
 
 .admin-products-table td {
@@ -197,17 +198,17 @@
   background-color: rgba(255, 255, 255, 0.02);
 }
 
-/* Anchos fijos y proporcionales de columnas */
+/* Columna ID */
 .admin-products-table .th-id,
 .admin-products-table .col-id {
   width: 65px;
   min-width: 65px;
-  max-width: 75px;
+  max-width: 65px;
   text-align: center;
 }
 
 .id-code-badge {
-  font-family: var(--font-numeric);
+  font-family: var(--font-numeric, 'Inter', 'Roboto', monospace);
   font-size: 0.75rem;
   color: #888;
   background: rgba(255, 255, 255, 0.04);
@@ -216,31 +217,32 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-/* Columna Prenda y Producto: Nombres siempre horizontales, legibles, máx 2 líneas, sin separar letras */
+/* ==========================================================================
+   COLUMNA PRENDA Y PRODUCTO - PRESENTACIÓN 100% HORIZONTAL, LIMPIA Y ESTABLE
+   ========================================================================== */
 .admin-products-table .th-product,
 .admin-products-table .col-product {
-  width: 360px !important;
-  min-width: 320px !important;
-  max-width: 440px !important;
-  vertical-align: middle !important;
-  box-sizing: border-box !important;
+  width: 360px;
+  min-width: 360px;
+  max-width: 360px;
+  vertical-align: middle;
+  text-align: left;
+  box-sizing: border-box;
 }
 
-.product-cell-with-thumb {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  gap: 12px !important;
-  width: 100% !important;
-  min-width: 300px !important;
-  box-sizing: border-box !important;
+.admin-product-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
 }
 
-.table-product-thumb {
+.admin-product-thumb {
   position: relative;
   width: 48px;
   height: 48px;
   min-width: 48px;
+  max-width: 48px;
   border-radius: 6px;
   overflow: hidden;
   background-color: #1a1a1a;
@@ -250,12 +252,12 @@
   transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
-.table-product-thumb:hover {
+.admin-product-thumb:hover {
   transform: scale(1.08);
   border-color: var(--color-accent, #FF5A1F);
 }
 
-.table-product-thumb img {
+.admin-product-thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -276,78 +278,99 @@
   line-height: 1.1;
 }
 
-.product-cell-name {
-  display: flex !important;
-  flex-direction: column !important;
-  justify-content: center !important;
-  gap: 4px !important;
-  min-width: 240px !important;
-  width: calc(100% - 60px) !important;
-  flex: 1 1 auto !important;
-  overflow: hidden !important;
-  text-align: left !important;
+.admin-product-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
 }
 
-.product-title-bold {
-  font-family: var(--font-sans, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif) !important;
-  font-size: 0.88rem !important;
-  font-weight: 700 !important;
+/* NOMBRE DEL PRODUCTO: Tipografía Inter / Roboto, palabras completas, horizontal */
+.admin-product-name {
+  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
   color: #ffffff !important;
   line-height: 1.35 !important;
-  letter-spacing: normal !important;
+  letter-spacing: 0 !important;
   word-spacing: normal !important;
-  text-transform: none !important;
-  text-align: left !important;
   direction: ltr !important;
   writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  text-transform: none !important;
+  transform: none !important;
   white-space: normal !important;
-  word-break: keep-all !important;
-  overflow-wrap: normal !important;
-  hyphens: none !important;
-  display: -webkit-box !important;
-  -webkit-line-clamp: 2 !important;
-  -webkit-box-orient: vertical !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  width: 100% !important;
-  min-width: 220px !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+  display: block !important;
+  text-align: left !important;
   cursor: default !important;
   transition: color 0.15s ease !important;
 }
 
-.product-title-bold:hover {
+.admin-product-name:hover {
   color: var(--color-accent, #FF5A1F) !important;
 }
 
-.product-meta-row {
+.admin-product-meta {
   display: flex;
-  gap: 6px;
   align-items: center;
-  font-size: 0.72rem;
-  flex-wrap: wrap;
+  gap: 6px;
+  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.73rem;
+  color: #888888;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
-.product-meta-brand {
+.admin-product-brand {
   color: var(--color-accent, #ff5a1f);
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: 0.02em;
 }
 
-.product-meta-model {
-  color: #ccc;
+.admin-product-model {
+  color: #cccccc;
 }
 
-.product-meta-dept {
-  color: #888;
-}
-
-.product-sub-meta {
-  font-size: 0.72rem;
+.admin-product-dept {
   color: #888888;
+}
+
+.admin-product-composition {
+  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.7rem;
+  color: #777777;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* Clases auxiliares para compatibilidad */
+.product-cell-with-thumb {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.product-cell-name {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+
+.product-title-bold {
+  font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.35;
+  display: block;
 }
 
 /* Columnas de Categoría, Precios y Descuentos */
