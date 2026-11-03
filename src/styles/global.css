@@ -195,8 +195,13 @@ h4 {
 .offers-grid .offer-card,
 .christmas-deals-grid .christmas-card {
   opacity: 1 !important;
-  transform: none !important;
   visibility: visible !important;
+}
+
+.products-grid .product-card:not(:hover),
+.offers-grid .offer-card:not(:hover),
+.christmas-deals-grid .christmas-card:not(:hover) {
+  transform: translateY(0);
 }
 
 /* Desplazamiento suave y márgenes de anclaje homogéneos */
@@ -278,6 +283,8 @@ select:-webkit-autofill {
 .offer-price-original,
 .modal-price,
 .modal-original-price,
+.modal-savings-text,
+.offer-savings-badge,
 .pricing-now,
 .cart-item-price,
 .cart-subtotal-amount,
@@ -288,11 +295,20 @@ select:-webkit-autofill {
 .summary-total-amount,
 .metric-value,
 .price-text-cop,
+.price-numeric-val,
 .preview-metric .metric-val,
 .hero-feature-number,
 .filter-pill-count,
 .order-number-link,
 .guide-link,
+.id-code-badge,
+.stock-status-pill,
+.size-badge-box,
+.order-date,
+.admin-table td.numeric-cell,
+.stepper-val,
+.stat-number,
+.badge-count,
 .success-order-num strong,
 .card-discount-badge,
 .discount-tag,
@@ -339,7 +355,6 @@ select:-webkit-autofill {
 .offer-card,
 .christmas-card {
   opacity: 1 !important;
-  transform: none !important;
   visibility: visible !important;
 }
 

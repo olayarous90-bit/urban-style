@@ -29,7 +29,7 @@
   --color-accent-orange: #FF5A1F;
   --color-text-secondary: #CCCCCC;
   --color-text-muted: #8E8E8E;
-  --font-family-primary: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  --font-family-primary: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --letter-spacing-wide: 0.05em;
   --letter-spacing-wider: 0.1em;
   --letter-spacing-widest: 0.2em;
@@ -39,10 +39,10 @@
   --line-height-relaxed: 1.6;
   --line-height-base: 1.5;
 
-  /* --- TIPOGRAFÍA (INTER / ROBOTO OFICIAL) --- */
-  --font-sans: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-  --font-display: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-  --font-numeric: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  /* --- TIPOGRAFÍA --- */
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-display: 'Syne', 'Plus Jakarta Sans', sans-serif;
+  --font-numeric: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
 
   /* Tamaños tipográficos con escala armónica */
   --font-size-xs: 0.75rem;    /* 12px */
