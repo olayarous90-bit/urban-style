@@ -176,8 +176,10 @@ export async function initNeonTables() {
         color VARCHAR(50),
         quantity INTEGER NOT NULL,
         unit_price INTEGER NOT NULL,
+        price INTEGER,
         subtotal INTEGER NOT NULL
       );
+      ALTER TABLE order_items ADD COLUMN IF NOT EXISTS price INTEGER;
 
       CREATE TABLE IF NOT EXISTS shipments (
         id SERIAL PRIMARY KEY,
@@ -185,17 +187,29 @@ export async function initNeonTables() {
         guide_number VARCHAR(100) UNIQUE,
         carrier_name VARCHAR(100) NOT NULL,
         carrier_service_id VARCHAR(100),
+        carrier_logo TEXT,
         mp_code VARCHAR(100),
         status VARCHAR(64) DEFAULT 'LABEL_GENERATED',
         status_description TEXT,
-        pdf_guide_url TEXT,
+        shipping_cost INTEGER DEFAULT 0,
+        delivery_time_hours INTEGER DEFAULT 24,
+        tracking_status VARCHAR(100) DEFAULT 'En preparación',
         tracking_url TEXT,
-        origin_city VARCHAR(100) NOT NULL,
+        pdf_guide_url TEXT,
+        origin_city VARCHAR(100) DEFAULT 'BOGOTÁ D.C.',
+        origin_dane_code VARCHAR(16) DEFAULT '11001000',
         destiny_city VARCHAR(100) NOT NULL,
         destiny_dane_code VARCHAR(16) NOT NULL,
+        raw_payload JSONB,
         created_at TIMESTAMPTZ DEFAULT NOW(),
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
+      ALTER TABLE shipments ADD COLUMN IF NOT EXISTS carrier_logo TEXT;
+      ALTER TABLE shipments ADD COLUMN IF NOT EXISTS shipping_cost INTEGER DEFAULT 0;
+      ALTER TABLE shipments ADD COLUMN IF NOT EXISTS delivery_time_hours INTEGER DEFAULT 24;
+      ALTER TABLE shipments ADD COLUMN IF NOT EXISTS tracking_status VARCHAR(100) DEFAULT 'En preparación';
+      ALTER TABLE shipments ADD COLUMN IF NOT EXISTS origin_dane_code VARCHAR(16) DEFAULT '11001000';
+      ALTER TABLE shipments ADD COLUMN IF NOT EXISTS raw_payload JSONB;
 
       CREATE TABLE IF NOT EXISTS email_logs (
         id SERIAL PRIMARY KEY,
@@ -203,9 +217,26 @@ export async function initNeonTables() {
         order_number VARCHAR(64),
         recipient_email VARCHAR(255) NOT NULL,
         subject VARCHAR(255) NOT NULL,
+        email_type VARCHAR(50) DEFAULT 'ORDER_CONFIRMATION',
         status VARCHAR(50) NOT NULL,
         error_message TEXT,
         content_preview TEXT,
+        html_file_path TEXT,
+        sent_at TIMESTAMPTZ DEFAULT NOW(),
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      ALTER TABLE email_logs ADD COLUMN IF NOT EXISTS email_type VARCHAR(50) DEFAULT 'ORDER_CONFIRMATION';
+      ALTER TABLE email_logs ADD COLUMN IF NOT EXISTS html_file_path TEXT;
+      ALTER TABLE email_logs ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ DEFAULT NOW();
+
+      CREATE TABLE IF NOT EXISTS payment_transactions (
+        id SERIAL PRIMARY KEY,
+        order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+        payment_method VARCHAR(50) NOT NULL,
+        amount INTEGER NOT NULL,
+        status VARCHAR(50) NOT NULL,
+        reference VARCHAR(100),
+        notes TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
 
@@ -221,11 +252,15 @@ export async function initNeonTables() {
 
       CREATE TABLE IF NOT EXISTS idempotency_records (
         id SERIAL PRIMARY KEY,
-        idempotency_key VARCHAR(255) UNIQUE NOT NULL,
+        idempotency_key VARCHAR(255) UNIQUE,
+        key VARCHAR(255) UNIQUE,
         order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+        order_number VARCHAR(64),
         response_payload JSONB,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+      ALTER TABLE idempotency_records ADD COLUMN IF NOT EXISTS key VARCHAR(255);
+      ALTER TABLE idempotency_records ADD COLUMN IF NOT EXISTS order_number VARCHAR(64);
 
       CREATE TABLE IF NOT EXISTS admin_users (
         id SERIAL PRIMARY KEY,

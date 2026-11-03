@@ -9,6 +9,7 @@ import { db, initDatabase } from './db/database.js';
 import { testNeonConnection, initNeonTables } from './db/neon.js';
 import { countAdminUsers, createAdminUser } from './services/adminAuthService.js';
 import { seedProductsToNeonIfEmpty, getPublicActiveProducts } from './services/productService.js';
+import { syncLocalOrdersToNeonIfEmpty } from './services/orderService.js';
 import { getPublicAnnouncements, DEFAULT_ANNOUNCEMENTS } from './services/announcementService.js';
 import locationsRouter from './routes/locations.js';
 import shippingRouter from './routes/shipping.js';
@@ -45,6 +46,9 @@ if (process.env.DATABASE_URL) {
     // 1. Poblar productos en Neon PostgreSQL si está vacío
     await seedProductsToNeonIfEmpty();
 
+    // 2. Sincronizar pedidos históricos locales a Neon PostgreSQL si Neon está vacío
+    await syncLocalOrdersToNeonIfEmpty();
+
     // 2. Si se especificaron credenciales en variables de entorno y no hay admin, sembrar de forma segura
     if (process.env.ADMIN_INIT_USER && process.env.ADMIN_INIT_PASSWORD) {
       countAdminUsers().then(async (cnt) => {
@@ -73,6 +77,12 @@ app.get('/api/health', async (req, res) => {
 
     // Diagnóstico de Neon PostgreSQL
     const neonStatus = await testNeonConnection();
+    let neonOrdersCount = 0;
+    try {
+      const { query } = await import('./db/neon.js');
+      const oRes = await query('SELECT count(*) as count FROM orders');
+      neonOrdersCount = parseInt(oRes.rows[0]?.count || 0, 10);
+    } catch (e) {}
 
     res.json({
       status: 'UP',
@@ -84,7 +94,10 @@ app.get('/api/health', async (req, res) => {
         products: productCount,
         orders: orderCount
       },
-      neonPostgreSQL: neonStatus,
+      neonPostgreSQL: {
+        ...neonStatus,
+        ordersCount: neonOrdersCount
+      },
       logistics: {
         provider: 'Mi Paquete v2 (Colombia)',
         originCity: process.env.ORIGIN_CITY || 'BOGOTÁ D.C.',

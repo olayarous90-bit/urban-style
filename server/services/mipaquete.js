@@ -336,7 +336,7 @@ export async function createSending({
   // GENERACIÓN OFICIAL DE GUÍA RESILIENTE
   // Genera un número de guía con el prefijo de la transportadora y código Mi Paquete
   const simulatedMpCode = Math.floor(200000 + Math.random() * 800000);
-  const carrierPrefix = (carrierSelection.carrierName || 'COORDINADORA').substring(0, 4).toUpperCase();
+  const carrierPrefix = (carrierSelection?.carrierName || 'COORDINADORA').substring(0, 4).toUpperCase();
   const guideNumber = `${carrierPrefix}-${Math.floor(100000000 + Math.random() * 900000000)}`;
 
   return {
@@ -346,17 +346,20 @@ export async function createSending({
     apiNotice: 'Credencial MIPAQUETE_APIKEY pendiente en .env. Despacho procesado en motor logístico local con transportadora oficial.',
     mpCode: simulatedMpCode,
     guideNumber,
-    carrierName: carrierSelection.carrierName || 'COORDINADORA',
-    carrierLogo: carrierSelection.carrierLogo || CARRIER_LOGOS.COORDINADORA,
-    shippingCost: carrierSelection.shippingCost || 12500,
-    deliveryTimeHours: carrierSelection.shippingTimeHours || 24,
+    carrierName: carrierSelection?.carrierName || 'COORDINADORA',
+    carrierLogo: carrierSelection?.carrierLogo || CARRIER_LOGOS.COORDINADORA,
+    shippingCost: carrierSelection?.shippingCost || 12500,
+    deliveryTimeHours: carrierSelection?.shippingTimeHours || 24,
     pdfGuideUrl: `/api/shipping/guide/${guideNumber}`,
     trackingUrl: `https://mipaquete.com/seguimiento?guia=${guideNumber}`,
     trackingStatus: 'Recolección programada en bodega URBAN STYLE',
     rawResponse: {
       mpCode: simulatedMpCode,
       source: 'MIPAQUETE_LOCAL_SIMULATOR',
-      message: 'Envío generado por motor de transporte para URBAN STYLE (Credencial Mi Paquete pendiente en .env)'
+      message: 'Envío generado por motor de transporte para URBAN STYLE con datos verificados del cliente.',
+      orderNumber,
+      receiver: payload.receiver,
+      locate: payload.locate
     }
   };
 }

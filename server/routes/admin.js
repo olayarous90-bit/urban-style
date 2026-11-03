@@ -2,6 +2,14 @@ import express from 'express';
 import { db } from '../db/database.js';
 import { retryOrderEmail } from '../services/mailer.js';
 import {
+  getAdminStatsData,
+  getAdminOrdersList,
+  getAdminOrderDetails,
+  updateOrderStatus,
+  getAdminEmailLogs,
+  getAdminShipmentsList
+} from '../services/orderService.js';
+import {
   verifyPassword,
   ADMIN_COOKIE_NAME,
   getAdminCookieOptions,
@@ -241,28 +249,14 @@ router.post('/register', (req, res) => {
 
 /**
  * GET /api/admin/stats
- * Resumen de métricas comerciales y logísticas
+ * Resumen de métricas comerciales y logísticas desde Neon PostgreSQL
  */
-router.get('/stats', requireAdmin, (req, res) => {
+router.get('/stats', requireAdmin, async (req, res) => {
   try {
-    const totalOrders = db.prepare('SELECT count(*) as count FROM orders').get().count;
-    const revenue = db.prepare("SELECT coalesce(sum(total), 0) as total FROM orders WHERE status != 'CANCELLED'").get().total;
-    const pendingOrders = db.prepare("SELECT count(*) as count FROM orders WHERE status IN ('PENDING_PAYMENT', 'PROCESSING')").get().count;
-    const shippedOrders = db.prepare("SELECT count(*) as count FROM orders WHERE status = 'SHIPPED'").get().count;
-    const totalItems = db.prepare('SELECT coalesce(sum(quantity), 0) as count FROM order_items').get().count;
-    const emailLogsCount = db.prepare('SELECT count(*) as count FROM email_logs').get().count;
-
+    const stats = await getAdminStatsData();
     res.json({
       success: true,
-      stats: {
-        totalOrders,
-        revenue,
-        formattedRevenue: `$${revenue.toLocaleString('es-CO')} COP`,
-        pendingOrders,
-        shippedOrders,
-        totalItems,
-        emailLogsCount
-      }
+      stats
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -271,48 +265,17 @@ router.get('/stats', requireAdmin, (req, res) => {
 
 /**
  * GET /api/admin/orders
- * Listado de pedidos con filtros
+ * Listado de pedidos con filtros desde Neon PostgreSQL
  */
-router.get('/orders', requireAdmin, (req, res) => {
+router.get('/orders', requireAdmin, async (req, res) => {
   try {
     const { status, search } = req.query;
-    let query = `
-      SELECT o.*, s.guide_number, s.carrier_name, s.tracking_status, s.pdf_guide_url
-      FROM orders o
-      LEFT JOIN shipments s ON o.id = s.order_id
-    `;
-    const params = [];
-
-    const conditions = [];
-    if (status && status !== 'ALL') {
-      conditions.push('o.status = ?');
-      params.push(status);
-    }
-    if (search) {
-      conditions.push('(o.order_number LIKE ? OR o.customer_name LIKE ? OR o.customer_email LIKE ? OR s.guide_number LIKE ?)');
-      const term = `%${search}%`;
-      params.push(term, term, term, term);
-    }
-
-    if (conditions.length > 0) {
-      query += ` WHERE ${conditions.join(' AND ')}`;
-    }
-
-    query += ' ORDER BY o.id DESC';
-
-    const orders = db.prepare(query).all(...params);
-
-    // Adjuntar items a cada orden
-    const getItems = db.prepare('SELECT * FROM order_items WHERE order_id = ?');
-    const enriched = orders.map((ord) => ({
-      ...ord,
-      items: getItems.all(ord.id)
-    }));
+    const orders = await getAdminOrdersList({ status, search });
 
     res.json({
       success: true,
-      count: enriched.length,
-      orders: enriched
+      count: orders.length,
+      orders
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -321,31 +284,25 @@ router.get('/orders', requireAdmin, (req, res) => {
 
 /**
  * GET /api/admin/orders/:orderNumber
- * Consulta detallada de una orden con trazabilidad completa
+ * Consulta detallada de una orden con trazabilidad completa desde Neon PostgreSQL
  */
-router.get('/orders/:orderNumber', requireAdmin, (req, res) => {
+router.get('/orders/:orderNumber', requireAdmin, async (req, res) => {
   try {
     const { orderNumber } = req.params;
-    const order = db.prepare('SELECT * FROM orders WHERE order_number = ?').get(orderNumber);
+    const details = await getAdminOrderDetails(orderNumber);
 
-    if (!order) {
+    if (!details || !details.order) {
       return res.status(404).json({ success: false, message: 'Pedido no encontrado' });
     }
 
-    const items = db.prepare('SELECT * FROM order_items WHERE order_id = ?').all(order.id);
-    const shipment = db.prepare('SELECT * FROM shipments WHERE order_id = ?').get(order.id);
-    const history = db.prepare('SELECT * FROM order_status_history WHERE order_id = ? ORDER BY id ASC').all(order.id);
-    const payments = db.prepare('SELECT * FROM payment_transactions WHERE order_id = ? ORDER BY id ASC').all(order.id);
-    const emails = db.prepare('SELECT * FROM email_logs WHERE order_id = ? ORDER BY id DESC').all(order.id);
-
     res.json({
       success: true,
-      order,
-      items,
-      shipment,
-      history,
-      payments,
-      emails
+      order: details.order,
+      items: details.items || [],
+      shipment: details.shipment || null,
+      history: details.history || [],
+      payments: details.payments || [],
+      emails: details.emails || []
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -354,9 +311,9 @@ router.get('/orders/:orderNumber', requireAdmin, (req, res) => {
 
 /**
  * PATCH /api/admin/orders/:orderNumber/status
- * Actualiza el estado de una orden con trazabilidad en SQLite
+ * Actualiza el estado de una orden con trazabilidad en Neon PostgreSQL y SQLite
  */
-router.patch('/orders/:orderNumber/status', requireAdmin, (req, res) => {
+router.patch('/orders/:orderNumber/status', requireAdmin, async (req, res) => {
   try {
     const { orderNumber } = req.params;
     const { newStatus, comment } = req.body;
@@ -369,40 +326,18 @@ router.patch('/orders/:orderNumber/status', requireAdmin, (req, res) => {
       });
     }
 
-    const order = db.prepare('SELECT * FROM orders WHERE order_number = ?').get(orderNumber);
-    if (!order) {
+    const details = await getAdminOrderDetails(orderNumber);
+    if (!details || !details.order) {
       return res.status(404).json({ success: false, message: 'Pedido no encontrado' });
     }
 
-    const now = new Date().toISOString();
     const adminUser = req.adminUser?.username || 'ADMIN';
-
-    const updateTx = db.transaction(() => {
-      // 1. Actualizar estado de la orden
-      db.prepare('UPDATE orders SET status = ?, updated_at = ? WHERE id = ?').run(newStatus, now, order.id);
-
-      // 2. Registrar en historial
-      db.prepare(`
-        INSERT INTO order_status_history (order_id, previous_status, new_status, comment, changed_by, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(order.id, order.status, newStatus, comment || `Estado cambiado a ${newStatus} por ${adminUser}`, adminUser, now);
-
-      // 3. Si se marca como SHIPPED, actualizar tracking del despacho
-      if (newStatus === 'SHIPPED') {
-        db.prepare('UPDATE shipments SET tracking_status = ?, updated_at = ? WHERE order_id = ?')
-          .run('Despachado y en tránsito con transportadora', now, order.id);
-      } else if (newStatus === 'CANCELLED') {
-        db.prepare('UPDATE shipments SET tracking_status = ?, updated_at = ? WHERE order_id = ?')
-          .run('Envío cancelado', now, order.id);
-      }
-    });
-
-    updateTx();
+    await updateOrderStatus(orderNumber, newStatus, comment, adminUser);
 
     res.json({
       success: true,
       message: `Estado del pedido #${orderNumber} actualizado a ${newStatus}.`,
-      previousStatus: order.status,
+      previousStatus: details.order.status,
       newStatus
     });
   } catch (error) {
@@ -417,12 +352,12 @@ router.patch('/orders/:orderNumber/status', requireAdmin, (req, res) => {
 router.post('/orders/:orderNumber/resend-email', requireAdmin, async (req, res) => {
   try {
     const { orderNumber } = req.params;
-    const order = db.prepare('SELECT * FROM orders WHERE order_number = ?').get(orderNumber);
-    if (!order) {
+    const details = await getAdminOrderDetails(orderNumber);
+    if (!details || !details.order) {
       return res.status(404).json({ success: false, message: 'Pedido no encontrado' });
     }
 
-    const result = await retryOrderEmail(order.id);
+    const result = await retryOrderEmail(details.order.id);
 
     res.json({
       success: true,
@@ -436,11 +371,11 @@ router.post('/orders/:orderNumber/resend-email', requireAdmin, async (req, res) 
 
 /**
  * GET /api/admin/emails
- * Consulta de registros de correos y fallos
+ * Consulta de registros de correos y fallos desde Neon PostgreSQL
  */
-router.get('/emails', requireAdmin, (req, res) => {
+router.get('/emails', requireAdmin, async (req, res) => {
   try {
-    const logs = db.prepare('SELECT * FROM email_logs ORDER BY id DESC LIMIT 50').all();
+    const logs = await getAdminEmailLogs(50);
     res.json({
       success: true,
       count: logs.length,
@@ -453,17 +388,11 @@ router.get('/emails', requireAdmin, (req, res) => {
 
 /**
  * GET /api/admin/shipments
- * Listado de todos los despachos y guías generadas
+ * Listado de todos los despachos y guías generadas desde Neon PostgreSQL
  */
-router.get('/shipments', requireAdmin, (req, res) => {
+router.get('/shipments', requireAdmin, async (req, res) => {
   try {
-    const shipments = db.prepare(`
-      SELECT s.*, o.order_number, o.customer_name, o.customer_email, o.delivery_city, o.delivery_department, o.total, o.payment_method
-      FROM shipments s
-      JOIN orders o ON s.order_id = o.id
-      ORDER BY s.id DESC
-    `).all();
-
+    const shipments = await getAdminShipmentsList();
     res.json({
       success: true,
       count: shipments.length,
