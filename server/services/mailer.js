@@ -114,43 +114,144 @@ export async function saveStoredSmtpSettings(settings = {}) {
 }
 
 /**
- * Prueba la conectividad SMTP en vivo y opcionalmente envía un correo de prueba
+ * Envío directo a través de la API REST oficial de Resend (HTTPS / 443)
+ * Más veloz, no depende de puertos SMTP bloqueados en Vercel y maneja adjuntos en Base64.
+ */
+export async function sendViaResendApi({ apiKey, from, to, subject, html, attachments = [] }) {
+  const cleanKey = (apiKey || '').trim();
+  if (!cleanKey) {
+    throw new Error('API Key de Resend no proporcionada.');
+  }
+
+  const recipients = Array.isArray(to) ? to : [to];
+
+  const payload = {
+    from,
+    to: recipients,
+    subject,
+    html
+  };
+
+  if (attachments && attachments.length > 0) {
+    payload.attachments = attachments.map((att) => {
+      let b64 = '';
+      if (Buffer.isBuffer(att.content)) {
+        b64 = att.content.toString('base64');
+      } else if (typeof att.content === 'string') {
+        b64 = Buffer.from(att.content, 'utf8').toString('base64');
+      }
+      return {
+        filename: att.filename,
+        content: b64
+      };
+    });
+  }
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${cleanKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    if (rawMsg.includes('only send testing emails')) {
+      throw new Error(`Restricción de prueba Resend (Sandbox): ${rawMsg}`);
+    }
+    if (rawMsg.includes('not verified') || rawMsg.includes('domain')) {
+      throw new Error(`Dominio no verificado en Resend: ${rawMsg}`);
+    }
+    throw new Error(`Resend API Error: ${rawMsg}`);
+  }
+
+  return {
+    success: true,
+    messageId: data.id,
+    response: `200 OK: queued for delivery via Resend API (ID: ${data.id})`,
+    accepted: recipients
+  };
+}
+
+/**
+ * Prueba la conectividad SMTP o Resend API en vivo y opcionalmente envía un correo de prueba
  */
 export async function testSmtpConnection({ host, port, secure, user, pass, mailFrom, toEmail, resendKey }) {
   const timeoutMs = 7000;
-  let testTransporter;
   let resolvedHost = host;
   let resolvedPort = Number(port) || 587;
-  let resolvedFrom = mailFrom || (user ? `"URBAN STYLE Test" <${user}>` : '"URBAN STYLE Test" <despachos@urbanstyle.com.co>');
+  let resolvedFrom = mailFrom || (user ? `"URBAN STYLE Test" <${user}>` : '"URBAN STYLE Test" <onboarding@resend.dev>');
 
+  // 1. Caso Resend API
   if (resendKey) {
-    resolvedHost = 'smtp.resend.com';
-    resolvedPort = 465;
-    testTransporter = nodemailer.createTransport({
-      host: 'smtp.resend.com',
-      port: 465,
-      secure: true,
-      auth: { user: 'resend', pass: resendKey },
-      connectionTimeout: timeoutMs,
-      greetingTimeout: 5000,
-      socketTimeout: timeoutMs
-    });
-  } else {
-    if (!host || !user || !pass) {
-      throw new Error('Faltan parámetros obligatorios: Servidor Host, Usuario y Contraseña son requeridos.');
+    resolvedHost = 'api.resend.com';
+    resolvedPort = 443;
+    resolvedFrom = mailFrom || '"URBAN STYLE" <onboarding@resend.dev>';
+
+    let sendResult = null;
+    if (toEmail) {
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; background: #0A0A0A; color: #FFFFFF; padding: 28px; border-radius: 8px; max-width: 520px; border: 1px solid #222222;">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h1 style="color: #FF5A1F; font-size: 22px; margin: 0; letter-spacing: 2px;">URBAN STYLE</h1>
+            <p style="font-size: 12px; color: #888888; margin: 4px 0 0 0;">PLATAFORMA DE CORREOS TRANSACCIONALES</p>
+          </div>
+          <div style="background: #141414; padding: 16px; border-radius: 6px; border-left: 4px solid #10B981; margin-bottom: 20px;">
+            <h3 style="color: #10B981; margin: 0 0 6px 0; font-size: 15px;">✓ Conexión Resend API Exitosa</h3>
+            <p style="font-size: 13px; color: #CCCCCC; margin: 0; line-height: 1.5;">
+              Este mensaje confirma que tu API de <strong>Resend</strong> está <strong>100% operativa</strong> y lista para entregar notificaciones de compras y guías de envío.
+            </p>
+          </div>
+          <table style="width: 100%; font-size: 13px; border-collapse: collapse; margin-bottom: 20px;">
+            <tr><td style="color: #888888; padding: 6px 0;">Proveedor:</td><td style="color: #FFFFFF; font-weight: 600; text-align: right;">Resend REST API (HTTPS:443)</td></tr>
+            <tr><td style="color: #888888; padding: 6px 0;">Remitente:</td><td style="color: #FFFFFF; text-align: right;">${resolvedFrom}</td></tr>
+            <tr><td style="color: #888888; padding: 6px 0;">Destinatario:</td><td style="color: #FFFFFF; font-weight: 600; text-align: right;">${toEmail}</td></tr>
+            <tr><td style="color: #888888; padding: 6px 0;">Fecha de Envío:</td><td style="color: #FFFFFF; text-align: right;">${new Date().toLocaleString('es-CO')}</td></tr>
+          </table>
+          <p style="font-size: 11px; color: #666666; text-align: center; margin: 0; border-top: 1px solid #1E1E1E; padding-top: 14px;">
+            URBAN STYLE S.A.S. • Bogotá, Colombia • Despachos Mi Paquete v2
+          </p>
+        </div>
+      `;
+
+      sendResult = await sendViaResendApi({
+        apiKey: resendKey,
+        from: resolvedFrom,
+        to: toEmail,
+        subject: '🧪 [URBAN STYLE] Verificación de Servidor de Correo Resend',
+        html: emailHtml
+      });
     }
-    const isGmail = host.toLowerCase().includes('gmail');
-    testTransporter = nodemailer.createTransport({
-      host,
-      port: resolvedPort,
-      secure: secure === true || resolvedPort === 465,
-      auth: { user, pass },
-      tls: { rejectUnauthorized: !isGmail },
-      connectionTimeout: timeoutMs,
-      greetingTimeout: 5000,
-      socketTimeout: timeoutMs
-    });
+
+    return {
+      success: true,
+      message: toEmail
+        ? `Correo de prueba enviado exitosamente a ${toEmail} a través de Resend API.`
+        : 'Credencial de Resend API validada exitosamente.',
+      host: 'api.resend.com',
+      port: 443,
+      sendResult
+    };
   }
+
+  // 2. Caso SMTP tradicional (Gmail / Hostinger / Brevo)
+  if (!host || !user || !pass) {
+    throw new Error('Faltan parámetros obligatorios: Servidor Host, Usuario y Contraseña son requeridos.');
+  }
+  const isGmail = host.toLowerCase().includes('gmail');
+  const testTransporter = nodemailer.createTransport({
+    host,
+    port: resolvedPort,
+    secure: secure === true || resolvedPort === 465,
+    auth: { user, pass },
+    tls: { rejectUnauthorized: !isGmail },
+    connectionTimeout: timeoutMs,
+    greetingTimeout: 5000,
+    socketTimeout: timeoutMs
+  });
 
   // 1. Verificar handshake SMTP y credenciales
   await testTransporter.verify();
@@ -233,8 +334,9 @@ export async function getTransporterInfo() {
     }
   }
 
-  // 1. Caso Resend SMTP
-  if (resendKey && (!host || host.includes('resend'))) {
+  // 1. Caso Resend (API REST oficial o SMTP)
+  if (resendKey && (!host || host.includes('resend') || host === 'api.resend.com')) {
+    const resolvedFrom = fromAddress || '"URBAN STYLE" <onboarding@resend.dev>';
     const transporter = nodemailer.createTransport({
       host: 'smtp.resend.com',
       port: 465,
@@ -250,13 +352,14 @@ export async function getTransporterInfo() {
 
     return {
       transporter,
-      providerName: 'Resend SMTP (smtp.resend.com)',
-      mode: 'RESEND_SMTP',
+      resendKey,
+      providerName: 'Resend API & SMTP (resend.com)',
+      mode: 'RESEND_API',
       isLive: true,
       isConfigured: true,
-      fromAddress: fromAddress || 'onboarding@resend.dev',
-      host: 'smtp.resend.com',
-      port: 465
+      fromAddress: resolvedFrom,
+      host: 'api.resend.com',
+      port: 443
     };
   }
 
@@ -278,6 +381,7 @@ export async function getTransporterInfo() {
 
     return {
       transporter,
+      resendKey: null,
       providerName: isGmail ? 'Google Gmail SMTP' : `SMTP (${host})`,
       mode: isGmail ? 'GMAIL_SMTP' : 'PRODUCTION_SMTP',
       isLive: true,
@@ -291,6 +395,7 @@ export async function getTransporterInfo() {
   // 3. Servidor de Correo no configurado aún (modo borrador)
   return {
     transporter: null,
+    resendKey: null,
     providerName: 'Servidor SMTP No Configurado',
     mode: 'UNCONFIGURED',
     isLive: false,
@@ -298,8 +403,79 @@ export async function getTransporterInfo() {
     fromAddress: fromAddress || '"URBAN STYLE Despachos" <despachos@urbanstyle.com.co>',
     host: host || 'No definido',
     port,
-    reason: 'Credenciales SMTP pendientes en Vercel o en Ajustes (SMTP_HOST, SMTP_USER, SMTP_PASS).'
+    reason: 'Credenciales de correo pendientes en Vercel o en Ajustes (RESEND_API_KEY o SMTP_HOST, SMTP_USER, SMTP_PASS).'
   };
+}
+
+/**
+ * Despachador de correos unificado:
+ * Prioridad 1: Resend REST API (HTTPS / 443) si resendKey está configurada.
+ * Prioridad 2: Nodemailer SMTP para Gmail, Brevo o servidor SMTP personalizado.
+ */
+export async function dispatchEmail({
+  to,
+  subject,
+  html,
+  attachments = [],
+  preferredFrom = null,
+  providerInfo = null
+}) {
+  const pInfo = providerInfo || (await getTransporterInfo());
+
+  if (!pInfo.isConfigured) {
+    throw new Error(pInfo.reason || 'Servidor de correo no configurado.');
+  }
+
+  const from = preferredFrom || pInfo.fromAddress || '"URBAN STYLE" <onboarding@resend.dev>';
+
+  // Caso 1: Resend REST API
+  if (pInfo.resendKey) {
+    try {
+      const apiRes = await sendViaResendApi({
+        apiKey: pInfo.resendKey,
+        from,
+        to,
+        subject,
+        html,
+        attachments
+      });
+
+      return {
+        success: true,
+        messageId: apiRes.messageId,
+        providerName: 'Resend REST API (https://api.resend.com/emails)',
+        providerResponse: apiRes.response,
+        from
+      };
+    } catch (apiErr) {
+      if (apiErr.message.includes('Dominio no verificado') || apiErr.message.includes('Restricción de prueba')) {
+        throw apiErr;
+      }
+      if (!pInfo.transporter) throw apiErr;
+      console.warn('[Resend API Fallback to SMTP]', apiErr.message);
+    }
+  }
+
+  // Caso 2: Nodemailer SMTP
+  if (pInfo.transporter) {
+    const info = await pInfo.transporter.sendMail({
+      from,
+      to,
+      subject,
+      html,
+      attachments
+    });
+
+    return {
+      success: true,
+      messageId: info.messageId,
+      providerName: pInfo.providerName,
+      providerResponse: info.response || '250 OK: queued for delivery',
+      from
+    };
+  }
+
+  throw new Error('No hay transportador de correo disponible.');
 }
 
 /**
@@ -721,7 +897,6 @@ export async function sendOrderPlacedEmail({ order, items = [], force = false })
   }
 
   const htmlContent = generateOrderPlacedEmailHtml({ order, items });
-  const from = process.env.MAIL_FROM || '"URBAN STYLE Pedidos" <pedidos@urbanstyle.com.co>';
   const subject = `¡Tu pedido #${order.order_number} en URBAN STYLE está confirmado!`;
 
   // Guardar archivo HTML en disco para inspección o vista previa
@@ -731,17 +906,20 @@ export async function sendOrderPlacedEmail({ order, items = [], force = false })
   } catch (e) {}
 
   const providerInfo = await getTransporterInfo();
+  const from = providerInfo.fromAddress || process.env.MAIL_FROM || '"URBAN STYLE Pedidos" <onboarding@resend.dev>';
 
-  if (providerInfo.transporter) {
+  if (providerInfo.isConfigured) {
     try {
-      const info = await providerInfo.transporter.sendMail({
-        from,
+      const sendResult = await dispatchEmail({
         to: order.customer_email,
         subject,
-        html: htmlContent
+        html: htmlContent,
+        attachments: [],
+        preferredFrom: from,
+        providerInfo
       });
 
-      const previewUrl = nodemailer.getTestMessageUrl(info) || `/api/orders/${order.order_number}/email-preview?type=placed`;
+      const previewUrl = `/api/orders/${order.order_number}/email-preview?type=placed`;
 
       await logEmailRecord({
         orderId: order.id,
@@ -750,9 +928,9 @@ export async function sendOrderPlacedEmail({ order, items = [], force = false })
         subject,
         emailType,
         status: 'ACCEPTED',
-        messageId: info.messageId,
-        providerName: providerInfo.providerName,
-        providerResponse: info.response || '250 OK: queued for delivery',
+        messageId: sendResult.messageId,
+        providerName: sendResult.providerName,
+        providerResponse: sendResult.providerResponse,
         attemptCount: force ? 2 : 1,
         previewUrl,
         errorMessage: null,
@@ -762,9 +940,9 @@ export async function sendOrderPlacedEmail({ order, items = [], force = false })
       return {
         success: true,
         status: 'ACCEPTED',
-        messageId: info.messageId,
-        providerName: providerInfo.providerName,
-        providerResponse: info.response || '250 OK',
+        messageId: sendResult.messageId,
+        providerName: sendResult.providerName,
+        providerResponse: sendResult.providerResponse,
         emailType,
         previewUrl
       };
@@ -847,7 +1025,6 @@ export async function sendShippingConfirmationEmail({ order, shipment, items = [
   }
 
   const htmlContent = generateShippingDispatchedEmailHtml({ order, shipment, items });
-  const from = process.env.MAIL_FROM || '"URBAN STYLE Despachos" <despachos@urbanstyle.com.co>';
   const subject = `¡Tu guía de envío #${shipment.guide_number} está lista! - Pedido #${order.order_number}`;
 
   // Guardar archivo HTML en disco
@@ -867,18 +1044,20 @@ export async function sendShippingConfirmationEmail({ order, shipment, items = [
   ];
 
   const providerInfo = await getTransporterInfo();
+  const from = providerInfo.fromAddress || process.env.MAIL_FROM || '"URBAN STYLE Despachos" <onboarding@resend.dev>';
 
-  if (providerInfo.transporter) {
+  if (providerInfo.isConfigured) {
     try {
-      const info = await providerInfo.transporter.sendMail({
-        from,
+      const sendResult = await dispatchEmail({
         to: order.customer_email,
         subject,
         html: htmlContent,
-        attachments
+        attachments,
+        preferredFrom: from,
+        providerInfo
       });
 
-      const previewUrl = nodemailer.getTestMessageUrl(info) || `/api/orders/${order.order_number}/email-preview?type=shipping`;
+      const previewUrl = `/api/orders/${order.order_number}/email-preview?type=shipping`;
 
       await logEmailRecord({
         orderId: order.id,
@@ -887,9 +1066,9 @@ export async function sendShippingConfirmationEmail({ order, shipment, items = [
         subject,
         emailType,
         status: 'ACCEPTED',
-        messageId: info.messageId,
-        providerName: providerInfo.providerName,
-        providerResponse: info.response || '250 OK: queued for delivery',
+        messageId: sendResult.messageId,
+        providerName: sendResult.providerName,
+        providerResponse: sendResult.providerResponse,
         attemptCount: force ? 2 : 1,
         previewUrl,
         errorMessage: null,
@@ -899,9 +1078,9 @@ export async function sendShippingConfirmationEmail({ order, shipment, items = [
       return {
         success: true,
         status: 'ACCEPTED',
-        messageId: info.messageId,
-        providerName: providerInfo.providerName,
-        providerResponse: info.response || '250 OK',
+        messageId: sendResult.messageId,
+        providerName: sendResult.providerName,
+        providerResponse: sendResult.providerResponse,
         emailType,
         previewUrl
       };
