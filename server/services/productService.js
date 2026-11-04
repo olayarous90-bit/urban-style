@@ -351,19 +351,52 @@ export async function getAdminProducts({ search = '', category = 'ALL', status =
   return localWithImages;
 }
 
+// Memoria caché para catálogo público (reduce latencia a < 2ms)
+let cachedPublicProducts = null;
+let publicProductsCacheTime = 0;
+const PUBLIC_CACHE_TTL_MS = 25000; // 25 segundos
+
+export function invalidatePublicProductsCache() {
+  cachedPublicProducts = null;
+  publicProductsCacheTime = 0;
+}
+
 /**
  * Obtiene únicamente los productos activos para la tienda pública con precios promocionales oficiales
  */
 export async function getPublicActiveProducts() {
+  const now = Date.now();
+  if (cachedPublicProducts && (now - publicProductsCacheTime) < PUBLIC_CACHE_TTL_MS) {
+    return cachedPublicProducts;
+  }
+
   const pool = getNeonPool();
 
   if (pool) {
     try {
       const res = await neonQuery('SELECT * FROM products WHERE is_active = TRUE ORDER BY created_at DESC, id ASC');
       if (res.rows && res.rows.length > 0) {
+        // Optimización por lotes: consultar todas las imágenes en 1 sola consulta SQL
+        const productIds = res.rows.map((r) => r.id);
+        const imagesMap = new Map();
+        try {
+          const imgRes = await neonQuery(
+            'SELECT * FROM product_images WHERE product_id = ANY($1) ORDER BY is_primary DESC, display_order ASC, id ASC',
+            [productIds]
+          );
+          if (imgRes && imgRes.rows) {
+            for (const img of imgRes.rows) {
+              if (!imagesMap.has(img.product_id)) imagesMap.set(img.product_id, []);
+              imagesMap.get(img.product_id).push(img);
+            }
+          }
+        } catch (imgErr) {
+          console.warn('[Public Products] Batch images fallback:', imgErr.message);
+        }
+
         const publicWithImages = await Promise.all(
           res.rows.map(async (p) => {
-            const images = await getProductImages(p.id);
+            const images = imagesMap.has(p.id) ? imagesMap.get(p.id) : await getProductImages(p.id);
             const defaultImg = p.image || '/images/products/prod-tshirt.jpg';
             const imageUrls = images.length > 0 ? images.map((i) => i.url) : [defaultImg];
             const pricing = computeProductPricing(p);
@@ -399,6 +432,8 @@ export async function getPublicActiveProducts() {
             };
           })
         );
+        cachedPublicProducts = publicWithImages;
+        publicProductsCacheTime = now;
         return publicWithImages;
       }
     } catch (err) {
@@ -445,6 +480,8 @@ export async function getPublicActiveProducts() {
       };
     })
   );
+  cachedPublicProducts = localWithImages;
+  publicProductsCacheTime = now;
   return localWithImages;
 }
 
@@ -692,6 +729,7 @@ export async function createProduct({
     console.warn('[CreateProduct] Error insertando localmente:', err.message);
   }
 
+  invalidatePublicProductsCache();
   const created = await getProductById(id);
   return created || {
     id,
@@ -824,6 +862,7 @@ export async function updateProduct(id, fields) {
     console.warn('[UpdateProduct] Error actualizando en SQLite:', err.message);
   }
 
+  invalidatePublicProductsCache();
   return await getProductById(id);
 }
 
@@ -898,6 +937,7 @@ export async function updateProductDiscount(id, {
     console.warn('[UpdateProductDiscount] Error SQLite:', err.message);
   }
 
+  invalidatePublicProductsCache();
   return await getProductById(id);
 }
 
@@ -930,6 +970,7 @@ export async function toggleProductDiscount(id, discountActive) {
     console.warn('[ToggleProductDiscount] Error SQLite:', err.message);
   }
 
+  invalidatePublicProductsCache();
   return await getProductById(id);
 }
 
@@ -954,6 +995,7 @@ export async function toggleProductStatus(id, isActive) {
     console.warn('[ToggleProduct] Error SQLite:', err.message);
   }
 
+  invalidatePublicProductsCache();
   return { id, is_active: activeBool };
 }
 
@@ -986,6 +1028,7 @@ export async function deleteProduct(id) {
   // 2. Si tiene pedidos asociados, no se destruye para preservar el historial contable y trazabilidad
   if (orderCount > 0) {
     await toggleProductStatus(id, false);
+    invalidatePublicProductsCache();
     return {
       success: true,
       hardDeleted: false,
@@ -1009,6 +1052,7 @@ export async function deleteProduct(id) {
     console.warn('[DeleteProduct] Error eliminando en SQLite:', err.message);
   }
 
+  invalidatePublicProductsCache();
   return {
     success: true,
     hardDeleted: true,

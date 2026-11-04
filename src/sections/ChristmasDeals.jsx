@@ -160,6 +160,7 @@ export const ChristmasDeals = ({ favorites = [], onToggleFavorite = () => {} }) 
                       alt={p.name}
                       className="christmas-card-image"
                       loading="lazy"
+                      decoding="async"
                     />
 
                     {/* BADGE DE DESCUENTO REAL */}

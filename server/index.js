@@ -119,10 +119,8 @@ app.get('/api/health', async (req, res) => {
 // 2. RUTA DE PRODUCTOS DEL CATÁLOGO OFICIAL (Neon PostgreSQL / Fallback)
 app.get('/api/products', async (req, res) => {
   try {
-    // Evitar que intermediarios, CDNs o navegadores sirvan productos obsoletos
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    res.set('Pragma', 'no-cache');
-    res.set('Expires', '0');
+    // Caché inteligente en el Edge CDN de Vercel con revalidación en segundo plano
+    res.set('Cache-Control', 'public, max-age=15, s-maxage=30, stale-while-revalidate=120');
 
     const products = await getPublicActiveProducts();
     res.json({
@@ -138,7 +136,7 @@ app.get('/api/products', async (req, res) => {
 // 2.1 RUTA PÚBLICA DE BARRA DE ANUNCIOS
 app.get('/api/announcements', async (req, res) => {
   try {
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
     const result = await getPublicAnnouncements();
     res.json({
       success: true,

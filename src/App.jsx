@@ -21,10 +21,16 @@ import { ChristmasDeals } from './sections/ChristmasDeals';
 import { CartDrawer } from './components/cart/CartDrawer';
 import { CheckoutModal } from './components/checkout/CheckoutModal';
 import { OrderSuccessModal } from './components/checkout/OrderSuccessModal';
-import { AdminDashboard } from './components/admin/AdminDashboard';
-import { AdminLoginPage } from './components/admin/AdminLoginPage';
 import './styles/christmas.css';
 import './App.css';
+
+// Lazy loading del módulo administrativo: evita descargar ~200 KB en la página pública para clientes
+const AdminDashboard = React.lazy(() =>
+  import('./components/admin/AdminDashboard').then((m) => ({ default: m.AdminDashboard }))
+);
+const AdminLoginPage = React.lazy(() =>
+  import('./components/admin/AdminLoginPage').then((m) => ({ default: m.AdminLoginPage }))
+);
 
 export function AppContent() {
   const { isChristmasMode } = useChristmasTheme();
@@ -64,26 +70,42 @@ export function AppContent() {
   // 1. RUTA DEDICADA: /admin/login
   if (currentPath === '/admin/login') {
     return (
-      <AdminLoginPage
-        onLoginSuccess={() => {
-          navigateTo('/admin');
-        }}
-        onReturnToStore={() => {
-          navigateTo('/');
-        }}
-      />
+      <React.Suspense
+        fallback={
+          <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff5a1f', fontFamily: 'sans-serif', letterSpacing: '1px' }}>
+            Cargando acceso administrativo...
+          </div>
+        }
+      >
+        <AdminLoginPage
+          onLoginSuccess={() => {
+            navigateTo('/admin');
+          }}
+          onReturnToStore={() => {
+            navigateTo('/');
+          }}
+        />
+      </React.Suspense>
     );
   }
 
   // 2. RUTA DEDICADA: /admin
   if (currentPath === '/admin') {
     return (
-      <AdminDashboard
-        isOpen={true}
-        onClose={() => {
-          navigateTo('/');
-        }}
-      />
+      <React.Suspense
+        fallback={
+          <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ff5a1f', fontFamily: 'sans-serif', letterSpacing: '1px' }}>
+            Cargando panel de administración...
+          </div>
+        }
+      >
+        <AdminDashboard
+          isOpen={true}
+          onClose={() => {
+            navigateTo('/');
+          }}
+        />
+      </React.Suspense>
     );
   }
 

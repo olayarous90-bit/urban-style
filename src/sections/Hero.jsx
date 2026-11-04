@@ -38,6 +38,7 @@ export const Hero = () => {
               className="hero-image"
               loading="eager"
               decoding="async"
+              fetchpriority="high"
               onError={() => setHasImageError(true)}
             />
           </picture>
