@@ -23,6 +23,8 @@ import { CheckoutModal } from './components/checkout/CheckoutModal';
 import { OrderSuccessModal } from './components/checkout/OrderSuccessModal';
 import { AnnouncementPopup } from './components/popup/AnnouncementPopup';
 import { CookieConsentBanner } from './components/cookie/CookieConsentBanner';
+import { FloatingWhatsAppButton } from './components/common/FloatingWhatsAppButton';
+import { AssistantWidget } from './components/assistant/AssistantWidget';
 import './styles/christmas.css';
 import './App.css';
 
@@ -181,8 +183,14 @@ export function AppContent() {
         {/* BANNER Y GESTOR DE CONSENTIMIENTO DE COOKIES */}
         <CookieConsentBanner />
 
-        {/* BOTÓN FLOTANTE: CONMUTADOR MODO NAVIDEÑO / ESTILO CLÁSICO */}
+        {/* BOTÓN FLOTANTE: CONMUTADOR MODO NAVIDEÑO / ESTILO CLÁSICO (INFERIOR IZQUIERDA) */}
         <ChristmasTogglePill />
+
+        {/* BOTÓN FLOTANTE DE WHATSAPP (ESQUINA INFERIOR DERECHA) */}
+        <FloatingWhatsAppButton />
+
+        {/* ASISTENTE VIRTUAL DE COMPRAS: ROBOT FLOTANTE (ESTRICTAMENTE SOBRE WHATSAPP) Y MODAL DE CHAT */}
+        <AssistantWidget />
 
         {/* PANEL ADMINISTRATIVO OVERLAY */}
         <AdminDashboard

@@ -72,6 +72,7 @@ import {
   getPopupById
 } from '../services/popupService.js';
 import { getSiteSettings, updateSiteSettings } from '../services/siteSettingsService.js';
+import { getAssistantSettings, saveAssistantSettings, getAssistantStats } from '../services/assistantService.js';
 
 const router = express.Router();
 
@@ -1348,6 +1349,47 @@ router.put('/site-settings', requireAdmin, async (req, res) => {
     res.json({
       success: true,
       message: 'Configuración del sitio actualizada exitosamente en Neon PostgreSQL',
+      data: updated
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+/* ==========================================================================
+   RUTAS DE ADMINISTRACIÓN DEL ASISTENTE VIRTUAL (ROBOT IA)
+   ========================================================================== */
+
+/**
+ * GET /api/admin/assistant
+ * Obtiene la configuración del asistente virtual y estadísticas de uso
+ */
+router.get('/assistant', requireAdmin, async (req, res) => {
+  try {
+    const settings = await getAssistantSettings();
+    const stats = await getAssistantStats();
+    res.json({
+      success: true,
+      data: {
+        settings,
+        stats
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * PUT /api/admin/assistant
+ * Actualiza la configuración del asistente virtual
+ */
+router.put('/assistant', requireAdmin, async (req, res) => {
+  try {
+    const updated = await saveAssistantSettings(req.body);
+    res.json({
+      success: true,
+      message: 'Configuración del Asistente Virtual guardada exitosamente.',
       data: updated
     });
   } catch (error) {

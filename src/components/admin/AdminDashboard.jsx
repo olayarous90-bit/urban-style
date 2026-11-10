@@ -5,6 +5,7 @@ import { AdminLoginPage } from './AdminLoginPage';
 import { AdminProductsSection } from './AdminProductsSection';
 import { AdminPopupsSection } from './AdminPopupsSection';
 import { AdminSiteSettingsSection } from './AdminSiteSettingsSection';
+import { AdminAssistantSection } from './AdminAssistantSection';
 import './AdminDashboard.css';
 
 export const AdminDashboard = ({ isOpen, onClose }) => {
@@ -871,6 +872,7 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
     { id: 'popups', label: 'Anuncios Emergentes', icon: '📣' },
     { id: 'emails', label: 'Correos', icon: '✉️' },
     { id: 'site_settings', label: 'Configuración del Sitio', icon: '🌐' },
+    { id: 'assistant', label: 'Asistente Virtual', icon: '🤖' },
     { id: 'settings', label: 'Diagnóstico & SMTP', icon: '⚙️' }
   ];
 
@@ -2196,6 +2198,15 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                   <AdminSiteSettingsSection
                     onToast={(msg) => setActionFeedback(msg)}
                   />
+                </div>
+              )}
+
+              {/* ===============================================================
+                 SECCIÓN: ASISTENTE VIRTUAL DE COMPRAS (ROBOT IA)
+                 =============================================================== */}
+              {activeTab === 'assistant' && (
+                <div className="tab-pane">
+                  <AdminAssistantSection />
                 </div>
               )}
 

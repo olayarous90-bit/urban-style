@@ -381,7 +381,7 @@ export async function getPublicActiveProducts() {
         const imagesMap = new Map();
         try {
           const imgRes = await neonQuery(
-            'SELECT * FROM product_images WHERE product_id = ANY($1) ORDER BY is_primary DESC, display_order ASC, id ASC',
+            'SELECT * FROM product_images WHERE product_id = ANY($1) ORDER BY is_primary DESC, sort_order ASC, id ASC',
             [productIds]
           );
           if (imgRes && imgRes.rows) {

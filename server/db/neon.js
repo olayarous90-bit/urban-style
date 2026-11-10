@@ -348,6 +348,17 @@ export async function initNeonTables() {
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
       CREATE INDEX IF NOT EXISTS idx_popups_priority ON popups(priority DESC, is_active);
+
+      CREATE TABLE IF NOT EXISTS assistant_conversations (
+        id SERIAL PRIMARY KEY,
+        session_id VARCHAR(100),
+        user_message TEXT,
+        assistant_response TEXT,
+        intent VARCHAR(50),
+        products_suggested JSONB,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_assistant_conv_time ON assistant_conversations(created_at DESC);
     `);
 
     return true;

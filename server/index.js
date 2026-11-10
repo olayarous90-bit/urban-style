@@ -17,6 +17,7 @@ import locationsRouter from './routes/locations.js';
 import shippingRouter from './routes/shipping.js';
 import ordersRouter from './routes/orders.js';
 import adminRouter from './routes/admin.js';
+import assistantRouter from './routes/assistant.js';
 
 dotenv.config();
 
@@ -201,6 +202,7 @@ app.use('/api/locations', locationsRouter);
 app.use('/api/shipping', shippingRouter);
 app.use('/api/orders', ordersRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/assistant', assistantRouter);
 
 // Manejo de errores global
 app.use((err, req, res, next) => {
