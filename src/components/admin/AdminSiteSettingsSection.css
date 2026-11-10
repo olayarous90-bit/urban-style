@@ -1,0 +1,281 @@
+/* ==========================================================================
+   ADMIN SITE SETTINGS SECTION (CONFIGURACIÓN DEL SITIO & FOOTER)
+   ========================================================================== */
+
+.admin-site-settings-module {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 0.5rem 0 2rem;
+  color: #f4f4f5;
+}
+
+/* CABECERA */
+.site-settings-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  background: #141417;
+  border: 1px solid #27272a;
+  border-radius: 14px;
+  padding: 1.5rem 1.75rem;
+}
+
+.settings-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.settings-pill-tag {
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #ff5500;
+  background: rgba(255, 85, 0, 0.12);
+  border: 1px solid rgba(255, 85, 0, 0.3);
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+}
+
+.settings-sync-tag {
+  font-size: 0.75rem;
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.site-settings-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.55rem;
+  font-weight: 800;
+  margin: 0 0 0.4rem 0;
+  color: #ffffff;
+}
+
+.site-settings-desc {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #a1a1aa;
+  margin: 0;
+  max-width: 720px;
+}
+
+.btn-visit-store {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #18181b;
+  border: 1px solid #3f3f46;
+  color: #ffffff;
+  padding: 0.65rem 1.15rem;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-visit-store:hover {
+  background: #ff5500;
+  border-color: #ff5500;
+  transform: translateY(-1px);
+}
+
+/* PESTAÑAS DE NAVEGACIÓN INTERNA */
+.settings-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding-bottom: 0.25rem;
+}
+
+.settings-nav-tab {
+  background: #141417;
+  border: 1px solid #27272a;
+  color: #a1a1aa;
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 0.65rem 1.15rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.settings-nav-tab:hover {
+  background: #18181b;
+  color: #ffffff;
+}
+
+.settings-nav-tab.active {
+  background: #ff5500;
+  border-color: #ff5500;
+  color: #ffffff;
+}
+
+.settings-loading-pane {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem;
+  color: #a1a1aa;
+}
+
+/* FORMULARIO */
+.site-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.settings-card-section {
+  background: #141417;
+  border: 1px solid #27272a;
+  border-radius: 14px;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+}
+
+.section-subtitle {
+  font-size: 0.84rem;
+  color: #a1a1aa;
+  margin: 0;
+}
+
+.settings-legal-alert {
+  background: rgba(255, 85, 0, 0.08);
+  border: 1px solid rgba(255, 85, 0, 0.3);
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  font-size: 0.82rem;
+  color: #e4e4e7;
+  line-height: 1.5;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.field-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #d4d4d8;
+}
+
+.field-input,
+.field-textarea {
+  background: #09090b;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  color: #ffffff;
+  font-size: 0.9rem;
+  transition: border-color 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.field-input:focus,
+.field-textarea:focus {
+  outline: none;
+  border-color: #ff5500;
+  box-shadow: 0 0 0 2px rgba(255, 85, 0, 0.2);
+}
+
+.field-hint {
+  font-size: 0.72rem;
+  color: #71717a;
+}
+
+/* FOOTER DEL FORMULARIO */
+.settings-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  background: #141417;
+  border: 1px solid #27272a;
+  border-radius: 12px;
+  padding: 1.25rem 1.75rem;
+  flex-wrap: wrap;
+}
+
+.footer-status-text {
+  font-size: 0.8rem;
+  color: #71717a;
+  max-width: 520px;
+}
+
+.btn-save-settings {
+  background: #ff5500;
+  border: none;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-save-settings:hover {
+  background: #ea580c;
+  transform: translateY(-1px);
+}
+
+.btn-save-settings:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .form-row-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .site-settings-header,
+  .settings-card-section,
+  .settings-form-footer {
+    padding: 1.25rem;
+  }
+
+  .settings-form-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .btn-save-settings {
+    width: 100%;
+    text-align: center;
+  }
+}

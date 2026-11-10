@@ -12,6 +12,7 @@ import { seedProductsToNeonIfEmpty, getPublicActiveProducts } from './services/p
 import { syncLocalOrdersToNeonIfEmpty } from './services/orderService.js';
 import { getPublicAnnouncements, DEFAULT_ANNOUNCEMENTS } from './services/announcementService.js';
 import { getPublicActivePopup } from './services/popupService.js';
+import { getSiteSettings } from './services/siteSettingsService.js';
 import locationsRouter from './routes/locations.js';
 import shippingRouter from './routes/shipping.js';
 import ordersRouter from './routes/orders.js';
@@ -173,6 +174,24 @@ app.get('/api/popups/active', async (req, res) => {
         enabled: false,
         popup: null
       }
+    });
+  }
+});
+
+// 2.3 RUTA PÚBLICA DE CONFIGURACIÓN DEL SITIO Y DATOS DE CONTACTO / REDES
+app.get('/api/site-settings', async (req, res) => {
+  try {
+    res.set('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=300');
+    const settings = await getSiteSettings();
+    res.json({
+      success: true,
+      data: settings
+    });
+  } catch (err) {
+    console.error('[Public Site Settings API Error]:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Error obteniendo configuración del sitio'
     });
   }
 });

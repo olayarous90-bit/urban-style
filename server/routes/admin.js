@@ -71,6 +71,7 @@ import {
   setPopupSystemEnabled,
   getPopupById
 } from '../services/popupService.js';
+import { getSiteSettings, updateSiteSettings } from '../services/siteSettingsService.js';
 
 const router = express.Router();
 
@@ -1314,6 +1315,43 @@ router.post('/popups/upload-image', requireAdmin, async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/* ==========================================================================
+   RUTAS DE CONFIGURACIÓN DEL SITIO (FOOTER, DATOS, CONTACTO Y REDES)
+   ========================================================================== */
+
+/**
+ * GET /api/admin/site-settings
+ * Obtiene la configuración general del sitio para administración
+ */
+router.get('/site-settings', requireAdmin, async (req, res) => {
+  try {
+    const settings = await getSiteSettings();
+    res.json({
+      success: true,
+      data: settings
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * PUT /api/admin/site-settings
+ * Actualiza la configuración general del sitio (contacto, redes, footer, legal)
+ */
+router.put('/site-settings', requireAdmin, async (req, res) => {
+  try {
+    const updated = await updateSiteSettings(req.body);
+    res.json({
+      success: true,
+      message: 'Configuración del sitio actualizada exitosamente en Neon PostgreSQL',
+      data: updated
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
   }
 });
 

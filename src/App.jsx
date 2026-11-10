@@ -22,6 +22,7 @@ import { CartDrawer } from './components/cart/CartDrawer';
 import { CheckoutModal } from './components/checkout/CheckoutModal';
 import { OrderSuccessModal } from './components/checkout/OrderSuccessModal';
 import { AnnouncementPopup } from './components/popup/AnnouncementPopup';
+import { CookieConsentBanner } from './components/cookie/CookieConsentBanner';
 import './styles/christmas.css';
 import './App.css';
 
@@ -176,6 +177,9 @@ export function AppContent() {
 
         {/* VENTANA EMERGENTE AUTOMÁTICA DE ANUNCIOS (POPUP) */}
         <AnnouncementPopup />
+
+        {/* BANNER Y GESTOR DE CONSENTIMIENTO DE COOKIES */}
+        <CookieConsentBanner />
 
         {/* BOTÓN FLOTANTE: CONMUTADOR MODO NAVIDEÑO / ESTILO CLÁSICO */}
         <ChristmasTogglePill />

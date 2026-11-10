@@ -4,6 +4,7 @@ import { Button } from '../common/Button';
 import { AdminLoginPage } from './AdminLoginPage';
 import { AdminProductsSection } from './AdminProductsSection';
 import { AdminPopupsSection } from './AdminPopupsSection';
+import { AdminSiteSettingsSection } from './AdminSiteSettingsSection';
 import './AdminDashboard.css';
 
 export const AdminDashboard = ({ isOpen, onClose }) => {
@@ -869,7 +870,8 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
     { id: 'announcements', label: 'Barra Superior', icon: '📢', badge: announcements.filter(a => a.is_active).length || null },
     { id: 'popups', label: 'Anuncios Emergentes', icon: '📣' },
     { id: 'emails', label: 'Correos', icon: '✉️' },
-    { id: 'settings', label: 'Configuración', icon: '⚙️' }
+    { id: 'site_settings', label: 'Configuración del Sitio', icon: '🌐' },
+    { id: 'settings', label: 'Diagnóstico & SMTP', icon: '⚙️' }
   ];
 
   if (!isOpen) return null;
@@ -2183,6 +2185,17 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                       </tbody>
                     </table>
                   </div>
+                </div>
+              )}
+
+              {/* ===============================================================
+                 SECCIÓN NUEVA: CONFIGURACIÓN DEL SITIO (FOOTER, DATOS, CONTACTO Y REDES)
+                 =============================================================== */}
+              {activeTab === 'site_settings' && (
+                <div className="tab-pane">
+                  <AdminSiteSettingsSection
+                    onToast={(msg) => setActionFeedback(msg)}
+                  />
                 </div>
               )}
 
