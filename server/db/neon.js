@@ -326,6 +326,28 @@ export async function initNeonTables() {
         value TEXT NOT NULL,
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS popups (
+        id VARCHAR(64) PRIMARY KEY,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        type VARCHAR(50) NOT NULL DEFAULT 'discount',
+        badge_text VARCHAR(100),
+        image_url TEXT,
+        image_storage_key VARCHAR(255),
+        button_text VARCHAR(100) DEFAULT 'Ver Oferta',
+        button_link VARCHAR(255) DEFAULT '#ofertas',
+        secondary_button_text VARCHAR(100) DEFAULT 'Continuar a la tienda',
+        is_active BOOLEAN DEFAULT TRUE,
+        priority INTEGER DEFAULT 1,
+        frequency VARCHAR(50) DEFAULT 'always',
+        start_date TIMESTAMPTZ,
+        end_date TIMESTAMPTZ,
+        status VARCHAR(50) DEFAULT 'active',
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_popups_priority ON popups(priority DESC, is_active);
     `);
 
     return true;

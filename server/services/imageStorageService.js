@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { query as neonQuery, getNeonPool } from '../db/neon.js';
 import { db as sqliteDb } from '../db/database.js';
@@ -384,4 +386,89 @@ export async function seedProductImagesIfEmpty() {
   } catch (err) {
     console.warn('[Neon Images Seed Notice]', err.message);
   }
+}
+
+/**
+ * Sube una imagen para anuncio emergente (Popup) a Neon Object Storage S3 o fallback local persistente
+ */
+export async function uploadPopupImage({
+  buffer,
+  originalName = 'popup-banner',
+  mimeType = 'image/jpeg'
+}) {
+  validateImageFile({ buffer, mimeType, originalName });
+
+  const ext = getExtensionFromMime(mimeType);
+  const timestamp = Date.now();
+  const randomSuffix = Math.random().toString(36).substring(2, 8);
+  const storageKey = `popups/${timestamp}-${randomSuffix}.${ext}`;
+
+  // Intentar subida a Neon S3 Bucket
+  try {
+    const s3 = getS3Client();
+    await s3.send(new PutObjectCommand({
+      Bucket: STORAGE_BUCKET,
+      Key: storageKey,
+      Body: buffer,
+      ContentType: mimeType,
+      Metadata: {
+        category: 'popup-announcement',
+        originalName: encodeURIComponent(originalName)
+      }
+    }));
+
+    const publicUrl = `${STORAGE_ENDPOINT}/${STORAGE_BUCKET}/${storageKey}`;
+    return {
+      url: publicUrl,
+      storageKey,
+      fileSize: buffer.length,
+      mimeType
+    };
+  } catch (err) {
+    console.warn('[Neon S3 Popup Upload Notice, using local fallback]:', err.message);
+    const popupsDir = path.resolve(process.cwd(), 'public/images/popups');
+    if (!fs.existsSync(popupsDir)) {
+      fs.mkdirSync(popupsDir, { recursive: true });
+    }
+    const fileName = `${timestamp}-${randomSuffix}.${ext}`;
+    const localFilePath = path.join(popupsDir, fileName);
+    fs.writeFileSync(localFilePath, buffer);
+
+    return {
+      url: `/images/popups/${fileName}`,
+      storageKey: `local:${fileName}`,
+      fileSize: buffer.length,
+      mimeType
+    };
+  }
+}
+
+/**
+ * Elimina una imagen de anuncio emergente de Neon S3 o del almacenamiento local
+ */
+export async function deletePopupImage(storageKey) {
+  if (!storageKey) return { success: true };
+
+  if (storageKey.startsWith('local:')) {
+    const fileName = storageKey.replace('local:', '');
+    const localPath = path.resolve(process.cwd(), 'public/images/popups', fileName);
+    if (fs.existsSync(localPath)) {
+      try {
+        fs.unlinkSync(localPath);
+      } catch {}
+    }
+    return { success: true };
+  }
+
+  try {
+    const s3 = getS3Client();
+    await s3.send(new DeleteObjectCommand({
+      Bucket: STORAGE_BUCKET,
+      Key: storageKey
+    }));
+  } catch (err) {
+    console.warn('[Neon S3 Popup Delete Notice]:', err.message);
+  }
+
+  return { success: true };
 }

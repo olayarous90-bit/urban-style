@@ -216,6 +216,27 @@ export function initDatabase() {
       updated_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS popups (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      type TEXT NOT NULL DEFAULT 'discount',
+      badge_text TEXT,
+      image_url TEXT,
+      image_storage_key TEXT,
+      button_text TEXT DEFAULT 'Ver Oferta',
+      button_link TEXT DEFAULT '#ofertas',
+      secondary_button_text TEXT DEFAULT 'Continuar a la tienda',
+      is_active INTEGER DEFAULT 1,
+      priority INTEGER DEFAULT 1,
+      frequency TEXT DEFAULT 'always',
+      start_date TEXT,
+      end_date TEXT,
+      status TEXT DEFAULT 'active',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
     CREATE INDEX IF NOT EXISTS idx_orders_order_number ON orders(order_number);
     CREATE INDEX IF NOT EXISTS idx_orders_customer_email ON orders(customer_email);
     CREATE INDEX IF NOT EXISTS idx_shipments_order_id ON shipments(order_id);
@@ -225,6 +246,7 @@ export function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_admin_sessions_token ON admin_sessions(session_token);
     CREATE INDEX IF NOT EXISTS idx_admin_attempts_ip ON admin_login_attempts(ip_address, attempted_at);
     CREATE INDEX IF NOT EXISTS idx_announcements_order ON announcements(sort_order ASC, is_active);
+    CREATE INDEX IF NOT EXISTS idx_popups_priority ON popups(priority DESC, is_active);
   `);
 
   // Asegurar columnas de descuentos en bases de datos existentes

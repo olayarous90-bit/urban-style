@@ -11,6 +11,7 @@ import { countAdminUsers, createAdminUser } from './services/adminAuthService.js
 import { seedProductsToNeonIfEmpty, getPublicActiveProducts } from './services/productService.js';
 import { syncLocalOrdersToNeonIfEmpty } from './services/orderService.js';
 import { getPublicAnnouncements, DEFAULT_ANNOUNCEMENTS } from './services/announcementService.js';
+import { getPublicActivePopup } from './services/popupService.js';
 import locationsRouter from './routes/locations.js';
 import shippingRouter from './routes/shipping.js';
 import ordersRouter from './routes/orders.js';
@@ -150,6 +151,27 @@ app.get('/api/announcements', async (req, res) => {
         enabled: true,
         rotationSeconds: 4,
         announcements: DEFAULT_ANNOUNCEMENTS
+      }
+    });
+  }
+});
+
+// 2.2 RUTA PÚBLICA DE ANUNCIOS EMERGENTES (POPUPS)
+app.get('/api/popups/active', async (req, res) => {
+  try {
+    res.set('Cache-Control', 'public, max-age=10, s-maxage=20, stale-while-revalidate=60');
+    const result = await getPublicActivePopup();
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (err) {
+    console.error('[Public Popups API Error]:', err);
+    res.json({
+      success: true,
+      data: {
+        enabled: false,
+        popup: null
       }
     });
   }

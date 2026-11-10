@@ -3,6 +3,7 @@ import { CloseIcon } from '../common/icons';
 import { Button } from '../common/Button';
 import { AdminLoginPage } from './AdminLoginPage';
 import { AdminProductsSection } from './AdminProductsSection';
+import { AdminPopupsSection } from './AdminPopupsSection';
 import './AdminDashboard.css';
 
 export const AdminDashboard = ({ isOpen, onClose }) => {
@@ -865,7 +866,8 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
     { id: 'orders', label: 'Pedidos', icon: '📑', badge: stats?.totalOrders || orders.length },
     { id: 'customers', label: 'Clientes', icon: '👥', badge: customersList.length || null },
     { id: 'shipments', label: 'Envíos', icon: '🚚', badge: shipments.length || null },
-    { id: 'announcements', label: 'Anuncios', icon: '📢', badge: announcements.filter(a => a.is_active).length || null },
+    { id: 'announcements', label: 'Barra Superior', icon: '📢', badge: announcements.filter(a => a.is_active).length || null },
+    { id: 'popups', label: 'Anuncios Emergentes', icon: '📣' },
     { id: 'emails', label: 'Correos', icon: '✉️' },
     { id: 'settings', label: 'Configuración', icon: '⚙️' }
   ];
@@ -2064,6 +2066,17 @@ export const AdminDashboard = ({ isOpen, onClose }) => {
                       </tbody>
                     </table>
                   </div>
+                </div>
+              )}
+
+              {/* ===============================================================
+                 SECCIÓN NUEVA: ANUNCIOS EMERGENTES (POPUPS EN LA TIENDA)
+                 =============================================================== */}
+              {activeTab === 'popups' && (
+                <div className="tab-pane">
+                  <AdminPopupsSection
+                    onToast={(msg) => setActionFeedback(msg)}
+                  />
                 </div>
               )}
 

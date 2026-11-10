@@ -48,6 +48,8 @@ import {
   setPrimaryImage,
   reorderProductImages,
   deleteProductImage,
+  uploadPopupImage,
+  deletePopupImage,
   ALLOWED_MIME_TYPES,
   MAX_FILE_SIZE_BYTES
 } from '../services/imageStorageService.js';
@@ -60,6 +62,15 @@ import {
   setRotationInterval,
   reorderAnnouncements
 } from '../services/announcementService.js';
+import {
+  getAllAdminPopups,
+  createPopup,
+  updatePopup,
+  deletePopup,
+  togglePopupStatus,
+  setPopupSystemEnabled,
+  getPopupById
+} from '../services/popupService.js';
 
 const router = express.Router();
 
@@ -1150,6 +1161,159 @@ router.post('/announcements/reorder', requireAdmin, async (req, res) => {
     });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+/* ==========================================================================
+   RUTAS DE GESTIÓN DE ANUNCIOS EMERGENTES (POPUPS EN LA TIENDA)
+   ========================================================================== */
+
+/**
+ * GET /api/admin/popups
+ * Obtiene todos los anuncios emergentes y estado del sistema
+ */
+router.get('/popups', requireAdmin, async (req, res) => {
+  try {
+    const data = await getAllAdminPopups();
+    res.json({
+      success: true,
+      data
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/popups
+ * Crea un nuevo anuncio emergente
+ */
+router.post('/popups', requireAdmin, async (req, res) => {
+  try {
+    const created = await createPopup(req.body);
+    res.status(201).json({
+      success: true,
+      message: 'Anuncio emergente creado exitosamente',
+      data: created
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * PUT /api/admin/popups/:id
+ * Actualiza un anuncio emergente existente
+ */
+router.put('/popups/:id', requireAdmin, async (req, res) => {
+  try {
+    const updated = await updatePopup(req.params.id, req.body);
+    res.json({
+      success: true,
+      message: 'Anuncio emergente actualizado correctamente',
+      data: updated
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * DELETE /api/admin/popups/:id
+ * Elimina un anuncio emergente
+ */
+router.delete('/popups/:id', requireAdmin, async (req, res) => {
+  try {
+    await deletePopup(req.params.id);
+    res.json({
+      success: true,
+      message: 'Anuncio emergente eliminado correctamente',
+      deletedId: req.params.id
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * PATCH /api/admin/popups/:id/toggle
+ * Activa o desactiva un anuncio emergente individual
+ */
+router.patch('/popups/:id/toggle', requireAdmin, async (req, res) => {
+  try {
+    const { is_active } = req.body;
+    const updated = await togglePopupStatus(req.params.id, is_active);
+    res.json({
+      success: true,
+      message: is_active ? 'Anuncio emergente activado' : 'Anuncio emergente desactivado',
+      data: updated
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/popups/toggle-system
+ * Activa o desactiva globalmente los anuncios emergentes en la tienda
+ */
+router.post('/popups/toggle-system', requireAdmin, async (req, res) => {
+  try {
+    const { enabled } = req.body;
+    const result = await setPopupSystemEnabled(enabled);
+    res.json({
+      success: true,
+      message: enabled ? 'Sistema de anuncios emergentes activado en la tienda' : 'Sistema de anuncios emergentes desactivado',
+      data: result
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/popups/upload-image
+ * Sube una imagen para un anuncio emergente y la almacena en Neon S3 / Local
+ */
+router.post('/popups/upload-image', requireAdmin, async (req, res) => {
+  try {
+    const rawData = req.body.image || req.body.data;
+    if (!rawData) {
+      return res.status(400).json({
+        success: false,
+        message: 'No se envió ninguna imagen válida para el anuncio emergente.'
+      });
+    }
+
+    const { buffer, mimeType } = parseBase64Image(rawData, req.body.mimeType);
+
+    if (!ALLOWED_MIME_TYPES.includes(mimeType.toLowerCase())) {
+      return res.status(400).json({
+        success: false,
+        message: `Formato de imagen no permitido (${mimeType}). Formatos aceptados: JPEG, PNG, WebP, AVIF, GIF.`
+      });
+    }
+
+    if (buffer.length > MAX_FILE_SIZE_BYTES) {
+      return res.status(400).json({
+        success: false,
+        message: 'La imagen supera el tamaño máximo permitido de 5 MB.'
+      });
+    }
+
+    const uploaded = await uploadPopupImage({
+      buffer,
+      originalName: req.body.originalName || 'popup-banner',
+      mimeType
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Imagen del anuncio emergente subida y optimizada exitosamente.',
+      data: uploaded
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 

@@ -1,0 +1,405 @@
+/* ==========================================================================
+   ANNOUNCEMENT POPUP (URBAN STYLE) - ESTILOS ELEGANTES Y RESPONSIVOS
+   ========================================================================== */
+
+.announcement-popup-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation-duration: 0.28s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: forwards;
+}
+
+.popup-fade-in {
+  animation-name: popupOverlayFadeIn;
+}
+
+.popup-fade-out {
+  animation-name: popupOverlayFadeOut;
+}
+
+@keyframes popupOverlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes popupOverlayFadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* CONTENEDOR MODAL PRINCIPAL */
+.announcement-popup-modal {
+  position: relative;
+  width: 100%;
+  max-width: 820px;
+  background: #111114;
+  border: 1px solid #27272a;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.9), 0 0 35px -5px rgba(255, 85, 0, 0.15);
+  animation-duration: 0.32s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  animation-fill-mode: forwards;
+  color: #ffffff;
+}
+
+.popup-scale-in {
+  animation-name: popupModalScaleIn;
+}
+
+.popup-scale-out {
+  animation-name: popupModalScaleOut;
+}
+
+@keyframes popupModalScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes popupModalScaleOut {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.94) translateY(10px);
+  }
+}
+
+/* BANNER DE VISTA PREVIA ADMINISTRATIVA */
+.popup-preview-banner {
+  background: linear-gradient(90deg, #ff5500, #ea580c);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 0.45rem 1rem;
+}
+
+/* BOTÓN DE CIERRE */
+.popup-close-btn {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 20;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(18, 18, 20, 0.85);
+  color: #e4e4e7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+
+.popup-close-btn:hover {
+  background: #ff5500;
+  border-color: #ff5500;
+  color: #ffffff;
+  transform: scale(1.08) rotate(90deg);
+}
+
+/* GRID PRINCIPAL: 2 COLUMNAS EN ESCRITORIO */
+.popup-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  min-height: 420px;
+}
+
+/* COLUMNA 1: IMAGEN */
+.popup-media-container {
+  position: relative;
+  background: #09090b;
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
+}
+
+.popup-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.announcement-popup-modal:hover .popup-image {
+  transform: scale(1.03);
+}
+
+.popup-image-gradient {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.15) 0%,
+    rgba(0, 0, 0, 0.3) 60%,
+    rgba(17, 17, 20, 0.85) 100%
+  );
+  pointer-events: none;
+}
+
+.popup-image-brand-tag {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(6px);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* COLUMNA 2: CONTENIDO */
+.popup-content-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2.5rem 2.25rem;
+  background: #111114;
+}
+
+/* INSIGNIA DEL TIPO */
+.popup-badge-wrapper {
+  margin-bottom: 1rem;
+}
+
+.popup-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+
+/* TÍTULO */
+.popup-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.65rem;
+  font-weight: 800;
+  line-height: 1.22;
+  color: #ffffff;
+  margin: 0 0 0.85rem 0;
+  letter-spacing: -0.02em;
+}
+
+/* DESCRIPCIÓN */
+.popup-description {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: #a1a1aa;
+  margin: 0 0 1.75rem 0;
+}
+
+/* ACCIONES */
+.popup-actions-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.popup-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.95rem 1.5rem;
+  background: #ff5500;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border-radius: 10px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.22s ease;
+  box-shadow: 0 8px 20px -4px rgba(255, 85, 0, 0.4);
+}
+
+.popup-cta-btn:hover {
+  background: #ea580c;
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -4px rgba(255, 85, 0, 0.55);
+}
+
+.popup-cta-arrow {
+  font-size: 1.1rem;
+  transition: transform 0.2s ease;
+}
+
+.popup-cta-btn:hover .popup-cta-arrow {
+  transform: translateX(4px);
+}
+
+.popup-dismiss-link {
+  background: none;
+  border: none;
+  color: #71717a;
+  font-size: 0.82rem;
+  text-align: center;
+  padding: 0.4rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.popup-dismiss-link:hover {
+  color: #d4d4d8;
+}
+
+/* ==========================================================================
+   TEMÁTICAS POR TIPO DE ANUNCIO
+   ========================================================================== */
+
+/* 1. DESCUENTOS */
+.popup-theme-discount .popup-type-badge {
+  background: rgba(255, 85, 0, 0.15);
+  color: #ff6a1a;
+  border-color: rgba(255, 85, 0, 0.35);
+}
+
+/* 2. NOVEDADES */
+.popup-theme-news .popup-type-badge {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.popup-theme-news .popup-cta-btn {
+  background: #ffffff;
+  color: #09090b;
+  box-shadow: 0 8px 20px -4px rgba(255, 255, 255, 0.25);
+}
+
+.popup-theme-news .popup-cta-btn:hover {
+  background: #e4e4e7;
+  box-shadow: 0 12px 24px -4px rgba(255, 255, 255, 0.35);
+}
+
+/* 3. PROMOCIONES */
+.popup-theme-promotion .popup-type-badge {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* 4. LANZAMIENTOS */
+.popup-theme-launch .popup-type-badge {
+  background: rgba(234, 179, 8, 0.18);
+  color: #facc15;
+  border-color: rgba(234, 179, 8, 0.4);
+}
+
+.popup-theme-launch .popup-cta-btn {
+  background: linear-gradient(135deg, #eab308, #ca8a04);
+  color: #000000;
+  box-shadow: 0 8px 20px -4px rgba(234, 179, 8, 0.35);
+}
+
+/* 5. PERSONALIZADO */
+.popup-theme-custom .popup-type-badge {
+  background: rgba(161, 161, 170, 0.15);
+  color: #e4e4e7;
+  border-color: rgba(161, 161, 170, 0.3);
+}
+
+/* ==========================================================================
+   RESPONSIVIDAD MÓVIL Y TABLET
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  .announcement-popup-overlay {
+    padding: 1rem;
+  }
+
+  .announcement-popup-modal {
+    max-width: 480px;
+    border-radius: 16px;
+  }
+
+  .popup-grid {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .popup-media-container {
+    height: 190px;
+  }
+
+  .popup-content-container {
+    padding: 1.5rem 1.25rem 1.25rem;
+  }
+
+  .popup-title {
+    font-size: 1.35rem;
+    margin-bottom: 0.55rem;
+  }
+
+  .popup-description {
+    font-size: 0.88rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .popup-cta-btn {
+    padding: 0.85rem 1.25rem;
+    font-size: 0.9rem;
+  }
+
+  .popup-close-btn {
+    top: 10px;
+    right: 10px;
+    width: 34px;
+    height: 34px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .popup-media-container {
+    height: 160px;
+  }
+
+  .popup-title {
+    font-size: 1.2rem;
+  }
+
+  .popup-description {
+    font-size: 0.82rem;
+  }
+}

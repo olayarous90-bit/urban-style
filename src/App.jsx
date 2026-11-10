@@ -21,6 +21,7 @@ import { ChristmasDeals } from './sections/ChristmasDeals';
 import { CartDrawer } from './components/cart/CartDrawer';
 import { CheckoutModal } from './components/checkout/CheckoutModal';
 import { OrderSuccessModal } from './components/checkout/OrderSuccessModal';
+import { AnnouncementPopup } from './components/popup/AnnouncementPopup';
 import './styles/christmas.css';
 import './App.css';
 
@@ -172,6 +173,9 @@ export function AppContent() {
         <CartDrawer />
         <CheckoutModal />
         <OrderSuccessModal />
+
+        {/* VENTANA EMERGENTE AUTOMÁTICA DE ANUNCIOS (POPUP) */}
+        <AnnouncementPopup />
 
         {/* BOTÓN FLOTANTE: CONMUTADOR MODO NAVIDEÑO / ESTILO CLÁSICO */}
         <ChristmasTogglePill />
